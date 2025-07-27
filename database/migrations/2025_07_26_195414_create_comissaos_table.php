@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('comissaos', function (Blueprint $table) {
             $table->id();
-            $table->enum('tipo', ['gestor', 'distribuidor']);
+            $table->enum('tipo', ['gestor', 'distribuidor'])->unique();
             $table->decimal('percentual', 5, 2);
             $table->timestamps();
         });

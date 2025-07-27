@@ -50,4 +50,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function gestor()
+    {
+        return $this->hasOne(\App\Models\Gestor::class);
+    }
+
+    public function distribuidor()
+    {
+        return $this->hasOne(\App\Models\Distribuidor::class);
+    }
 }

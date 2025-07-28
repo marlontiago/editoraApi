@@ -11,8 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('distribuidor_id')->constrained('distribuidores')->cascadeOnDelete();
             $table->foreignId('gestor_id')->constrained('gestores')->cascadeOnDelete(); // denormalizado p/ facilitar relatórios
-            $table->foreignId('produto_id')->constrained('produtos')->cascadeOnDelete();
-            $table->integer('quantidade');
+            $table->date('data');
             $table->decimal('valor_total', 12, 2);
 
             // Snapshot da comissão do DISTRIBUIDOR no momento da venda

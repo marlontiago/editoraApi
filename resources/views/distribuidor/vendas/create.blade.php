@@ -3,38 +3,36 @@
         <h2 class="text-xl font-semibold text-gray-800">Registrar Venda</h2>
     </x-slot>
 
-    <div class="max-w-xl mx-auto p-6">
-        @if ($errors->any())
-            <div class="bg-red-100 text-red-800 p-3 rounded mb-4">
-                <ul class="list-disc pl-5">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <form action="{{ route('distribuidor.vendas.store') }}" method="POST" class="space-y-4">
+    <div class="p-6">
+        <form method="POST" action="{{ route('distribuidor.vendas.store') }}">
             @csrf
-
-            <div>
-                <label class="block mb-1">Produto:</label>
-                <select name="produto_id" class="w-full border rounded p-2" required>
-                    <option value="">Selecione…</option>
-                    @foreach ($produtos as $produto)
-                        <option value="{{ $produto->id }}">
-                            {{ $produto->nome }} — R$ {{ number_format($produto->preco, 2, ',', '.') }} (Estoque: {{ $produto->quantidade_estoque }})
-                        </option>
-                    @endforeach
-                </select>
+            <div id="produtos" class="space-y-4">
+                <div class="produto flex gap-4">
+                    <select name="produtos[0][id]" class="form-select w-full" required>
+                        <option value="">Selecione um produto</option>
+                        @foreach($produtos as $produto)
+                            <option value="{{ $produto->id }}">{{ $produto->nome }} - R$ {{ number_format($produto->preco, 2, ',', '.') }}</option>
+                        @endforeach
+                    </select>
+                    <input type="number" name="produtos[0][quantidade]" class="form-input w-24" placeholder="Qtd" min="1" required>
+                </div>
             </div>
 
-            <div>
-                <label class="block mb-1">Quantidade:</label>
-                <input type="number" name="quantidade" min="1" class="w-full border rounded p-2" required>
-            </div>
+            <button type="button" onclick="addProduto()" class="mt-4 px-4 py-2 text-black border rounded">+ Produto</button>
 
-            <button class=" text-black border mt-2 px-4 py-2 rounded" type="submit">Salvar</button>
+            <button type="submit" class="mt-4 px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700">Salvar Venda</button>
         </form>
     </div>
+
+    <script>
+        let count = 1;
+        function addProduto() {
+            const container = document.getElementById('produtos');
+            const div = document.createElement('div');
+            div.className = 'produto flex gap-4 mt-2';
+            div.innerHTML = `{!! str_replace(["\n", "'"], ["", "\\'"], view('components.produto-linha', compact('produtos'))->render()) !!}`.replace(/__INDEX__/g, count);
+            container.appendChild(div);
+            count++;
+        }
+    </script>
 </x-app-layout>

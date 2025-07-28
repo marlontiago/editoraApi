@@ -16,11 +16,14 @@ class DatabaseSeeder extends Seeder
     Role::firstOrCreate(['name' => 'distribuidor']);
 
     $this->call([
-        CitySeeder::class,
         UserSeeder::class,
+        CitySeeder::class,
+        ProdutoSeeder::class,
         CommissionSeeder::class,
         CityVinculosSeeder::class,
-        ProdutoSeeder::class,
+        GestorSeeder::class,
+        DistribuidorSeeder::class,
+        VendaSeeder::class,
     ]);
 }
 }

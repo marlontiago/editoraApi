@@ -3,17 +3,39 @@
 namespace App\Http\Controllers\Gestor;
 
 use App\Http\Controllers\Controller;
-use App\Models\Distribuidor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Venda;
+use App\Models\Commission;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $gestor = Auth::user()->gestor;
-        $qtdDistribuidores = $gestor->distribuidores()->count();
+        $user = Auth::user();
+        $gestor = $user->gestor;
+        $distribuidores = $gestor ? $gestor->distribuidores()->with('user')->get() : collect();
+        $distribuidorIds = $distribuidores->pluck('id');
 
-        return view('gestor.dashboard', compact('qtdDistribuidores'));
+        // Vendas feitas pelos distribuidores do gestor
+        $vendas = Venda::with(['distribuidor.user'])
+            ->whereIn('distribuidor_id', $distribuidorIds)
+            ->orderByDesc('data')
+            ->get();
+
+        // Comissões dos distribuidores (último percentual ativo por user_id)
+        $comissoes = Commission::whereIn('user_id', $distribuidores->pluck('user_id'))->get()->groupBy('user_id');
+
+        // Totalizadores
+        $totalVendas = $vendas->count();
+        $totalComissao = 0;
+
+        foreach ($vendas as $venda) {
+            $userId = $venda->distribuidor->user_id;
+            $percentual = optional(optional($comissoes[$userId] ?? null)->last())->percentage ?? 0;
+            $totalComissao += ($percentual / 100) * $venda->valor_total;
+        }
+
+        return view('gestor.dashboard', compact('distribuidores', 'vendas', 'totalVendas', 'totalComissao'));
     }
 }

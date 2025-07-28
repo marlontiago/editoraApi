@@ -18,6 +18,7 @@ class Commission extends Model
         'valid_from' => 'date',
         'valid_to'   => 'date',
         'active'     => 'boolean',
+        'percentage' => 'float',
     ];
 
     public function user()

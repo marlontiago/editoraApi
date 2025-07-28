@@ -14,6 +14,7 @@ class Venda extends Model
         'gestor_id',
         'produto_id',
         'quantidade',
+        'data',
         'valor_total',
         'commission_percentage_snapshot',
         'commission_value_snapshot',
@@ -29,8 +30,10 @@ class Venda extends Model
         return $this->belongsTo(Gestor::class);
     }
 
-    public function produto()
+    public function produtos()
     {
-        return $this->belongsTo(Produto::class);
+         return $this->belongsToMany(Produto::class, 'produto_venda')
+                ->withPivot('quantidade', 'preco_unitario')
+                ->withTimestamps();
     }
 }

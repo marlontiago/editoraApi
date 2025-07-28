@@ -38,16 +38,24 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
     Route::resource('produtos', \App\Http\Controllers\Admin\ProdutoController::class);
     Route::resource('gestores', \App\Http\Controllers\Admin\GestorController::class)->parameters(['gestores' => 'gestor']);
-    Route::resource('comissoes', \App\Http\Controllers\Admin\ComissaoController::class)->parameters(['comissoes' => 'comissao'])->except(['show']);
+    Route::resource('comissoes', \App\Http\Controllers\Admin\CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
     Route::resource('distribuidores', \App\Http\Controllers\Admin\DistribuidorController::class)->names('admin.distribuidores');
 });
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Gestor\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/relatorios/vendas', [\App\Http\Controllers\Gestor\RelatorioVendasController::class, 'index'])->name('relatorios.vendas');
+    Route::get('/relatorios/vendas/export/excel', [\App\Http\Controllers\Gestor\RelatorioVendasController::class, 'exportExcel'])->name('relatorios.vendas.export.excel');
+    Route::get('/relatorios/vendas/export/pdf', [\App\Http\Controllers\Gestor\RelatorioVendasController::class, 'exportPdf'])->name('relatorios.vendas.export.pdf');
 });
 
 Route::middleware(['auth', 'role:distribuidor'])->prefix('distribuidor')->name('distribuidor.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Distribuidor\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/vendas', [\App\Http\Controllers\Distribuidor\VendaController::class, 'index'])->name('vendas.index');
+    Route::get('/vendas/create', [\App\Http\Controllers\Distribuidor\VendaController::class, 'create'])->name('vendas.create');
+    Route::post('/vendas', [\App\Http\Controllers\Distribuidor\VendaController::class, 'store'])->name('vendas.store');
+    Route::get('/vendas/export/excel', [VendaController::class, 'exportExcel'])->name('vendas.export.excel');
+    Route::get('/vendas/export/pdf', [VendaController::class, 'exportPdf'])->name('vendas.export.pdf');
 });
 
 require __DIR__.'/auth.php';

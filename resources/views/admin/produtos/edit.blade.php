@@ -25,7 +25,7 @@
 
             <div class="mb-4">
                 <label class="block">Estoque</label>
-                <input type="number" name="estoque" value="{{ $produto->estoque }}" class="w-full border rounded px-3 py-2" required>
+                <input type="number" name="quantidade_estoque" value="{{ old('quantidade_estoque', $produto->quantidade_estoque) }}" class="w-full border rounded px-3 py-2" required>
             </div>
 
             <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Atualizar</button>

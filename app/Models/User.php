@@ -64,7 +64,7 @@ class User extends Authenticatable
 
     public function comissoes()
     {
-        return $this->hasMany(\App\Models\Comissao::class);
+        return $this->hasMany(\App\Models\Commission::class);
     }
 
 }

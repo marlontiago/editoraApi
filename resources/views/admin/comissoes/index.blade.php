@@ -32,30 +32,30 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($comissoes as $comissao)
+                    @foreach ($commissions as $commission)
                         <tr class="border-t">
-                            <td class="px-4 py-2">{{ $comissao->user->name }}</td>
-                            <td class="px-4 py-2">{{ $comissao->user->email }}</td>
-                            <td class="px-4 py-2">{{ number_format($comissao->percentage, 2, ',', '.') }}%</td>
+                            <td class="px-4 py-2">{{ $commission->user->name }}</td>
+                            <td class="px-4 py-2">{{ $commission->user->email }}</td>
+                            <td class="px-4 py-2">{{ number_format($commission->percentage, 2, ',', '.') }}%</td>
                             <td class="px-4 py-2">
-                                @if($comissao->valid_from)
-                                    {{ $comissao->valid_from->format('d/m/Y') }}
+                                @if($commission->valid_from)
+                                    {{ $commission->valid_from->format('d/m/Y') }}
                                 @endif
                                 –
-                                @if($comissao->valid_to)
-                                    {{ $comissao->valid_to->format('d/m/Y') }}
+                                @if($commission->valid_to)
+                                    {{ $commission->valid_to->format('d/m/Y') }}
                                 @endif
                             </td>
                             <td class="px-4 py-2">
-                                <span class="px-2 py-1 rounded text-white {{ $comissao->active ? 'bg-green-600' : 'bg-gray-500' }}">
-                                    {{ $comissao->active ? 'Sim' : 'Não' }}
+                                <span class="px-2 py-1 rounded text-white {{ $commission->active ? 'bg-green-600' : 'bg-gray-500' }}">
+                                    {{ $commission->active ? 'Sim' : 'Não' }}
                                 </span>
                             </td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('admin.comissoes.edit', $comissao) }}"
+                                <a href="{{ route('admin.comissoes.edit', $commission) }}"
                                    class="text-black border px-3 py-1 rounded hover:bg-blue-700 text-sm">Editar</a>
 
-                                <form action="{{ route('admin.comissoes.destroy', $comissao) }}"
+                                <form action="{{ route('admin.comissoes.destroy', $commission) }}"
                                       method="POST"
                                       class="inline"
                                       onsubmit="return confirm('Excluir esta comissão?')">
@@ -72,7 +72,7 @@
             </table>
 
             <div class="mt-4">
-                {{ $comissoes->links() }}
+                {{ $commissions->links() }}
             </div>
         </div>
     </div>

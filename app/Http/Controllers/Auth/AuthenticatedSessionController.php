@@ -26,7 +26,16 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        $request->validate([
+        'email' => ['required', 'string', 'email'],
+        'password' => ['required', 'string'],
+    ]);
+
+        if (!Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+            return back()->withErrors([
+                'email' => 'Credenciais inválidas.',
+            ]);
+        }
 
         $request->session()->regenerate();
 
@@ -40,7 +49,7 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('distribuidor.dashboard');
         }
 
-        return redirect('/'); // fallback caso não tenha papel
+        return redirect('/');
     }
 
     /**

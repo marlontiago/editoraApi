@@ -9,13 +9,13 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="bg-white p-4 shadow rounded">
                 <h3 class="text-sm text-gray-500">Produtos</h3>
-                <p class="text-2xl font-bold">{{ \App\Models\Produto::count() }}</p>
+                <p class="text-2xl font-bold">{{ $totalProdutos }}</p>
                 <a href="{{ route('admin.produtos.index') }}" class="text-blue-600 text-sm underline">Ver produtos</a>
             </div>
 
             <div class="bg-white p-4 shadow rounded">
                 <h3 class="text-sm text-gray-500">Gestores</h3>
-                <p class="text-2xl font-bold">{{ \App\Models\Gestor::count() }}</p>
+                <p class="text-2xl font-bold">{{ $totalGestores }}</p>
                 <a href="{{ route('admin.gestores.index') }}" class="text-blue-600 text-sm underline">Ver gestores</a>
             </div>
 
@@ -23,10 +23,6 @@
                 <h3 class="text-sm text-gray-500">Comissões</h3>
                 <a href="{{ route('admin.comissoes.index') }}" class="text-blue-600 text-sm underline">Gerenciar Comissões</a>
             </div>
-
-            <a href="{{ route('admin.comissoes.index') }}" class="text-black px-4 py-2 rounded inline-block">
-            Gerenciar Comissões
-            </a>
         </div>
     </div>
 </x-app-layout>

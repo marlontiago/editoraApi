@@ -10,16 +10,20 @@ class Gestor extends Model
     use HasFactory;
 
     protected $fillable = ['user_id', 'nome_completo', 'telefone'];
+    protected $table = 'gestores';
 
-    public function user(){
-        
+    public function user()
+    {
         return $this->belongsTo(User::class);
-
     }
 
-    public function distribuidores(){
-
+    public function distribuidores()
+    {
         return $this->hasMany(Distribuidor::class);
-        
+    }
+
+    public function cities()
+    {
+        return $this->belongsToMany(City::class, 'city_gestor');
     }
 }

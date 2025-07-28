@@ -3,90 +3,96 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Gestor;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
+use App\Models\City;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class GestorController extends Controller
 {
     public function index()
     {
-        $gestores = Gestor::whereHas('user')->latest()->paginate(10);
-
-        foreach ($gestores as $gestor) {
-            if (!$gestor->user) {
-                Log::warning("Gestor sem usuário vinculado: ID {$gestor->id}");
-            }}
+        $gestores = Gestor::with('user')->get();
         return view('admin.gestores.index', compact('gestores'));
     }
 
     public function create()
     {
-    
-        return view('admin.gestores.create', ['ping' => 'pong']);
+        $cities = City::all();
+        return view('admin.gestores.create', compact('cities'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'nome_completo' => 'required|string|max:255',
-            'telefone'      => 'nullable|string|max:20',
-            'email'         => 'required|email|unique:users,email',
-            'senha'         => 'required|min:6',
+            'telefone' => 'required|string|max:20',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6',
+            'cities' => 'array|nullable',
         ]);
 
-        // 1) Cria o usuário
         $user = User::create([
-            'name'     => $request->nome_completo,
-            'email'    => $request->email,
-            'password' => bcrypt($request->senha),
+            'name' => $request->nome_completo,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
         ]);
         $user->assignRole('gestor');
 
-        // 2) Cria o gestor vinculado ao user
-        Gestor::create([
-            'user_id'       => $user->id,
+        $gestor = Gestor::create([
+            'user_id' => $user->id,
             'nome_completo' => $request->nome_completo,
-            'telefone'      => $request->telefone,
+            'telefone' => $request->telefone,
         ]);
 
-        return to_route('admin.gestores.index')->with('success', 'Gestor criado com sucesso!');
+        if ($request->has('cities')) {
+            $gestor->cities()->sync($request->cities);
+        }
+
+        return redirect()->route('admin.gestores.index')->with('success', 'Gestor criado com sucesso!');
     }
 
     public function edit(Gestor $gestor)
     {
-        return view('admin.gestores.edit', compact('gestor'));
+        $cities = City::all();
+        $gestor->load('user', 'cities');
+        return view('admin.gestores.edit', compact('gestor', 'cities'));
     }
 
     public function update(Request $request, Gestor $gestor)
     {
         $request->validate([
             'nome_completo' => 'required|string|max:255',
-            'telefone'      => 'nullable|string|max:20',
+            'telefone' => 'required|string|max:20',
+            'email' => 'required|email|unique:users,email,' . $gestor->user_id,
+            'cities' => 'array|nullable',
         ]);
 
         $gestor->update([
             'nome_completo' => $request->nome_completo,
-            'telefone'      => $request->telefone,
+            'telefone' => $request->telefone,
         ]);
 
         $gestor->user->update([
             'name' => $request->nome_completo,
+            'email' => $request->email,
         ]);
 
-        return to_route('admin.gestores.index')->with('success', 'Gestor atualizado com sucesso!');
+        if ($request->has('cities')) {
+            $gestor->cities()->sync($request->cities);
+        }
+
+        return redirect()->route('admin.gestores.index')->with('success', 'Gestor atualizado com sucesso!');
     }
 
     public function destroy(Gestor $gestor)
     {
-        if ($gestor->user) {
-            $gestor->user->delete();
-        }
-
+        $gestor->cities()->detach();
+        $gestor->user->delete(); // remove também o user
         $gestor->delete();
 
-        return to_route('admin.gestores.index')->with('success', 'Gestor excluído com sucesso!');
+        return redirect()->route('admin.gestores.index')->with('success', 'Gestor removido com sucesso!');
     }
-
 }

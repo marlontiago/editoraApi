@@ -9,6 +9,7 @@ use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use App\Models\Distribuidor;
 
 class GestorController extends Controller
 {
@@ -94,5 +95,30 @@ class GestorController extends Controller
         $gestor->delete();
 
         return redirect()->route('admin.gestores.index')->with('success', 'Gestor removido com sucesso!');
+    }
+
+    public function vincularDistribuidores()
+    {
+        $gestores = Gestor::with('user')->get();
+        $distribuidores = Distribuidor::with('user')->get();
+
+        return view('admin.gestores.vincular', compact('gestores', 'distribuidores'));
+    }
+
+    public function storeVinculo(Request $request)
+    {
+        $request->validate([
+            'gestor_id' => 'required|exists:gestores,id',
+            'distribuidores' => 'array',
+            'distribuidores.*' => 'exists:distribuidores,id',
+        ]);
+
+        foreach ($request->distribuidores as $distribuidorId) {
+            $distribuidor = Distribuidor::find($distribuidorId);
+            $distribuidor->gestor_id = $request->gestor_id;
+            $distribuidor->save();
+        }
+
+        return redirect()->route('admin.admin.gestores.vincular')->with('success', 'Distribuidores vinculados com sucesso.');
     }
 }

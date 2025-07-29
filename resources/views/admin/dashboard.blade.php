@@ -23,6 +23,13 @@
                 <h3 class="text-sm text-gray-500">Comissões</h3>
                 <a href="{{ route('admin.comissoes.index') }}" class="text-blue-600 text-sm underline">Gerenciar Comissões</a>
             </div>
+            <div class="bg-white p-4 shadow rounded">
+                <h3 class="text-sm text-gray-500">Distribuidores</h3>
+                <a href="{{ route('admin.admin.distribuidores.create') }}"
+   class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+    + Novo Distribuidor
+</a>
+            </div>
         </div>
     </div>
 </x-app-layout>

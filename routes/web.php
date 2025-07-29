@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\GestorController;
+
 use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -10,13 +10,14 @@ use App\Http\Controllers\Admin\ComissaoController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\UserCommissionController;
 use App\Http\Controllers\Admin\GestorController as AdminGestorController;
-
+use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\Gestor\GestorDashboardController;
 use App\Http\Controllers\Gestor\DistribuidorController as GestorDistribuidorController;
 use App\Http\Controllers\Gestor\GestorComissaoController;
 
 use App\Http\Controllers\Distribuidor\DistribuidorDashboardController;
 use App\Http\Controllers\Distribuidor\VendaController;
+
 
 
 Route::get('/', function () {
@@ -31,15 +32,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/dashboard', [DashboardRedirectController::class, 'redirect'])->name('dashboard.redirect');
     
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
     Route::resource('produtos', \App\Http\Controllers\Admin\ProdutoController::class);
-    Route::resource('gestores', \App\Http\Controllers\Admin\GestorController::class)->parameters(['gestores' => 'gestor']);
+    Route::resource('gestores', \App\Http\Controllers\Admin\GestorController::class)->parameters(['gestores' => 'gestor'])->except('show');
     Route::resource('comissoes', \App\Http\Controllers\Admin\CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
     Route::resource('distribuidores', \App\Http\Controllers\Admin\DistribuidorController::class)->names('admin.distribuidores');
+
+    Route::get('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'vincularDistribuidores'])->name('admin.gestores.vincular');
+    Route::post('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'storeVinculo'])->name('admin.gestores.vincular.salvar');
 });
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {

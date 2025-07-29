@@ -70,7 +70,7 @@
             </a>
 
             <a href="{{ route('distribuidor.vendas.index', request()->query()) }}"
-               class="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800">
+               class="px-4 py-2 bg-black text-white rounded hover:bg-gray-800">
                 Ver Relatório Completo
             </a>
         </form>

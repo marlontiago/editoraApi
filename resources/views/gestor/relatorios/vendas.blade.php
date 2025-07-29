@@ -7,6 +7,20 @@
 
     <div class="p-6 space-y-6">
 
+        <form method="GET" action="{{ route('gestor.relatorios.vendas') }}" class="mb-6">
+            <label for="user_id" class="block mb-1 font-semibold">Filtrar por Distribuidor:</label>
+            <select name="user_id" id="user_id" class="w-full p-2 border rounded">
+                <option value="">-- Todos --</option>
+                @foreach($distribuidores as $distribuidor)
+                    <option value="{{ $distribuidor->user_id }}" {{ request('user_id') == $distribuidor->user_id ? 'selected' : '' }}>
+                        {{ $distribuidor->user->name }}
+                    </option>
+                @endforeach
+            </select>
+            <button type="submit" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded">Filtrar</button>
+        </form>
+
+
         <form method="GET" action="{{ route('gestor.relatorios.vendas') }}" class="flex flex-wrap gap-4 items-end">
             <div>
                 <label for="periodo" class="block text-sm font-medium text-gray-700">Período</label>

@@ -7,6 +7,7 @@
 
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <a href="{{ route('admin.gestores.create') }}" class="text-black border px-4 py-2 rounded">Novo Gestor</a>
+        <a href="{{ route('admin.admin.gestores.vincular') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Vincular Distribuidores</a>
 
         <div class="mt-6 bg-white shadow-md rounded p-4">
             <table class="min-w-full divide-y divide-gray-200">

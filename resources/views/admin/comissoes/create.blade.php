@@ -14,7 +14,7 @@
                     <label class="block text-sm font-medium text-gray-700">Usuário</label>
                     <select name="user_id" class="mt-1 block w-full border-gray-300 rounded-md" required>
                         <option value="">Selecione...</option>
-                        @foreach($users as $u)
+                        @foreach($usuarios as $u)
                             <option value="{{ $u->id }}" {{ old('user_id') == $u->id ? 'selected' : '' }}>
                                 {{ $u->name }} ({{ $u->email }})
                             </option>

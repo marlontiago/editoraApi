@@ -16,9 +16,14 @@ class RelatorioVendasController extends Controller
 {
     public function index(Request $request)
     {
+        $gestor = Auth::user()->gestor;
+
+
         [$vendas, $comissoes] = $this->getVendasFiltradas($request);
 
-        return view('gestor.relatorios.vendas', compact('vendas', 'comissoes'));
+        $distribuidores = $gestor->distribuidores()->with('user')->get();
+
+        return view('gestor.relatorios.vendas', compact('vendas', 'comissoes', 'distribuidores'));
     }
 
     public function exportExcel(Request $request)
@@ -47,6 +52,7 @@ class RelatorioVendasController extends Controller
         $query = Venda::with('distribuidor.user')
             ->whereIn('distribuidor_id', $distribuidorIds);
 
+        // 🔹 Filtro por período (semana ou mês)
         if ($request->filled('periodo')) {
             $hoje = Carbon::today();
             if ($request->periodo === 'semana') {
@@ -56,13 +62,21 @@ class RelatorioVendasController extends Controller
             }
         }
 
+        // 🔹 Filtro por intervalo de datas personalizado
         if ($request->filled('inicio') && $request->filled('fim')) {
             $query->whereBetween('data', [$request->inicio, $request->fim]);
         }
 
+        // 🔹 Filtro por distribuidor (user_id)
+        if ($request->filled('user_id')) {
+            $query->whereHas('distribuidor', function ($q) use ($request) {
+                $q->where('user_id', $request->user_id);
+            });
+        }
+
         $vendas = $query->orderByDesc('data')->get();
 
-        // groupBy para pegar rapidamente a última comissão por user
+        // 🔹 GroupBy para pegar rapidamente a última comissão por user
         $comissoes = Commission::whereIn('user_id', $userIds)
             ->orderBy('valid_from')
             ->get()
@@ -70,4 +84,5 @@ class RelatorioVendasController extends Controller
 
         return [$vendas, $comissoes];
     }
+
 }

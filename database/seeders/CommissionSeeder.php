@@ -13,19 +13,16 @@ class CommissionSeeder extends Seeder
         $gestor = User::where('email', 'gestor@example.com')->first();
         $distribuidor = User::where('email', 'distribuidor@example.com')->first();
 
-        Commission::insert([
-            [
-                'user_id' => $gestor->id,
-                'percentage' => 5.00,
-                'valid_from' => now()->toDateString(),
-                'active' => true,
-            ],
-            [
-                'user_id' => $distribuidor->id,
-                'percentage' => 8.50,
-                'valid_from' => now()->toDateString(),
-                'active' => true,
-            ],
+        Commission::create([
+            'user_id' => 2,
+            'tipo_usuario' => 'gestor',
+            'percentage' => 5.00,
+        ]);
+
+        Commission::create([
+            'user_id' => 3,
+            'tipo_usuario' => 'distribuidor',
+            'percentage' => 8.50,
         ]);
     }
 }

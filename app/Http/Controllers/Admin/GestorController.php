@@ -15,7 +15,7 @@ class GestorController extends Controller
 {
     public function index()
     {
-        $gestores = Gestor::with('user')->get();
+        $gestores = Gestor::with('user', 'distribuidores.user')->paginate(10);
         return view('admin.gestores.index', compact('gestores'));
     }
 

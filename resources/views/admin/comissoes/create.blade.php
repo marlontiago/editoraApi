@@ -28,15 +28,7 @@
                     <input type="number" step="0.01" name="percentage" value="{{ old('percentage') }}"
                            class="mt-1 block w-full border-gray-300 rounded-md" required>
                     @error('percentage') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
-                </div>
-               
-
-                <div class="mb-4">
-                    <label class="inline-flex items-center">
-                        <input type="checkbox" name="active" value="1" class="rounded" {{ old('active', true) ? 'checked' : '' }}>
-                        <span class="ml-2">Ativa</span>
-                    </label>
-                </div>
+                </div>             
 
                 <div class="flex justify-end">
                     <a href="{{ route('admin.comissoes.index') }}" class="bg-gray-300 text-black px-4 py-2 rounded mr-2">Cancelar</a>

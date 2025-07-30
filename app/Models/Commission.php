@@ -11,13 +11,10 @@ class Commission extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'percentage', 'valid_from', 'valid_to', 'active', 'notes'
+        'user_id', 'tipo_usuario', 'percentage'
     ];
 
     protected $casts = [
-        'valid_from' => 'date',
-        'valid_to'   => 'date',
-        'active'     => 'boolean',
         'percentage' => 'float',
     ];
 
@@ -26,18 +23,13 @@ class Commission extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function scopeCurrent(Builder $query, $date = null)
+    public function scopeGestores($query)
     {
-        $date = $date ?: now()->toDateString();
+        return $query->where('tipo_usuario', 'gestor');
+    }
 
-        return $query
-            ->where(function ($q) use ($date) {
-                $q->whereNull('valid_from')->orWhere('valid_from', '<=', $date);
-            })
-            ->where(function ($q) use ($date) {
-                $q->whereNull('valid_to')->orWhere('valid_to', '>=', $date);
-            })
-            ->where('active', true)
-            ->orderByDesc('created_at');
+    public function scopeDistribuidores($query)
+    {
+        return $query->where('tipo_usuario', 'distribuidor');
     }
 }

@@ -18,7 +18,7 @@ class DashboardController extends Controller
 
         // Busca percentual atual do distribuidor
         $percentual = Commission::where('user_id', Auth::id())
-            ->orderByDesc('valid_from')
+            ->latest()
             ->value('percentage') ?? 0;
 
         // Aplica os mesmos filtros do relatório

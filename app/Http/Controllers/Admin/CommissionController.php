@@ -26,11 +26,29 @@ class CommissionController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
-            'percentage' => 'required|numeric|min:0',
-            
+            'percentage' => 'required|numeric|min:0',            
         ]);
 
-        Commission::create($request->only('user_id', 'percentage'));
+        $user = User::findOrFail($request->user_id);
+
+        if($user->hasRole('gestor')){
+
+                $tipo = 'gestor';
+
+            }elseif ($user->hasRole('distribuidor')){
+
+                $tipo = 'distribuidor';
+
+            }else{
+                
+                return back()->withErrors(['user_id' => 'Este usuário não possui um papel válido para cadastrar comissão']);
+            }
+
+        Commission::create([
+            'user_id' => $request->user_id,
+            'tipo_usuario' => $tipo,
+            'percentage' => $request->percentage,
+        ]);
 
         return redirect()->route('admin.comissoes.index')->with('success', 'Comissão cadastrada com sucesso.');
     }
@@ -44,11 +62,12 @@ class CommissionController extends Controller
     public function update(Request $request, Commission $commission)
     {
         $request->validate([
-            'percentage' => 'required|numeric|min:0',
-            
+            'percentage' => 'required|numeric|min:0',            
         ]);
 
-        $commission->update($request->only('percentage'));
+        $commission->update([
+            'percentage' => $request->percentage,
+        ]);
 
         return redirect()->route('admin.comissoes.index')->with('success', 'Comissão atualizada com sucesso.');
     }

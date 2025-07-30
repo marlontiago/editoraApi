@@ -13,7 +13,8 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gestor</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Distribuidores Vinculados</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
                     </tr>
@@ -22,6 +23,13 @@
                     @foreach($gestores as $gestor)
                         <tr>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $gestor->nome_completo }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                 @forelse($gestor->distribuidores as $distribuidor)
+                                    <div class="text-sm">{{ $distribuidor->user->name ?? '-' }}</div>
+                                @empty
+                                    <div class="text-gray-500 italic">Nenhum</div>
+                                @endforelse
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">{{ $gestor->user->email }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <a href="{{ route('admin.gestores.edit', $gestor) }}" class="text-indigo-600 hover:text-indigo-900">Editar</a>

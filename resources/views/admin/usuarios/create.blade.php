@@ -3,7 +3,7 @@
         <h2 class="text-xl font-semibold">Criar Novo Usuário</h2>
     </x-slot>
 
-    <div class="p-6">
+    <div class="p-6 max-w-xl mt-6 mx-auto bg-white rounded shadow space-y-6">
         <form action="{{ route('admin.usuarios.store') }}" method="POST" class="space-y-4">
             @csrf
 

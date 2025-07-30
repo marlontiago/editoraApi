@@ -9,7 +9,7 @@
         </div>
     @endif
 
-    <div class="p-6">
+    <div class="p-6 max-w-xl mt-6 mx-auto bg-white rounded shadow space-y-6">
         <form method="POST" action="{{ route('distribuidor.vendas.store') }}">
             @csrf
             <div id="produtos" class="space-y-4">

@@ -17,7 +17,8 @@ class CommissionController extends Controller
 
     public function create()
     {
-        $usuarios = User::all();
+        $usuariosComComissao = Commission::pluck('user_id');
+        $usuarios = User::whereNotIn('id', $usuariosComComissao)->get();
         return view('admin.comissoes.create', compact('usuarios'));
     }
 
@@ -26,10 +27,10 @@ class CommissionController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'percentage' => 'required|numeric|min:0',
-            'valid_from' => 'required|date',
+            
         ]);
 
-        Commission::create($request->only('user_id', 'percentage', 'valid_from'));
+        Commission::create($request->only('user_id', 'percentage'));
 
         return redirect()->route('admin.comissoes.index')->with('success', 'Comissão cadastrada com sucesso.');
     }
@@ -44,10 +45,10 @@ class CommissionController extends Controller
     {
         $request->validate([
             'percentage' => 'required|numeric|min:0',
-            'valid_from' => 'required|date',
+            
         ]);
 
-        $commission->update($request->only('percentage', 'valid_from'));
+        $commission->update($request->only('percentage'));
 
         return redirect()->route('admin.comissoes.index')->with('success', 'Comissão atualizada com sucesso.');
     }

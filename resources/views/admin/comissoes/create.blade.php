@@ -29,22 +29,7 @@
                            class="mt-1 block w-full border-gray-300 rounded-md" required>
                     @error('percentage') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
                 </div>
-
-                <div class="mb-4 flex gap-2">
-                    <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-700">Válido de</label>
-                        <input type="date" name="valid_from" value="{{ old('valid_from') }}"
-                               class="mt-1 block w-full border-gray-300 rounded-md">
-                        @error('valid_from') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-700">Até</label>
-                        <input type="date" name="valid_to" value="{{ old('valid_to') }}"
-                               class="mt-1 block w-full border-gray-300 rounded-md">
-                        @error('valid_to') <p class="text-red-600 text-sm">{{ $message }}</p> @enderror
-                    </div>
-                </div>
+               
 
                 <div class="mb-4">
                     <label class="inline-flex items-center">

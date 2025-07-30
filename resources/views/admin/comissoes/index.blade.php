@@ -26,9 +26,9 @@
                         <th class="text-left px-4 py-2">Usuário</th>
                         <th class="text-left px-4 py-2">Email</th>
                         <th class="text-left px-4 py-2">Percentual</th>
-                        <th class="text-left px-4 py-2">Vigência</th>
-                        <th class="text-left px-4 py-2">Ativa</th>
+                        <th class="text-left px-4 py-2"></th>
                         <th class="text-left px-4 py-2">Ações</th>
+
                     </tr>
                 </thead>
                 <tbody>
@@ -38,19 +38,7 @@
                             <td class="px-4 py-2">{{ $commission->user->email }}</td>
                             <td class="px-4 py-2">{{ number_format($commission->percentage, 2, ',', '.') }}%</td>
                             <td class="px-4 py-2">
-                                @if($commission->valid_from)
-                                    {{ $commission->valid_from->format('d/m/Y') }}
-                                @endif
-                                –
-                                @if($commission->valid_to)
-                                    {{ $commission->valid_to->format('d/m/Y') }}
-                                @endif
-                            </td>
-                            <td class="px-4 py-2">
-                                <span class="px-2 py-1 rounded text-white {{ $commission->active ? 'bg-green-600' : 'bg-gray-500' }}">
-                                    {{ $commission->active ? 'Sim' : 'Não' }}
-                                </span>
-                            </td>
+                                
                             <td class="px-4 py-2">
                                 <a href="{{ route('admin.comissoes.edit', $commission) }}"
                                    class="text-black border px-3 py-1 rounded hover:bg-blue-700 text-sm">Editar</a>

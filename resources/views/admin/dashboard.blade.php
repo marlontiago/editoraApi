@@ -10,26 +10,31 @@
             <div class="bg-white p-4 shadow rounded">
                 <h3 class="text-sm text-gray-500">Produtos</h3>
                 <p class="text-2xl font-bold">{{ $totalProdutos }}</p>
-                <a href="{{ route('admin.produtos.index') }}" class="text-blue-600 text-sm underline">Ver produtos</a>
+                <a href="{{ route('admin.produtos.index') }}" class="inline-block bg-green-600 mt-6 text-white px-4 py-2 rounded hover:bg-green-700">Ver produtos</a>
             </div>
 
             <div class="bg-white p-4 shadow rounded">
                 <h3 class="text-sm text-gray-500">Gestores</h3>
                 <p class="text-2xl font-bold">{{ $totalGestores }}</p>
-                <a href="{{ route('admin.gestores.index') }}" class="text-blue-600 text-sm underline">Ver gestores</a>
+                <a href="{{ route('admin.gestores.index') }}" class="inline-block bg-blue-600 mt-6 text-white px-4 py-2 rounded hover:bg-green-700">Ver gestores</a>
+            </div>
+
+            <div class="bg-white p-4 shadow rounded">
+                <h3 class="text-sm text-gray-500">Criar Usuário</h3>
+                <a href="{{ route('admin.usuarios.create') }}" class="inline-block bg-green-600 mt-6 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Novo Usuário
+                </a>
             </div>
 
             <div class="bg-white p-4 shadow rounded">
                 <h3 class="text-sm text-gray-500">Comissões</h3>
-                <a href="{{ route('admin.comissoes.index') }}" class="text-blue-600 text-sm underline">Gerenciar Comissões</a>
+                <a href="{{ route('admin.comissoes.index') }}" class="inline-block mt-10 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Gerenciar Comissões</a>
             </div>
-            <div class="bg-white p-4 shadow rounded">
-                <h3 class="text-sm text-gray-500">Distribuidores</h3>
-                <a href="{{ route('admin.admin.distribuidores.create') }}"
-   class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-    + Novo Distribuidor
-</a>
-            </div>
+            
+
+            
+
+            
         </div>
     </div>
 </x-app-layout>

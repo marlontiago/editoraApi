@@ -1,24 +1,9 @@
 <?php
 
-
-use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Gestor\DistribuidorController;
-use App\Http\Controllers\Admin\ComissaoController;
-
-use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\UserCommissionController;
-use App\Http\Controllers\Admin\GestorController as AdminGestorController;
 use App\Http\Controllers\DashboardRedirectController;
-use App\Http\Controllers\Gestor\GestorDashboardController;
-use App\Http\Controllers\Gestor\DistribuidorController as GestorDistribuidorController;
-use App\Http\Controllers\Gestor\GestorComissaoController;
-
-use App\Http\Controllers\Distribuidor\DistribuidorDashboardController;
 use App\Http\Controllers\Distribuidor\VendaController;
-
-
 
 Route::get('/', function () {
     return view('auth.login');
@@ -39,13 +24,16 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('produtos', \App\Http\Controllers\Admin\ProdutoController::class);
+    Route::resource('produtos', \App\Http\Controllers\Admin\ProdutoController::class)->except("show");
     Route::resource('gestores', \App\Http\Controllers\Admin\GestorController::class)->parameters(['gestores' => 'gestor'])->except('show');
     Route::resource('comissoes', \App\Http\Controllers\Admin\CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
     Route::resource('distribuidores', \App\Http\Controllers\Admin\DistribuidorController::class)->names('admin.distribuidores');
 
     Route::get('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'vincularDistribuidores'])->name('admin.gestores.vincular');
     Route::post('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'storeVinculo'])->name('admin.gestores.vincular.salvar');
+
+    Route::get('/usuarios/create', [\App\Http\Controllers\Admin\UserController::class, 'create'])->name('usuarios.create');
+    Route::post('/usuarios', [\App\Http\Controllers\Admin\UserController::class, 'store'])->name('usuarios.store');
 });
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {

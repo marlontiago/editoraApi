@@ -11,32 +11,15 @@ use Carbon\Carbon;
 use App\Exports\DistribuidorVendasExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
 
 class VendaController extends Controller
 {
     public function index(Request $request)
     {
-        $distribuidor = Auth::user()->distribuidor;
+        $vendas = $this->filtrarVendas($request)->paginate(10);
 
-    $query = Venda::with(['produtos'])
-        ->where('distribuidor_id', $distribuidor->id);
-
-    if ($request->filled('periodo')) {
-        $hoje = Carbon::today();
-        if ($request->periodo === 'semana') {
-            $query->whereBetween('data', [$hoje->startOfWeek(), $hoje->endOfWeek()]);
-        } elseif ($request->periodo === 'mes') {
-            $query->whereMonth('data', $hoje->month)->whereYear('data', $hoje->year);
-        }
-    }
-
-    if ($request->filled('inicio') && $request->filled('fim')) {
-        $query->whereBetween('data', [$request->inicio, $request->fim]);
-    }
-
-    $vendas = $query->orderByDesc('data')->paginate(10);
-
-    return view('distribuidor.vendas.index', compact('vendas'));
+        return view('distribuidor.vendas.index', compact('vendas'));
     }
 
     public function create()
@@ -57,11 +40,21 @@ class VendaController extends Controller
         $gestorId = $distribuidor->gestor_id;
         $valorTotal = 0;
 
+        DB::beginTransaction();
+
+        try {
+        // Verifica se todos os produtos têm estoque suficiente
         foreach ($request->produtos as $produto) {
             $produtoModel = Produto::find($produto['id']);
+
+            if ($produtoModel->quantidade_estoque < $produto['quantidade']) {
+                throw new \Exception("Estoque insuficiente para o produto: {$produtoModel->nome}");
+            }
+
             $valorTotal += $produtoModel->preco * $produto['quantidade'];
         }
 
+        // Cria a venda
         $venda = Venda::create([
             'distribuidor_id' => $distribuidor->id,
             'gestor_id' => $gestorId,
@@ -69,49 +62,67 @@ class VendaController extends Controller
             'valor_total' => $valorTotal,
         ]);
 
+        // Associa produtos à venda e dá baixa no estoque
         foreach ($request->produtos as $produto) {
-        $produtoModel = Produto::find($produto['id']);
-        $venda->produtos()->attach($produto['id'], [
-        'quantidade' => $produto['quantidade'],
-        'preco_unitario' => $produtoModel->preco,
-        ]);
-}
+            $produtoModel = Produto::find($produto['id']);
+
+            $venda->produtos()->attach($produto['id'], [
+                'quantidade' => $produto['quantidade'],
+                'preco_unitario' => $produtoModel->preco,
+            ]);
+
+            $produtoModel->quantidade_estoque -= $produto['quantidade'];
+            $produtoModel->save();
+        }
+
+        DB::commit();
 
         return redirect()->route('distribuidor.vendas.index')->with('success', 'Venda registrada com sucesso.');
-    }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Erro ao registrar venda: ' . $e->getMessage()])->withInput();
+        }
+        }
 
     public function exportExcel(Request $request)
-{
-    return Excel::download(new DistribuidorVendasExport($request), 'vendas_distribuidor.xlsx');
-}
+    {
+        return Excel::download(new DistribuidorVendasExport($request), 'vendas_distribuidor.xlsx');
+    }
 
-public function exportPdf(Request $request)
-{
-    $vendas = $this->filtrarVendas($request)->get();
+    public function exportPdf(Request $request)
+        {
+            $vendas = $this->filtrarVendas($request)->get();
 
-    $pdf = Pdf::loadView('distribuidor.vendas.pdf', compact('vendas'));
-    return $pdf->download('vendas_distribuidor.pdf');
-}
+            $pdf = Pdf::loadView('distribuidor.vendas.pdf', compact('vendas'));
+            return $pdf->download('vendas_distribuidor.pdf');
+        }
 
 // Método interno para reutilizar filtro
-private function filtrarVendas(Request $request)
-{
-    $distribuidor = Auth::user()->distribuidor;
-    $query = Venda::with(['produtos'])->where('distribuidor_id', $distribuidor->id);
+    private function filtrarVendas(Request $request)
+    {
 
-    if ($request->filled('periodo')) {
-        $hoje = Carbon::today();
+        //dd('filtrarVendas chamado');
+        $distribuidor = Auth::user()->distribuidor;
+        $query = Venda::with(['produtos'])->where('distribuidor_id', $distribuidor->id);
+
+        if ($request->filled('periodo')) {
         if ($request->periodo === 'semana') {
-            $query->whereBetween('data', [$hoje->startOfWeek(), $hoje->endOfWeek()]);
-        } elseif ($request->periodo === 'mes') {
-            $query->whereMonth('data', $hoje->month)->whereYear('data', $hoje->year);
+
+            $inicioSemana = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
+            $fimSemana = Carbon::now()->endOfWeek(Carbon::SUNDAY)->toDateString();
+
+            $query->whereBetween('data', [$inicioSemana, $fimSemana]);
+
+            } elseif ($request->periodo === 'mes') {
+                $hoje = Carbon::now();
+                $query->whereMonth('data', $hoje->month)->whereYear('data', $hoje->year);
+            }
+    }
+            if ($request->filled('inicio') && $request->filled('fim')) {
+                $query->whereBetween('data', [$request->inicio, $request->fim]);
+            }
+
+            return $query->orderByDesc('data');
         }
-    }
-
-    if ($request->filled('inicio') && $request->filled('fim')) {
-        $query->whereBetween('data', [$request->inicio, $request->fim]);
-    }
-
-    return $query->orderByDesc('data');
-}
 }

@@ -25,7 +25,8 @@
                         <th class="p-2 border text-left">Nome</th>
                         <th class="p-2 border text-left">Preço</th>
                         <th class="p-2 border text-left">Estoque</th>
-                        <th class="p-2 border text-left">Ações</th>
+                        <th class="p-2 border text-left">Editar</th>
+                        <th class="p-2 border text-left">Excluir</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -46,6 +47,13 @@
                             <td class="p-2">
                                 <a href="{{ route('admin.produtos.edit', $produto) }}"
                                    class="text-blue-600 hover:underline">Editar</a>
+                            </td>
+                            <td class="p-2"> 
+                                <form action="{{ route('admin.produtos.destroy', $produto) }}" method="POST" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600 hover:text-red-900 ml-2">Excluir</button>
+                                </form>
                             </td>
                         </tr>
                     @empty

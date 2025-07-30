@@ -3,6 +3,12 @@
         <h2 class="text-xl font-semibold text-gray-800">Registrar Venda</h2>
     </x-slot>
 
+    @if ($errors->has('error'))
+        <div class="bg-red-100 text-red-800 p-4 rounded mb-4">
+            {{ $errors->first('error') }}
+        </div>
+    @endif
+
     <div class="p-6">
         <form method="POST" action="{{ route('distribuidor.vendas.store') }}">
             @csrf

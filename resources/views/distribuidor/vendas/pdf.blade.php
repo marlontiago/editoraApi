@@ -1,3 +1,26 @@
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    th, td {
+        border: 1px solid #000;
+        padding: 8px;
+        text-align: left;
+    }
+
+    thead {
+        background-color: #f3f3f3;
+    }
+
+    h3 {
+        margin-top: 20px;
+    }
+</style>
+
+
 <table>
     <thead>
         <tr>

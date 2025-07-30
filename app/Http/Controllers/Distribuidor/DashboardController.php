@@ -14,6 +14,7 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $distribuidor = Auth::user()->distribuidor;
+        
 
         // Busca percentual atual do distribuidor
         $percentual = Commission::where('user_id', Auth::id())
@@ -27,7 +28,9 @@ class DashboardController extends Controller
         if ($request->filled('periodo')) {
             $hoje = Carbon::today();
             if ($request->periodo === 'semana') {
-                $vendasQuery->whereBetween('data', [$hoje->startOfWeek(), $hoje->endOfWeek()]);
+                $inicioSemana = Carbon::now()->startOfWeek(Carbon::MONDAY)->toDateString();
+                $fimSemana = Carbon::now()->endOfWeek(Carbon::SUNDAY)->toDateString();
+                $vendasQuery->whereBetween('data', [$inicioSemana, $fimSemana]);
             } elseif ($request->periodo === 'mes') {
                 $vendasQuery->whereMonth('data', $hoje->month)->whereYear('data', $hoje->year);
             }

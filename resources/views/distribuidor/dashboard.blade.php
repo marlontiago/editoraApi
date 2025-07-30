@@ -7,12 +7,12 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-blue-100 p-4 rounded shadow">
-                <p class="text-sm text-gray-600">Total de Vendas (filtradas)</p>
+                <p class="text-sm text-gray-600">Total de Vendas</p>
                 <p class="text-xl font-bold">R$ {{ number_format($totalVendas, 2, ',', '.') }}</p>
             </div>
             
             <div class="bg-green-100 p-4 rounded shadow">
-                <p class="text-sm text-gray-600">Comissão Recebida (filtradas)</p>
+                <p class="text-sm text-gray-600">Comissão Recebida</p>
                 <p class="text-xl font-bold">R$ {{ number_format($totalComissao, 2, ',', '.') }}</p>
             </div>
             <div class="bg-yellow-100 p-4 rounded shadow">

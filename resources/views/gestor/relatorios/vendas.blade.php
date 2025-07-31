@@ -5,6 +5,17 @@
         </h2>
     </x-slot>
 
+    <div class="mt-2 text-gray-700">
+    <p><strong>Gestor:</strong> {{ $gestor->user->name ?? '---' }}</p>
+
+    @php
+        $gestorUserId = $gestor->user_id;
+        $comissaoGestor = optional(optional($comissoes[$gestorUserId] ?? null)->last())->percentage ?? 0;
+    @endphp
+
+    <p><strong>Comissão do Gestor:</strong> {{ number_format($comissaoGestor, 2, ',', '.') }}%</p>
+</div>
+
     <div class="p-6 space-y-6">
 
         <form method="GET" action="{{ route('gestor.relatorios.vendas') }}" class="mb-6">

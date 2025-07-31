@@ -20,6 +20,14 @@
             </div>
 
             <div class="bg-white p-4 shadow rounded">
+                <h3 class="text-sm text-gray-500">Distribuidores</h3>
+                <p class="text-2xl font-bold">{{ $totalUsuarios }}</p>
+                <a href="{{ route('admin.distribuidores.index') }}" class="inline-block bg-green-600 mt-6 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Ver distribuidores
+                </a>
+            </div>
+
+            <div class="bg-white p-4 shadow rounded">
                 <h3 class="text-sm text-gray-500">Usuários</h3>
                 <p class="text-2xl font-bold">{{ $totalUsuarios }}</p>
                 <a href="{{ route('admin.usuarios.create') }}" class="inline-block bg-green-600 mt-6 text-white px-4 py-2 rounded hover:bg-green-700">

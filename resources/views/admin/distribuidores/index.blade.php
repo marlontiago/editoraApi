@@ -15,6 +15,7 @@
                 <tr class="bg-gray-200">
                     <th class="px-4 py-2 text-left">Nome</th>
                     <th class="px-4 py-2 text-left">Telefone</th>
+                    <th class="px-4 py-2 text-left">Cidade Atuação</th>
                     <th class="px-4 py-2 text-left">Ações</th>
                 </tr>
             </thead>
@@ -23,6 +24,14 @@
                     <tr class="border-t">
                         <td class="px-4 py-2">{{ $distribuidor->nome_completo }}</td>
                         <td class="px-4 py-2">{{ $distribuidor->telefone }}</td>
+                        <td>
+                        @if(optional($distribuidor->cities)->count())
+                            {{ $distribuidor->cities->pluck('name')->join(', ') }}
+                        @else
+                            <span class="text-gray-500">Sem cidade de atuação</span>
+                        @endif
+                        </td>
+
                         <td class="px-4 py-2 space-x-2">
                             <a href="{{ route('admin.distribuidores.edit', $distribuidor->id) }}" class="text-blue-600">Editar</a>
                             <form action="{{ route('admin.distribuidores.destroy', $distribuidor->id) }}" method="POST" class="inline">

@@ -50,8 +50,10 @@
 
                 <div class="mb-2 text-sm">
                     <strong>Valor Total:</strong> R$ {{ number_format($venda->valor_total, 2, ',', '.') }}<br>
-                    <strong>Comissão (%):</strong> {{ number_format($venda->commission_percentage_snapshot ?? 0, 2, ',', '.') }}%<br>
-                    <strong>Comissão (R$):</strong> R$ {{ number_format($venda->commission_value_snapshot ?? 0, 2, ',', '.') }}
+                    <strong>Comissão Distribuidor (%):</strong> {{ $comissaoDistribuidor }} % <br>
+                    <strong>Valor (R$):</strong> R$ {{ number_format($venda->comissao_distribuidor_valor, 2, ',', '.') }}<br>
+                    <strong>Comissao Gestor (%):</strong> {{ $comissaoGestor }} % <br>
+                    <strong>Valor (R$):</strong> R$ {{ number_format($venda->comissao_gestor_valor, 2, ',', '.') }}
                 </div>
 
                 <table class="w-full mt-2 text-sm">

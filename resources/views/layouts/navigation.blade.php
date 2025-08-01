@@ -5,12 +5,34 @@
             <div class="flex">
                 
 
+                
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link href="{{ route('dashboard.redirect') }}" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @role('admin')
+                    <x-nav-link href="{{ route('admin.produtos.index') }}" :active="request()->routeIs('dashboard')">
+                        {{ __('Produtos') }}
+                    </x-nav-link>
+
+                    <x-nav-link href="{{ route('admin.gestores.index') }}" :active="request()->routeIs('dashboard')">
+                        {{ __('Gestores') }}
+                    </x-nav-link>
+
+                    <x-nav-link href="{{ route('admin.distribuidores.index') }}" :active="request()->routeIs('dashboard')">
+                        {{ __('Distribuidores') }}
+                    </x-nav-link>
+
+                    <x-nav-link href="{{ route('admin.usuarios.create') }}" :active="request()->routeIs('dashboard')">
+                        {{ __('Usuários') }}
+                    </x-nav-link>
+
+                    <x-nav-link href="{{ route('admin.comissoes.index') }}" :active="request()->routeIs('dashboard')">
+                        {{ __('Comissões') }}
+                    </x-nav-link>
                 </div>
+                @endrole
             </div>
 
             <!-- Settings Dropdown -->

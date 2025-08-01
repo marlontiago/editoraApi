@@ -13,8 +13,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $distribuidor = Auth::user()->distribuidor;
-        
+        $distribuidor = Auth::user()->distribuidor;        
 
         // Busca percentual atual do distribuidor
         $percentual = Commission::where('user_id', Auth::id())

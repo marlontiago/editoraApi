@@ -14,6 +14,7 @@
             <thead>
                 <tr class="bg-gray-200">
                     <th class="px-4 py-2 text-left">Nome</th>
+                    <th class="px-4 py-2 text-left">Email</th>
                     <th class="px-4 py-2 text-left">Telefone</th>
                     <th class="px-4 py-2 text-left">Cidade Atuação</th>
                     <th class="px-4 py-2 text-left">Ações</th>
@@ -23,6 +24,7 @@
                 @foreach($distribuidores as $distribuidor)
                     <tr class="border-t">
                         <td class="px-4 py-2">{{ $distribuidor->nome_completo }}</td>
+                        <td class="px-4 py-2">{{ $distribuidor->user->email }}</td>
                         <td class="px-4 py-2">{{ $distribuidor->telefone }}</td>
                         <td>
                         @if(optional($distribuidor->cities)->count())

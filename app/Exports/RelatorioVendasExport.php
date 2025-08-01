@@ -42,7 +42,6 @@ class RelatorioVendasExport implements FromView
         $vendas = $query->orderByDesc('data')->get();
 
         $comissoes = Commission::whereIn('user_id', $userIds)
-            ->orderBy('valid_from')
             ->get()
             ->groupBy('user_id');
 

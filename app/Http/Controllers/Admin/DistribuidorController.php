@@ -61,9 +61,10 @@ class DistribuidorController extends Controller
 
     public function edit(Distribuidor $distribuidor)
     {
-        $cities = City::orderBy('nome')->get();
+        $cities = City::orderBy('name')->get();
+        $gestores = Gestor::orderBy('nome_completo')->get();
         $selectedCities = $distribuidor->cities->pluck('id')->toArray();
-        return view('admin.distribuidores.edit', compact('distribuidor', 'cities', 'selectedCities'));
+        return view('admin.distribuidores.edit', compact('distribuidor', 'cities', 'selectedCities', 'gestores'));
     }
 
     public function update(Request $request, Distribuidor $distribuidor)

@@ -56,7 +56,7 @@
             </div>
 
             <div class="mb-4">
-                <label class="block font-medium text-sm text-gray-700 mb-2">Cidades</label>
+                <label class="block font-medium text-sm text-gray-700 mb-2">Cidades de atuação</label>
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     @foreach($cities as $cidade)
                         <label class="flex items-center space-x-2">

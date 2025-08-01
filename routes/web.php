@@ -27,7 +27,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('produtos', \App\Http\Controllers\Admin\ProdutoController::class)->except("show");
     Route::resource('gestores', \App\Http\Controllers\Admin\GestorController::class)->parameters(['gestores' => 'gestor'])->except('show');
     Route::resource('comissoes', \App\Http\Controllers\Admin\CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
-    Route::resource('distribuidores', \App\Http\Controllers\Admin\DistribuidorController::class)->names('distribuidores')->except('show');
+    Route::resource('distribuidores', \App\Http\Controllers\Admin\DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor'])->except('show');
 
     Route::get('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'vincularDistribuidores'])->name('admin.gestores.vincular');
     Route::post('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'storeVinculo'])->name('admin.gestores.vincular.salvar');

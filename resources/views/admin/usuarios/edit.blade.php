@@ -1,38 +1,28 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Criar Novo Usuário</h2>
+        <h2 class="text-xl font-semibold text-gray-800">Editar Usuário</h2>
     </x-slot>
 
     <div class="p-6 max-w-3xl mx-auto space-y-10">
-
-        {{-- Formulário de criação --}}
+        {{-- Formulário de edição --}}
         <div class="bg-white p-6 rounded shadow">
-            <form action="{{ route('admin.usuarios.store') }}" method="POST" class="space-y-4">
+            <form action="{{ route('admin.usuarios.update', $usuario->id) }}" method="POST" class="space-y-4">
                 @csrf
+                @method('PUT')
 
                 <div>
                     <label for="name" class="block font-medium">Nome</label>
-                    <input type="text" name="name" class="w-full border rounded p-2" required>
+                    <input type="text" name="name" class="w-full border rounded p-2" value="{{ $usuario->name }}" required>
                 </div>
 
                 <div>
                     <label for="email" class="block font-medium">Email</label>
-                    <input type="email" name="email" class="w-full border rounded p-2" required>
+                    <input type="email" name="email" class="w-full border rounded p-2" value="{{ $usuario->email }}" required>
                 </div>
 
                 <div>
                     <label for="telefone" class="block font-medium">Telefone</label>
-                    <input type="text" name="telefone" class="w-full border rounded p-2">
-                </div>
-
-                <div>
-                    <label for="password" class="block font-medium">Senha</label>
-                    <input type="password" name="password" class="w-full border rounded p-2" required>
-                </div>
-
-                <div>
-                    <label for="password_confirmation" class="block font-medium">Confirmar Senha</label>
-                    <input type="password" name="password_confirmation" class="w-full border rounded p-2" required>
+                    <input type="text" name="telefone" class="w-full border rounded p-2" value="{{ $usuario->telefone ?? '' }}">
                 </div>
 
                 <div>
@@ -40,7 +30,9 @@
                     <select name="role" id="role" class="w-full border rounded p-2" required onchange="toggleGestorField()">
                         <option value="">Selecione...</option>
                         @foreach($roles as $role)
-                            <option value="{{ $role->name }}">{{ ucfirst($role->name) }}</option>
+                            <option value="{{ $role->name }}" {{ $usuario->roles->contains('name', $role->name) ? 'selected' : '' }}>
+                                {{ ucfirst($role->name) }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -50,25 +42,30 @@
                     <select name="gestor_id" class="w-full border rounded p-2">
                         <option value="">Selecione o gestor...</option>
                         @foreach($gestores as $gestor)
-                            <option value="{{ $gestor->id }}">{{ $gestor->nome_completo }}</option>
+                            <option value="{{ $gestor->id }}" {{ $usuario->distribuidor->gestor_id ?? null == $gestor->id ? 'selected' : '' }}>
+                                {{ $gestor->nome_completo }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
 
                 <div class="text-right">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Criar</button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Atualizar</button>
                 </div>
             </form>
         </div>
-
     </div>
 
-    {{-- Script para mostrar campo de gestor se role for "distribuidor" --}}
     <script>
         function toggleGestorField() {
             const role = document.getElementById('role').value;
             const gestorField = document.getElementById('gestor-field');
             gestorField.style.display = (role === 'distribuidor') ? 'block' : 'none';
         }
+
+        // Executa ao carregar para exibir o campo se for distribuidor
+        document.addEventListener('DOMContentLoaded', function () {
+            toggleGestorField();
+        });
     </script>
 </x-app-layout>

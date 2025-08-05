@@ -32,8 +32,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'vincularDistribuidores'])->name('admin.gestores.vincular');
     Route::post('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'storeVinculo'])->name('admin.gestores.vincular.salvar');
 
-    Route::get('/usuarios/create', [\App\Http\Controllers\Admin\UserController::class, 'create'])->name('usuarios.create');
-    Route::post('/usuarios', [\App\Http\Controllers\Admin\UserController::class, 'store'])->name('usuarios.store');
+    Route::resource('usuarios', \App\Http\Controllers\Admin\UserController::class);
+    
 });
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {

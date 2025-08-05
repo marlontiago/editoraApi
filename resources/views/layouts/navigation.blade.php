@@ -24,7 +24,7 @@
                         {{ __('Distribuidores') }}
                     </x-nav-link>
 
-                    <x-nav-link href="{{ route('admin.usuarios.create') }}" :active="request()->routeIs('dashboard')">
+                    <x-nav-link href="{{ route('admin.usuarios.index') }}" :active="request()->routeIs('dashboard')">
                         {{ __('Usuários') }}
                     </x-nav-link>
 

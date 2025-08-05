@@ -3,15 +3,32 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreProdutoRequest;
+use App\Http\Requests\UpdateProdutoRequest;
+use App\Http\Resources\ProdutoResource;
 use App\Models\Produto;
+use App\Services\ProdutoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProdutoController extends Controller
 {
-    public function index()
+
+    protected $produtoService;
+
+    public function __construct(ProdutoService $produtoService)
+    {
+        $this->produtoService = $produtoService;
+    }
+
+    public function index(Request $request)
     {
         $produtos = Produto::all();
+
+        if($request->wantsJson())
+        {
+            return ProdutoResource::collection($produtos);
+        }
+
         return view('admin.produtos.index', compact('produtos'));
     }
 
@@ -20,25 +37,20 @@ class ProdutoController extends Controller
         return view('admin.produtos.create');
     }
 
-    public function store(Request $request)
+    public function store(StoreProdutoRequest $request)
     {
-        $request->validate([
-        'nome' => 'required|string|max:255',
-        'descricao' => 'nullable|string',
-        'preco' => 'required|numeric',
-        'quantidade_estoque' => 'required|integer',
-        'imagem' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-    ]);
+        $dados = $request->validated();
+        $dados['imagem'] = $request->file('imagem');
 
-    $data = $request->only(['nome', 'descricao', 'preco', 'quantidade_estoque']);
+        $produto = $this->produtoService->criar($dados);
 
-    if ($request->hasFile('imagem')) {
-        $data['imagem'] = $request->file('imagem')->store('produtos', 'public');
-    }
+        if($request->wantsJson())
+        {
+            return new ProdutoResource($produto);
+        }
 
-    Produto::create($data);
-
-    return redirect()->route('admin.produtos.index')->with('success', 'Produto criado com sucesso.');
+        return redirect()->route('admin.produtos.index')
+            ->with('success', 'Produto criado com sucesso.');
     }
 
     public function edit(Produto $produto)
@@ -46,33 +58,41 @@ class ProdutoController extends Controller
         return view('admin.produtos.edit', compact('produto'));
     }
 
-    public function update(Request $request, Produto $produto)
+    public function update(UpdateProdutoRequest $request, Produto $produto)
     {
-        $request->validate([
-        'nome' => 'required|string|max:255',
-        'descricao' => 'nullable|string',
-        'preco' => 'required|numeric',
-        'quantidade_estoque' => 'required|integer',
-        'imagem' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-    ]);
 
-    $data = $request->only(['nome', 'descricao', 'preco', 'quantidade_estoque']);
+        $dados = $request->validated();
+        $dados['imagem'] = $request->file('imagem');
+        $produto = $this->produtoService->atualizar($produto, $dados);
 
-    if ($request->hasFile('imagem')) {
-        if ($produto->imagem && Storage::disk('public')->exists($produto->imagem)) {
-            Storage::disk('public')->delete($produto->imagem);
+        if($request->wantsJson())
+        {
+            return new ProdutoResource($produto);
         }
-        $data['imagem'] = $request->file('imagem')->store('produtos', 'public');
+
+        return redirect()->route('admin.produtos.index')
+            ->with('success', 'Produto atualizado com sucesso.');
     }
 
-    $produto->update($data);
-
-    return redirect()->route('admin.produtos.index')->with('success', 'Produto atualizado com sucesso.');
-    }
-
-    public function destroy(Produto $produto)
+    public function destroy(Request $request, Produto $produto)
     {
-        $produto->delete();
-        return redirect()->route('admin.produtos.index')->with('success', 'Produto removido com sucesso.');
+        $this->produtoService->deletar($produto);
+
+        if($request->wantsJson())
+        {
+            return response()->json(['message' => 'Produto removido com sucesso.']);
+        }
+
+        return redirect()->route('admin.produtos.index')
+            ->with('success', 'Produto removido com sucesso.');
+    }
+
+    public function show(Request $request, Produto $produto)
+    {
+        if ($request->wantsJson()) {
+            return new ProdutoResource($produto);
+        }
+
+        return view('admin.produtos.show', compact('produto'));
     }
 }

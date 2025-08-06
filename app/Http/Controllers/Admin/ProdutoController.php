@@ -7,12 +7,12 @@ use App\Http\Requests\StoreProdutoRequest;
 use App\Http\Requests\UpdateProdutoRequest;
 use App\Http\Resources\ProdutoResource;
 use App\Models\Produto;
+use App\Models\Colecao;
 use App\Services\ProdutoService;
 use Illuminate\Http\Request;
 
 class ProdutoController extends Controller
 {
-
     protected $produtoService;
 
     public function __construct(ProdutoService $produtoService)
@@ -22,10 +22,9 @@ class ProdutoController extends Controller
 
     public function index(Request $request)
     {
-        $produtos = Produto::all();
+        $produtos = Produto::with('colecao')->get();
 
-        if($request->wantsJson())
-        {
+        if ($request->wantsJson()) {
             return ProdutoResource::collection($produtos);
         }
 
@@ -34,7 +33,8 @@ class ProdutoController extends Controller
 
     public function create()
     {
-        return view('admin.produtos.create');
+        $colecoes = Colecao::orderBy('nome')->get();
+        return view('admin.produtos.create', compact('colecoes'));
     }
 
     public function store(StoreProdutoRequest $request)
@@ -44,8 +44,7 @@ class ProdutoController extends Controller
 
         $produto = $this->produtoService->criar($dados);
 
-        if($request->wantsJson())
-        {
+        if ($request->wantsJson()) {
             return new ProdutoResource($produto);
         }
 
@@ -55,18 +54,18 @@ class ProdutoController extends Controller
 
     public function edit(Produto $produto)
     {
-        return view('admin.produtos.edit', compact('produto'));
+        $colecoes = Colecao::orderBy('nome')->get();
+        return view('admin.produtos.edit', compact('produto', 'colecoes'));
     }
 
     public function update(UpdateProdutoRequest $request, Produto $produto)
     {
-
         $dados = $request->validated();
         $dados['imagem'] = $request->file('imagem');
+
         $produto = $this->produtoService->atualizar($produto, $dados);
 
-        if($request->wantsJson())
-        {
+        if ($request->wantsJson()) {
             return new ProdutoResource($produto);
         }
 
@@ -78,8 +77,7 @@ class ProdutoController extends Controller
     {
         $this->produtoService->deletar($produto);
 
-        if($request->wantsJson())
-        {
+        if ($request->wantsJson()) {
             return response()->json(['message' => 'Produto removido com sucesso.']);
         }
 

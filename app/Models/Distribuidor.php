@@ -10,7 +10,21 @@ class Distribuidor extends Model
     use HasFactory;
 
     protected $table = 'distribuidores';
-    protected $fillable = ['user_id', 'gestor_id', 'nome_completo', 'telefone'];
+    protected $fillable = [
+        'user_id',
+        'gestor_id',
+        'razao_social',
+        'cnpj',
+        'representante_legal',
+        'cpf',
+        'rg',
+        'telefone',
+        'endereco_completo',
+        'percentual_vendas',
+        'vencimento_contrato',
+        'contrato_assinado',
+        'contrato',
+    ];
 
     public function user()
     {
@@ -29,6 +43,6 @@ class Distribuidor extends Model
 
     public function cities()
     {
-        return $this->belongsToMany(City::class, 'city_distribuidor');
+        return $this->belongsToMany(City::class);
     }
 }

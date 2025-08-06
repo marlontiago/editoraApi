@@ -27,8 +27,16 @@ class DistribuidorSeeder extends Seeder
             'user_id' => $user->id,
         ], [
             'gestor_id' => $gestor->id,
-            'nome_completo' => 'Distribuidor Exemplo',
+            'razao_social' => 'Distribuidora Exemplo LTDA',
+            'cnpj' => '12.345.678/0001-99',
+            'representante_legal' => 'João da Silva',
+            'cpf' => '123.456.789-00',
+            'rg' => '12.345.678-9',
             'telefone' => '41999998888',
+            'endereco_completo' => 'Rua Exemplo, 123, Curitiba - PR',
+            'percentual_vendas' => 10,
+            'vencimento_contrato' => now()->addYear(),
+            'contrato_assinado' => true,
         ]);
     }
 }

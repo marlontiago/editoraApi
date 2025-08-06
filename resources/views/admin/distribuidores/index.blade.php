@@ -10,40 +10,53 @@
             <div class="mt-4 text-green-600">{{ session('success') }}</div>
         @endif
 
-        <table class="w-full mt-6 bg-white rounded shadow">
-            <thead>
-                <tr class="bg-gray-200">
-                    <th class="px-4 py-2 text-left">Nome</th>
-                    <th class="px-4 py-2 text-left">Email</th>
-                    <th class="px-4 py-2 text-left">Telefone</th>
-                    <th class="px-4 py-2 text-left">Cidade Atuação</th>
-                    <th class="px-4 py-2 text-left">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($distribuidores as $distribuidor)
-                    <tr class="border-t">
-                        <td class="px-4 py-2">{{ $distribuidor->nome_completo }}</td>
-                        <td class="px-4 py-2">{{ $distribuidor->user->email }}</td>
-                        <td class="px-4 py-2">{{ $distribuidor->telefone }}</td>
-                        <td>
-                        @if(optional($distribuidor->cities)->count())
-                            {{ $distribuidor->cities->pluck('name')->join(', ') }}
-                        @else
-                            <span class="text-gray-500">Sem cidade de atuação</span>
-                        @endif
-                        </td>
-
-                        <td class="px-4 py-2 space-x-2">
-                            <a href="{{ route('admin.distribuidores.edit', $distribuidor->id) }}" class="text-blue-600">Editar</a>
-                            <form action="{{ route('admin.distribuidores.destroy', $distribuidor->id) }}" method="POST" class="inline">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="text-red-600" onclick="return confirm('Tem certeza?')">Excluir</button>
-                            </form>
-                        </td>
+        <div class="overflow-x-auto mt-6">
+            <table class="min-w-full bg-white rounded shadow text-sm">
+                <thead class="bg-gray-100">
+                    <tr class="text-left">
+                        <th class="px-4 py-2">Razão Social</th>
+                        <th class="px-4 py-2">Representante</th>
+                        <th class="px-4 py-2">Email</th>
+                        <th class="px-4 py-2">CNPJ</th>
+                        <th class="px-4 py-2">Percentual (%)</th>
+                        <th class="px-4 py-2">Contrato</th>
+                        <th class="px-4 py-2">Cidades</th>
+                        <th class="px-4 py-2">Ações</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach($distribuidores as $distribuidor)
+                        <tr class="border-t">
+                            <td class="px-4 py-2">{{ $distribuidor->razao_social }}</td>
+                            <td class="px-4 py-2">{{ $distribuidor->representante_legal }}</td>
+                            <td class="px-4 py-2">{{ $distribuidor->user->email }}</td>
+                            <td class="px-4 py-2">{{ $distribuidor->cnpj }}</td>
+                            <td class="px-4 py-2">{{ number_format($distribuidor->percentual_vendas, 2) }}%</td>
+                            <td class="px-4 py-2">
+                                @if($distribuidor->contrato)
+                                    <a href="{{ Storage::url($distribuidor->contrato) }}" target="_blank" class="text-blue-600 underline">Ver PDF</a>
+                                @else
+                                    <span class="text-gray-400">Nenhum</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-2">
+                                @if($distribuidor->cities->count())
+                                    {{ $distribuidor->cities->pluck('name')->join(', ') }}
+                                @else
+                                    <span class="text-gray-400">Sem cidades</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-2 space-x-2">
+                                <a href="{{ route('admin.distribuidores.edit', $distribuidor->id) }}" class="text-blue-600">Editar</a>
+                                <form action="{{ route('admin.distribuidores.destroy', $distribuidor->id) }}" method="POST" class="inline">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="text-red-600" onclick="return confirm('Tem certeza que deseja excluir?')">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     </div>
 </x-app-layout>

@@ -11,8 +11,17 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('gestor_id')->constrained('gestores')->cascadeOnDelete();
-            $table->string('nome_completo');
+            $table->string('razao_social');
+            $table->string('cnpj');
+            $table->string('representante_legal');
+            $table->string('cpf');
+            $table->string('rg');
             $table->string('telefone')->nullable();
+            $table->string('endereco_completo')->nullable();
+            $table->decimal('percentual_vendas', 5, 2)->default(0);
+            $table->date('vencimento_contrato')->nullable();
+            $table->boolean('contrato_assinado')->default(false);
+            $table->string('contrato')->nullable(); // path do arquivo
             $table->timestamps();
         });
     }

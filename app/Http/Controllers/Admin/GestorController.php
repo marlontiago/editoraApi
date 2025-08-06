@@ -22,21 +22,35 @@ class GestorController extends Controller
     public function create()
     {
         $cities = City::all();
+        
         return view('admin.gestores.create', compact('cities'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'nome_completo' => 'required|string|max:255',
+            'razao_social' => 'required|string|max:255',
+            'cnpj' => 'required|string|max:20',
+            'representante_legal' => 'required|string|max:255',
+            'cpf' => 'required|string|max:20',
+            'rg' => 'required|string|max:20',
             'telefone' => 'required|string|max:20',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
+            'endereco_completo' => 'nullable|string|max:255',
+            'percentual_vendas' => 'requi                   red|numeric|min:0|max:100',
+            'vencimento_contrato' => 'nullable|date',
+            'contrato_assinado' => 'nullable|boolean',
+            'contrato' => 'nullable|file|mimes:pdf|max:2048',
             'cities' => 'array|nullable',
         ]);
 
+        $contratoPath = $request->hasFile('contrato')
+            ? $request->file('contrato')->store('contratos', 'public')
+            : null;
+
         $user = User::create([
-            'name' => $request->nome_completo,
+            'name' => $request->razao_social,
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
@@ -44,8 +58,18 @@ class GestorController extends Controller
 
         $gestor = Gestor::create([
             'user_id' => $user->id,
-            'nome_completo' => $request->nome_completo,
+            'razao_social' => $request->razao_social,
+            'cnpj' => $request->cnpj,
+            'representante_legal' => $request->representante_legal,
+            'cpf' => $request->cpf,
+            'rg' => $request->rg,
             'telefone' => $request->telefone,
+            'email' => $request->email,
+            'endereco_completo' => $request->endereco_completo,
+            'percentual_vendas' => $request->percentual_vendas,
+            'vencimento_contrato' => $request->vencimento_contrato,
+            'contrato_assinado' => $request->boolean('contrato_assinado'),
+            'contrato' => $contratoPath,
         ]);
 
         if ($request->has('cities')) {
@@ -57,29 +81,58 @@ class GestorController extends Controller
 
     public function edit(Gestor $gestor)
     {
-        $cities = City::all();
+        $cities = City::orderBy('name')->get();
         $gestor->load('user', 'cities');
         return view('admin.gestores.edit', compact('gestor', 'cities'));
     }
 
     public function update(Request $request, Gestor $gestor)
     {
-        $request->validate([
-            'nome_completo' => 'required|string|max:255',
+         $request->validate([
+            'razao_social' => 'required|string|max:255',
+            'cnpj' => 'required|string|max:20',
+            'representante_legal' => 'required|string|max:255',
+            'cpf' => 'required|string|max:20',
+            'rg' => 'required|string|max:20',
             'telefone' => 'required|string|max:20',
-            'email' => 'required|email|unique:users,email,' . $gestor->user_id,
+            'email' => 'nullable|email|unique:users,email,' . $gestor->user_id,
+            'password' => 'nullable|string|min:6',
+            'endereco_completo' => 'nullable|string|max:255',
+            'percentual_vendas' => 'required|numeric|min:0|max:100',
+            'vencimento_contrato' => 'nullable|date',
+            'contrato_assinado' => 'nullable|boolean',
+            'contrato' => 'nullable|file|mimes:pdf|max:2048',
             'cities' => 'array|nullable',
         ]);
 
+        if ($request->hasFile('contrato')) {
+            $contratoPath = $request->file('contrato')->store('contratos', 'public');
+            $gestor->contrato = $contratoPath;
+        }
+
         $gestor->update([
-            'nome_completo' => $request->nome_completo,
+            'razao_social' => $request->razao_social,
+            'cnpj' => $request->cnpj,
+            'representante_legal' => $request->representante_legal,
+            'cpf' => $request->cpf,
+            'rg' => $request->rg,
             'telefone' => $request->telefone,
+            'email' => $request->email,
+            'endereco_completo' => $request->endereco_completo,
+            'percentual_vendas' => $request->percentual_vendas,
+            'vencimento_contrato' => $request->vencimento_contrato,
+            'contrato_assinado' => $request->boolean('contrato_assinado'),
         ]);
 
-        $gestor->user->update([
-            'name' => $request->nome_completo,
-            'email' => $request->email,
-        ]);
+        $userData = [
+    'name' => $request->razao_social,
+];
+
+if ($request->filled('email')) {
+    $userData['email'] = $request->email;
+}
+
+$gestor->user->update($userData);
 
         if ($request->has('cities')) {
             $gestor->cities()->sync($request->cities);

@@ -9,8 +9,27 @@ class Gestor extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'nome_completo', 'telefone'];
     protected $table = 'gestores';
+    protected $fillable = [
+        'user_id',
+        'razao_social',
+        'cnpj',
+        'representante_legal',
+        'cpf',
+        'rg',
+        'telefone',
+        'email',
+        'endereco_completo',
+        'percentual_vendas',
+        'vencimento_contrato',
+        'contrato_assinado',
+        'contrato',
+    ];
+
+    protected $casts = [
+        'vencimento_contrato' => 'date',
+    ];
+    
 
     public function user()
     {

@@ -30,8 +30,18 @@ class UserSeeder extends Seeder
 
         $gestor = Gestor::create([
             'user_id' => $userGestor->id,
-            'nome_completo' => 'Gestor Teste',
+            'razao_social' => 'Gestor Representações LTDA',
+            'cnpj' => '12.345.678/0001-00',
+            'representante_legal' => 'João Representante',
+            'cpf' => '123.456.789-00',
+            'rg' => '12.345.678-9',
             'telefone' => '41999999999',
+            'email' => 'gestor@example.com',
+            'endereco_completo' => 'Rua dos Gerentes, 456, Curitiba - PR',
+            'percentual_vendas' => 12.5,
+            'vencimento_contrato' => now()->addYear(),
+            'contrato_assinado' => true,
+            'contrato' => null,
         ]);
 
         // Distribuidor
@@ -45,8 +55,17 @@ class UserSeeder extends Seeder
         Distribuidor::create([
             'user_id' => $userDistribuidor->id,
             'gestor_id' => $gestor->id,
-            'nome_completo' => 'Distribuidor Teste',
+            'razao_social' => 'Distribuidora Teste LTDA',
+            'cnpj' => '99.999.999/0001-00',
+            'representante_legal' => 'Maria Oliveira',
+            'cpf' => '999.999.999-99',
+            'rg' => '12.345.678-9',
             'telefone' => '41999999998',
+            'endereco_completo' => 'Rua das Flores, 321',
+            'percentual_vendas' => 8.5,
+            'vencimento_contrato' => now()->addMonths(18),
+            'contrato_assinado' => true,
+            'contrato' => null,
         ]);
     }
 }

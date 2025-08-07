@@ -83,5 +83,13 @@
         <div class="mt-6">
             <a href="{{ route('admin.pedidos.index') }}" class="text-blue-600 hover:underline">← Voltar para a lista</a>
         </div>
+
+        <div class="mt-6 flex gap-4">
+            <a href="{{ route('admin.pedidos.exportar', ['pedido' => $pedido->id, 'tipo' => 'relatorio']) }}"
+            class="bg-black text-white px-4 py-2 rounded hover:bg-gray-200">Exportar Relatório</a>
+
+            <a href="{{ route('admin.pedidos.exportar', ['pedido' => $pedido->id, 'tipo' => 'orcamento']) }}"
+            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Exportar Orçamento</a>
+        </div>
     </div>
 </x-app-layout>

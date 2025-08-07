@@ -11,6 +11,8 @@ use App\Models\Distribuidor;
 use App\Models\Gestor;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PedidoController extends Controller
 {
@@ -70,31 +72,48 @@ class PedidoController extends Controller
             $desconto = is_numeric($request->desconto) ? floatval($request->desconto) : 0;
 
             foreach ($validated['produtos'] as $produtoData) {
-            $produto = Produto::findOrFail($produtoData['id']);
-            $quantidade = $produtoData['quantidade'];
+                //  trava a linha do produto
+                $produto = Produto::whereKey($produtoData['id'])->lockForUpdate()->firstOrFail();
+                $quantidade = (int) $produtoData['quantidade'];
 
-            $precoUnitario = $produto->preco;
-            $subtotalBruto = $precoUnitario * $quantidade;
-            $precoComDesconto = $precoUnitario * (1 - ($desconto / 100));
-            $subtotalComDesconto = $precoComDesconto * $quantidade;
+                //  validação de estoque
+                $disponivel = (int) $produto->quantidade_estoque;
+                if ($disponivel < $quantidade) {
+                    throw new \RuntimeException(
+                        "Estoque insuficiente para o produto {$produto->nome}. Disponível: {$disponivel}, solicitado: {$quantidade}"
+                    );
+                }
 
-            $pesoTotalProduto = $produto->peso * $quantidade;
-            $caixas = ceil($quantidade / $produto->quantidade_por_caixa);
+                // cálculos
+                $precoUnitario = (float) $produto->preco;
+                $subtotalBruto = $precoUnitario * $quantidade;
 
-            $pedido->produtos()->attach($produto->id, [
-                'quantidade' => $quantidade,
-                'preco_unitario' => $precoUnitario,
-                'desconto_aplicado' => $desconto,
-                'subtotal' => $subtotalComDesconto,
-                'peso_total_produto' => $pesoTotalProduto,
-                'caixas' => $caixas,
-            ]);
+                $precoComDesconto = $precoUnitario * (1 - ($desconto / 100));
+                $subtotalComDesconto = $precoComDesconto * $quantidade;
 
-            $pesoTotal += $pesoTotalProduto;
-            $totalCaixas += $caixas;
-            $valorBruto += $subtotalBruto;
-            $valorComDesconto += $subtotalComDesconto;
-        }
+                $pesoTotalProduto = (float) ($produto->peso ?? 0) * $quantidade;
+                $porCaixa = max(1, (int) $produto->quantidade_por_caixa);
+                $caixas = (int) ceil($quantidade / $porCaixa);
+
+                // pivot
+                $pedido->produtos()->attach($produto->id, [
+                    'quantidade'           => $quantidade,
+                    'preco_unitario'       => $precoUnitario,
+                    'desconto_aplicado'    => $desconto,
+                    'subtotal'             => $subtotalComDesconto,
+                    'peso_total_produto'   => $pesoTotalProduto,
+                    'caixas'               => $caixas,
+                ]);
+
+                //  debita estoque
+                $produto->decrement('quantidade_estoque', $quantidade);
+
+                // acumuladores
+                $pesoTotal        += $pesoTotalProduto;
+                $totalCaixas      += $caixas;
+                $valorBruto       += $subtotalBruto;
+                $valorComDesconto += $subtotalComDesconto;
+            }
 
             $pedido->update([
                 'peso_total' => $pesoTotal,
@@ -117,4 +136,30 @@ class PedidoController extends Controller
         $pedido->load(['cidades', 'gestor', 'distribuidor.user', 'produtos']);
         return view('admin.pedidos.show', compact('pedido'));
     }
+
+    public function exportar(Pedido $pedido, string $tipo)
+    {
+        $pedido->load(['produtos', 'cidades', 'gestor', 'distribuidor.user']);
+
+        if (!in_array($tipo, ['relatorio', 'orcamento'])) abort(404);
+
+        $view = $tipo === 'relatorio'
+            ? 'admin.pedidos.pdf.relatorio'
+            : 'admin.pedidos.pdf.orcamento';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView($view, [
+            'pedido' => $pedido,
+            'tipo'   => $tipo,
+        ])
+        ->setPaper('a4')
+        ->setOptions([
+            'defaultFont'     => 'DejaVu Sans',
+            'isRemoteEnabled' => true, // permite carregar imagens via caminho/URL
+        ]);
+
+        return $pdf->download("pedido-{$pedido->id}-{$tipo}.pdf");
+    }
+
+
+
 }

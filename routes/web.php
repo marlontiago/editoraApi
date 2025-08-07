@@ -39,6 +39,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
     Route::get('/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
     Route::get('/pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+    Route::get('/pedidos/{pedido}/exportar/{tipo}', [PedidoController::class, 'exportar'])->name('pedidos.exportar');
     
     Route::get('/cidades/por-gestor/{id}', [\App\Http\Controllers\Admin\CidadeController::class, 'cidadesPorGestor']);
     Route::get('/cidades/por-distribuidor/{id}', [\App\Http\Controllers\Admin\CidadeController::class, 'cidadesPorDistribuidor']);

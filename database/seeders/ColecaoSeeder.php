@@ -14,11 +14,15 @@ class ColecaoSeeder extends Seeder
     public function run(): void
     {
         $colecoes = [
-            'Coleção Aprender e Crescer',
-            'Coleção Mundo do Saber',
-            'Coleção Descobertas',
-            'Coleção Leitura Viva',
-            'Coleção Primeiros Passos',
+            'Conecta ENEM',
+            'Didático Profissional',
+            'Educação Financeira',
+            'Educação Trânsito',
+            'EJA - Educação Adultos',
+            'PNLD',
+            'Revisão dos Saberes',
+            'Robogarden',
+            'Sabe Brasil',
         ];
 
         foreach ($colecoes as $nome) {

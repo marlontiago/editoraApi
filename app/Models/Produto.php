@@ -17,6 +17,13 @@ class Produto extends Model
         'numero_paginas', 'peso', 'ano_escolar'
     ];
 
+    protected $casts = [
+        'preco'               => 'decimal:2',
+        'peso'                => 'decimal:3',
+        'quantidade_estoque'  => 'integer',
+        'quantidade_por_caixa'=> 'integer',
+    ];
+
     public function vendas()
     {
 

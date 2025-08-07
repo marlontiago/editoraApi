@@ -31,6 +31,9 @@
                     <x-nav-link href="{{ route('admin.comissoes.index') }}" :active="request()->routeIs('dashboard')">
                         {{ __('Comissões') }}
                     </x-nav-link>
+                    <x-nav-link href="{{ route('admin.pedidos.index') }}" :active="request()->routeIs('dashboard')">
+                        {{ __('Pedidos') }}
+                    </x-nav-link>
                 </div>
                 @endrole
             </div>

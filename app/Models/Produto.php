@@ -9,8 +9,10 @@ class Produto extends Model
 {
     use HasFactory;
 
+    protected $table = 'produtos';
+
     protected $fillable = [
-        'nome', 'descricao', 'preco', 'imagem', 'quantidade_estoque',
+        'nome', 'descricao', 'preco', 'imagem', 'quantidade_estoque','quantidade_por_caixa',
         'colecao_id', 'titulo', 'isbn', 'autores', 'edicao', 'ano',
         'numero_paginas', 'peso', 'ano_escolar'
     ];
@@ -25,5 +27,19 @@ class Produto extends Model
     public function colecao()
     {
         return $this->belongsTo(Colecao::class);
+    }
+
+    public function pedidos()
+    {
+        return $this->belongsToMany(Pedido::class, 'pedido_produto')
+            ->withPivot([
+                'quantidade',
+                'preco_unitario',
+                'desconto_aplicado',
+                'subtotal',
+                'peso_total_produto',
+                'caixas'
+            ])
+            ->withTimestamps();
     }
 }

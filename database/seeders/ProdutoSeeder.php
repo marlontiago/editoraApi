@@ -20,6 +20,7 @@ class ProdutoSeeder extends Seeder
             'peso' => 0.450,
             'ano_escolar' => 'Fund 2',
             'quantidade_estoque' => 50,
+            'quantidade_por_caixa' => 10,
             'preco' => 35.00,
             'colecao_id' => 1, // Assumindo que já exista uma coleção com ID 1
         ]);

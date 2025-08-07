@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\Distribuidor\VendaController;
+use App\Http\Controllers\Admin\PedidoController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -33,6 +34,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'storeVinculo'])->name('admin.gestores.vincular.salvar');
 
     Route::resource('usuarios', \App\Http\Controllers\Admin\UserController::class);
+
+    Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
+    Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
+    Route::get('/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
+    Route::get('/pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
+    
+    Route::get('/cidades/por-gestor/{id}', [\App\Http\Controllers\Admin\CidadeController::class, 'cidadesPorGestor']);
+    Route::get('/cidades/por-distribuidor/{id}', [\App\Http\Controllers\Admin\CidadeController::class, 'cidadesPorDistribuidor']);
     
 });
 

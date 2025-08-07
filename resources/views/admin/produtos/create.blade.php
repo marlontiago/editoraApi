@@ -70,12 +70,19 @@
                     <label for="peso" class="block text-sm font-medium text-gray-700">Peso (kg)</label>
                     <input type="number" step="0.001" name="peso" id="peso" class="form-input mt-1 block w-full">
                 </div>
+                <!-- Quantidade por Caixa -->
+                <div>
+                    <label for="quantidade_por_caixa" class="block font-medium text-sm text-gray-700">Quantidade por Caixa</label>
+                    <input type="number" name="quantidade_por_caixa" id="quantidade_por_caixa"
+                        value="{{ old('quantidade_por_caixa', $produto->quantidade_por_caixa ?? 1) }}"
+                        class="form-input mt-1 block w-full" required min="1">
+                </div>
                 <div>
                     <label for="ano_escolar" class="block text-sm font-medium text-gray-700">Ano Escolar</label>
                     <select name="ano_escolar" id="ano_escolar" class="form-input mt-1 block w-full">
                         <option value="">Selecione</option>
-                        @foreach (['Educação Infantil', 'Ensino Fundamental 1', 'Ensino Fundamental 2', 'Ensino Médio'] as $opcao)
-                            <option value="{{ $opcao }}">{{ $opcao }}</option>
+                        @foreach (['Ens Inf' => 'Educação Infantil', 'Fund 1' => 'Ens. Fundamental 1', 'Fund 2' => 'Ens. Fundamental 2', 'EM' => 'Ensino Médio'] as $valor => $label)
+                            <option value="{{ $valor }}">{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>

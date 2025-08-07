@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->decimal('preco', 10, 2);
             $table->string('imagem')->nullable();
             $table->integer('quantidade_estoque')->default(0);
+            $table->integer('quantidade_por_caixa')->default(1);
             $table->string('titulo')->nullable();
             $table->string('isbn')->nullable();
             $table->string('autores')->nullable();
@@ -22,7 +23,7 @@ return new class extends Migration {
             $table->year('ano')->nullable();
             $table->integer('numero_paginas')->nullable();
             $table->decimal('peso', 8, 3)->nullable(); // Ex: 0.450 (kg)
-            $table->enum('ano_escolar', ['Ens Inf', 'Fund 1', 'Fund 2', 'EM'])->nullable();
+            $table->enum('ano_escolar', ['Ens Inf', 'Fund 1', 'Fund 2', 'EM'])->nullable();            
             $table->timestamps();
         });
     }

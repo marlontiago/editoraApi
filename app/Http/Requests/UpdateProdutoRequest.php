@@ -21,6 +21,7 @@ class UpdateProdutoRequest extends FormRequest
             'edicao' => 'nullable|string|max:50',
             'ano' => 'nullable|integer|min:1900|max:' . date('Y'),
             'numero_paginas' => 'nullable|integer|min:1',
+            'quantidade_por_caixa' => 'required|integer|min:1',
             'peso' => 'nullable|numeric|min:0',
             'ano_escolar' => 'nullable|in:Ens Inf,Fund 1,Fund 2,EM',
             'colecao_id' => 'nullable|exists:colecoes,id',

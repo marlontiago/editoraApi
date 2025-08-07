@@ -79,6 +79,14 @@
                 <input type="number" step="0.001" name="peso" value="{{ old('peso', $produto->peso) }}" class="form-input w-full">
             </div>
 
+            <!-- Quantidade por Caixa -->
+            <div>
+                <label for="quantidade_por_caixa" class="block font-medium text-sm text-gray-700">Quantidade por Caixa</label>
+                <input type="number" name="quantidade_por_caixa" id="quantidade_por_caixa"
+                    value="{{ old('quantidade_por_caixa', $produto->quantidade_por_caixa ?? 1) }}"
+                    class="form-input mt-1 block w-full" required min="1">
+            </div>
+
             <!-- Ano Escolar -->
             <div>
                 <label class="block">Ano Escolar</label>

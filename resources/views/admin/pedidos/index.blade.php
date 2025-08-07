@@ -22,8 +22,9 @@
                         <th class="px-4 py-2">Cidade</th>
                         <th class="px-4 py-2">Gestor</th>
                         <th class="px-4 py-2">Distribuidor</th>
-                        <th class="px-4 py-2">Valor Total</th>
+                        <th class="px-4 py-2">Valor Bruto</th>
                         <th class="px-4 py-2">Desconto (%)</th>
+                        <th class="px-4 py-2">Valor com Desconto</th>
                         <th class="px-4 py-2">Caixas</th>
                         <th class="px-4 py-2">Peso (kg)</th>
                         <th class="px-4 py-2">Status</th>
@@ -35,18 +36,23 @@
                         <tr class="border-b">
                             <td class="px-4 py-2">{{ \Carbon\Carbon::parse($pedido->data)->format('d/m/Y') }}</td>
                             <td class="px-4 py-2">
-    @forelse ($pedido->cidades as $cidade)
-        <span class="inline-block bg-gray-200 text-sm text-gray-700 px-2 py-1 rounded mr-1">
-            {{ $cidade->name }}
-        </span>
-    @empty
-        <span class="text-gray-500">-</span>
-    @endforelse
-</td>
+                                @forelse ($pedido->cidades as $cidade)
+                                    <span class="inline-block bg-gray-200 text-sm text-gray-700 px-2 py-1 rounded mr-1">
+                                        {{ $cidade->name }}
+                                    </span>
+                                @empty
+                                    <span class="text-gray-500">-</span>
+                                @endforelse
+                            </td>
                             <td class="px-4 py-2">{{ $pedido->gestor->razao_social ?? '-' }}</td>
                             <td class="px-4 py-2">{{ $pedido->distribuidor->user->name ?? '-' }}</td>
-                            <td class="px-4 py-2">R$ {{ number_format($pedido->valor_total, 2, ',', '.') }}</td>
+                            <td class="px-4 py-2">
+                                R$ {{ number_format($pedido->valor_bruto, 2, ',', '.') }}
+                            </td>
                             <td class="px-4 py-2">{{ $pedido->desconto }}%</td>
+                            <td class="px-4 py-2">
+                                R$ {{ number_format($pedido->valor_total, 2, ',', '.') }}
+                            </td>
                             <td class="px-4 py-2">{{ $pedido->total_caixas }}</td>
                             <td class="px-4 py-2">{{ number_format($pedido->peso_total, 2, ',', '.') }}</td>
                             <td class="px-4 py-2 capitalize">{{ str_replace('_', ' ', $pedido->status) }}</td>

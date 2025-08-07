@@ -19,6 +19,7 @@ return new class extends Migration
             $table->decimal('desconto', 5, 2)->default(0); // ex: 20.00
             $table->decimal('peso_total', 8, 2)->default(0); // kg
             $table->integer('total_caixas')->default(0);
+            $table->decimal('valor_bruto', 10, 2)->default(0);
             $table->decimal('valor_total', 10, 2)->default(0);
             $table->enum('status', ['em_andamento', 'enviado', 'aprovado', 'rejeitado'])->default('em_andamento');
             $table->timestamps();

@@ -65,38 +65,42 @@ class PedidoController extends Controller
 
             $pesoTotal = 0;
             $totalCaixas = 0;
-            $valorTotal = 0;
+            $valorBruto = 0;
+            $valorComDesconto = 0;
+            $desconto = is_numeric($request->desconto) ? floatval($request->desconto) : 0;
 
             foreach ($validated['produtos'] as $produtoData) {
-                $produto = Produto::findOrFail($produtoData['id']);
-                $quantidade = $produtoData['quantidade'];
-                $desconto = $request->desconto ?? 0;
+            $produto = Produto::findOrFail($produtoData['id']);
+            $quantidade = $produtoData['quantidade'];
 
-                $precoUnitario = $produto->preco;
-                $precoComDesconto = $precoUnitario * (1 - ($desconto / 100));
-                $subtotal = $precoComDesconto * $quantidade;
+            $precoUnitario = $produto->preco;
+            $subtotalBruto = $precoUnitario * $quantidade;
+            $precoComDesconto = $precoUnitario * (1 - ($desconto / 100));
+            $subtotalComDesconto = $precoComDesconto * $quantidade;
 
-                $pesoTotalProduto = $produto->peso * $quantidade;
-                $caixas = ceil($quantidade / $produto->quantidade_por_caixa);
+            $pesoTotalProduto = $produto->peso * $quantidade;
+            $caixas = ceil($quantidade / $produto->quantidade_por_caixa);
 
-                $pedido->produtos()->attach($produto->id, [
-                    'quantidade' => $quantidade,
-                    'preco_unitario' => $precoUnitario,
-                    'desconto_aplicado' => $desconto,
-                    'subtotal' => $subtotal,
-                    'peso_total_produto' => $pesoTotalProduto,
-                    'caixas' => $caixas,
-                ]);
+            $pedido->produtos()->attach($produto->id, [
+                'quantidade' => $quantidade,
+                'preco_unitario' => $precoUnitario,
+                'desconto_aplicado' => $desconto,
+                'subtotal' => $subtotalComDesconto,
+                'peso_total_produto' => $pesoTotalProduto,
+                'caixas' => $caixas,
+            ]);
 
-                $pesoTotal += $pesoTotalProduto;
-                $totalCaixas += $caixas;
-                $valorTotal += $subtotal;
-            }
+            $pesoTotal += $pesoTotalProduto;
+            $totalCaixas += $caixas;
+            $valorBruto += $subtotalBruto;
+            $valorComDesconto += $subtotalComDesconto;
+        }
 
             $pedido->update([
                 'peso_total' => $pesoTotal,
                 'total_caixas' => $totalCaixas,
-                'valor_total' => $valorTotal,
+                'valor_bruto' => $valorBruto,
+                'valor_total' => $valorComDesconto,
             ]);
 
             DB::commit();

@@ -20,6 +20,7 @@ class Pedido extends Model
         'desconto',
         'peso_total',
         'total_caixas',
+        'valor_bruto',
         'valor_total',
         'status',
     ];

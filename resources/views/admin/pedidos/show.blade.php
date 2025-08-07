@@ -52,10 +52,29 @@
                 </tbody>
                 <tfoot class="bg-gray-50 font-semibold">
                     <tr>
-                        <td colspan="4" class="px-4 py-2 text-right">Totais:</td>
+                        <td colspan="4" class="px-4 py-2 text-right">Valor Bruto:</td>
+                        <td class="px-4 py-2">R$ {{ number_format($pedido->valor_bruto, 2, ',', '.') }}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="px-4 py-2 text-right">Desconto:</td>
+                        <td class="px-4 py-2">{{ $pedido->desconto }}%</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="px-4 py-2 text-right">Valor com Desconto:</td>
                         <td class="px-4 py-2">R$ {{ number_format($pedido->valor_total, 2, ',', '.') }}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="px-4 py-2 text-right">Peso Total:</td>
                         <td class="px-4 py-2">{{ number_format($pedido->peso_total, 2, ',', '.') }} kg</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td colspan="4" class="px-4 py-2 text-right">Total de Caixas:</td>
                         <td class="px-4 py-2">{{ $pedido->total_caixas }}</td>
+                        <td colspan="2"></td>
                     </tr>
                 </tfoot>
             </table>

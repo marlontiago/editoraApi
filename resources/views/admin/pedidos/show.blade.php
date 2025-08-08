@@ -3,6 +3,12 @@
         <h2 class="text-xl font-semibold text-gray-800">Detalhes do Pedido #{{ $pedido->id }}</h2>
     </x-slot>
 
+    @if (session('error'))
+        <div class="bg-red-100 text-red-800 p-3 rounded mb-4">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <div class="p-6 space-y-6">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded shadow">
@@ -80,11 +86,36 @@
             </table>
         </div>
 
+        <div class="bg-white p-4 rounded shadow mt-8">
+    <h3 class="text-lg font-semibold mb-4">Linha do Tempo</h3>
+    <ul class="space-y-4">
+        @forelse($pedido->logs as $log)
+            <li class="border-l-4 border-blue-600 pl-4">
+                <div class="text-sm text-gray-600">{{ $log->created_at->format('d/m/Y H:i') }}</div>
+                <div class="font-semibold">{{ $log->acao }}</div>
+                @if($log->detalhes)
+                    <div class="text-sm text-gray-700">{{ $log->detalhes }}</div>
+                @endif
+                @if($log->user)
+                    <div class="text-xs text-gray-500">Por: {{ $log->user->name }}</div>
+                @endif
+            </li>
+        @empty
+            <li class="text-gray-500">Nenhum registro até o momento.</li>
+        @endforelse
+    </ul>
+</div>
+
         <div class="mt-6">
             <a href="{{ route('admin.pedidos.index') }}" class="text-blue-600 hover:underline">← Voltar para a lista</a>
         </div>
 
         <div class="mt-6 flex gap-4">
+            <a href="{{ route('admin.pedidos.edit', $pedido) }}"
+                class="bg-black text-white px-4 py-2 rounded hover:bg-yellow-600">
+                Editar
+            </a>
+
             <a href="{{ route('admin.pedidos.exportar', ['pedido' => $pedido->id, 'tipo' => 'relatorio']) }}"
             class="bg-black text-white px-4 py-2 rounded hover:bg-gray-200">Exportar Relatório</a>
 

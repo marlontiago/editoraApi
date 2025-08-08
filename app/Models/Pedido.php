@@ -59,4 +59,19 @@ class Pedido extends Model
         return $this->belongsTo(Distribuidor::class);
     }
 
+    public function logs()
+    {
+        return $this->hasMany(PedidoLog::class)->latest();
+    }
+
+    public function registrarLog(string $acao, ?string $detalhes = null, array $changes = [])
+    {
+        $this->logs()->create([
+            'user_id'  => auth()->id(),
+            'acao'     => $acao,
+            'detalhes' => $detalhes,
+            'changes'  => $changes ?: null,
+        ]);
+    }
+
 }

@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('total_caixas')->default(0);
             $table->decimal('valor_bruto', 10, 2)->default(0);
             $table->decimal('valor_total', 10, 2)->default(0);
-            $table->enum('status', ['em_andamento', 'enviado', 'aprovado', 'rejeitado'])->default('em_andamento');
+            $table->enum('status', ['em_andamento', 'finalizado', 'cancelado'])->default('em_andamento');
             $table->timestamps();
         });
     }

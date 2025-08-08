@@ -58,6 +58,8 @@
                             <td class="px-4 py-2 capitalize">{{ str_replace('_', ' ', $pedido->status) }}</td>
                             <td class="px-4 py-2">
                                 <a href="{{ route('admin.pedidos.show', $pedido) }}" class="text-blue-600 hover:underline">Ver</a>
+                                <span class="mx-1">|</span>
+                                <a href="{{ route('admin.pedidos.edit', $pedido) }}" class="text-yellow-600 hover:underline">Editar</a>
                             </td>
                         </tr>
                     @empty

@@ -72,16 +72,19 @@
                 <input type="text" name="endereco_completo" id="endereco_completo" class="mt-1 block w-full border border-gray-300 rounded-md">
             </div>
 
-            {{-- Estados Atribuídos (Cidades) --}}
-            <div class="mb-4">
-                <label for="cities" class="block text-sm font-medium text-gray-700">Estados Atribuídos</label>
-                <select name="cities[]" id="cities" class="mt-1 block w-full border border-gray-300 rounded-md" multiple>
-                    @foreach($cities as $city)
-                        <option value="{{ $city->id }}">{{ $city->name }}</option>
-                    @endforeach
-                </select>
-                <p class="text-sm text-gray-500 mt-1">Segure Ctrl (Windows) ou Cmd (Mac) para selecionar múltiplos</p>
-            </div>
+            @php
+$ufs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+@endphp
+
+<div class="mb-4">
+    <label for="estado_uf" class="block text-sm font-medium text-gray-700">UF do Gestor</label>
+    <select name="estado_uf" id="estado_uf" class="mt-1 block w-full border rounded">
+        <option value="">-- Selecione --</option>
+        @foreach($ufs as $uf)
+            <option value="{{ $uf }}" @selected(old('estado_uf', $gestor->estado_uf ?? null) === $uf)>{{ $uf }}</option>
+        @endforeach
+    </select>
+</div>
 
             {{-- Percentual sobre vendas --}}
             <div class="mb-4">

@@ -15,7 +15,7 @@ class GestorController extends Controller
 {
     public function index()
     {
-        $gestores = Gestor::with('user', 'distribuidores.user')->paginate(10);
+        $gestores = Gestor::with('user', 'distribuidores.user', 'cities')->paginate(10);
         return view('admin.gestores.index', compact('gestores'));
     }
 
@@ -30,6 +30,7 @@ class GestorController extends Controller
     {
         $request->validate([
             'razao_social' => 'required|string|max:255',
+            'estado_uf' => 'nullable|string|size:2',
             'cnpj' => 'required|string|max:20',
             'representante_legal' => 'required|string|max:255',
             'cpf' => 'required|string|max:20',
@@ -58,6 +59,7 @@ class GestorController extends Controller
 
         $gestor = Gestor::create([
             'user_id' => $user->id,
+            'estado_uf' => $request->estado_uf,
             'razao_social' => $request->razao_social,
             'cnpj' => $request->cnpj,
             'representante_legal' => $request->representante_legal,
@@ -90,6 +92,7 @@ class GestorController extends Controller
     {
          $request->validate([
             'razao_social' => 'required|string|max:255',
+            'estado_uf' => 'nullable|string|size:2',
             'cnpj' => 'required|string|max:20',
             'representante_legal' => 'required|string|max:255',
             'cpf' => 'required|string|max:20',
@@ -112,6 +115,7 @@ class GestorController extends Controller
 
         $gestor->update([
             'razao_social' => $request->razao_social,
+            'estado_uf' => $request->estado_uf,
             'cnpj' => $request->cnpj,
             'representante_legal' => $request->representante_legal,
             'cpf' => $request->cpf,
@@ -128,11 +132,11 @@ class GestorController extends Controller
     'name' => $request->razao_social,
 ];
 
-if ($request->filled('email')) {
-    $userData['email'] = $request->email;
-}
+    if ($request->filled('email')) {
+        $userData['email'] = $request->email;
+    }
 
-$gestor->user->update($userData);
+    $gestor->user->update($userData);
 
         if ($request->has('cities')) {
             $gestor->cities()->sync($request->cities);
@@ -174,4 +178,18 @@ $gestor->user->update($userData);
 
         return redirect()->route('admin.admin.gestores.vincular')->with('success', 'Distribuidores vinculados com sucesso.');
     }
+
+    public function cidadesPorGestor(Gestor $gestor)
+{
+    if (!$gestor->estado_uf) {
+        return response()->json([]); // sem UF, sem cidades
+    }
+
+    return response()->json(
+        City::where('state', strtoupper($gestor->estado_uf))
+            ->orderBy('name')
+            ->get(['id','name'])
+    );
+}
+
 }

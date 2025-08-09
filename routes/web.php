@@ -5,6 +5,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\Distribuidor\VendaController;
 use App\Http\Controllers\Admin\PedidoController;
+use App\Http\Controllers\Admin\GestorController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ProdutoController;
+use App\Http\Controllers\Admin\DistribuidorController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\CommissionController;
+use App\Http\Controllers\Admin\CidadeController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -24,16 +31,18 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('produtos', \App\Http\Controllers\Admin\ProdutoController::class)->except("show");
-    Route::resource('gestores', \App\Http\Controllers\Admin\GestorController::class)->parameters(['gestores' => 'gestor'])->except('show');
-    Route::resource('comissoes', \App\Http\Controllers\Admin\CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
-    Route::resource('distribuidores', \App\Http\Controllers\Admin\DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor'])->except('show');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::resource('produtos',ProdutoController::class)->except("show");
 
-    Route::get('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'vincularDistribuidores'])->name('admin.gestores.vincular');
-    Route::post('gestores/vincular', [\App\Http\Controllers\Admin\GestorController::class, 'storeVinculo'])->name('admin.gestores.vincular.salvar');
+    Route::resource('comissoes', CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
+    Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor'])->except('show');
 
-    Route::resource('usuarios', \App\Http\Controllers\Admin\UserController::class);
+    Route::resource('gestores', GestorController::class)->parameters(['gestores' => 'gestor'])->except('show');
+    Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('admin.gestores.vincular');
+    Route::post('gestores/vincular', [GestorController::class, 'storeVinculo'])->name('admin.gestores.vincular.salvar');
+    Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])->name('gestores.cidades');
+
+    Route::resource('usuarios', UserController::class);
 
     Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
     Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
@@ -43,8 +52,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/pedidos/{pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
 
-    Route::get('/cidades/por-gestor/{id}', [\App\Http\Controllers\Admin\CidadeController::class, 'cidadesPorGestor']);
-    Route::get('/cidades/por-distribuidor/{id}', [\App\Http\Controllers\Admin\CidadeController::class, 'cidadesPorDistribuidor']);
+    Route::get('/cidades/por-gestor/{id}', [CidadeController::class, 'cidadesPorGestor']);
+    Route::get('/cidades/por-distribuidor/{id}', [CidadeController::class, 'cidadesPorDistribuidor']);
     
 });
 

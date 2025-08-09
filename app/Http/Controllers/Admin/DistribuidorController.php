@@ -15,7 +15,7 @@ class DistribuidorController extends Controller
 {
     public function index()
     {
-        $distribuidores = Distribuidor::with(['user', 'cities'])->get();
+        $distribuidores = Distribuidor::with(['user', 'cities','gestor.user'])->get();
         return view('admin.distribuidores.index', compact('distribuidores'));
     }
 
@@ -23,7 +23,7 @@ class DistribuidorController extends Controller
     {
         $cities = City::orderBy('name')->get();
         $gestores = Gestor::orderBy('razao_social')->get();
-        return view('admin.distribuidores.create', compact('cities', 'gestores'));
+        return view('admin.distribuidores.create', compact('gestores'));
     }
 
     public function store(Request $request)
@@ -47,6 +47,36 @@ class DistribuidorController extends Controller
             'cities' => 'required|array|min:1',
             'cities.*' => 'exists:cities,id',
         ]);
+
+        $gestor = Gestor::findOrFail($request->gestor_id);
+        if (!$gestor->estado_uf) {
+            return back()->withErrors(['gestor_id' => 'O gestor selecionado não tem UF vinculada.'])->withInput();
+        }
+
+        // 1) nenhuma cidade pode estar ocupada
+        $cidadesEmUso = DB::table('city_distribuidor')
+            ->whereIn('city_id', $request->cities)
+            ->pluck('city_id')
+            ->toArray();
+
+        if (!empty($cidadesEmUso)) {
+            $nomesCidades = City::whereIn('id', $cidadesEmUso)->pluck('name')->toArray();
+            return back()->withErrors([
+                'cities' => 'As seguintes cidades já possuem um distribuidor: ' . implode(', ', $nomesCidades)
+            ])->withInput();
+        }
+
+        // 2) TODAS as cidades devem ser da UF do gestor
+        $foraDaUF = City::whereIn('id', $request->cities)
+            ->where('state', '!=', $gestor->estado_uf)
+            ->exists();
+
+        if ($foraDaUF) {
+            return back()->withErrors([
+                'cities' => 'Há cidades que não pertencem à UF do gestor selecionado.'
+            ])->withInput();
+        }
+
 
         $contratoPath = $request->hasFile('contrato') 
             ? $request->file('contrato')->store('contratos', 'public') 

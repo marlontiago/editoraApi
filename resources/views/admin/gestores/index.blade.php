@@ -3,7 +3,7 @@
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">Gestores</h2>
     </x-slot>
 
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="min-w-full mx-auto py-6 sm:px-6 lg:px-8">
 
         @if(session('success'))
             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
@@ -28,7 +28,7 @@
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Telefone</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Email</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Endereço</th>
-                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Estados Atribuídos</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">UF do Gestor</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Distribuidores</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">% Vendas</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Venc. Contrato</th>
@@ -48,9 +48,9 @@
                             <td class="px-4 py-2">{{ $gestor->user->email }}</td>
                             <td class="px-4 py-2">{{ $gestor->endereco_completo }}</td>
                             <td class="px-4 py-2">
-                                @foreach($gestor->cities as $city)
-                                    <span class="block text-sm">{{ $city->nome }}</span>
-                                @endforeach
+                                <span class="inline-flex items-center rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                                    {{ $gestor->estado_uf ?? '-' }}
+                                </span>
                             </td>
                             <td class="px-4 py-2">
                                 @forelse($gestor->distribuidores as $dist)

@@ -16,6 +16,7 @@
                     <tr class="text-left">
                         <th class="px-4 py-2">Razão Social</th>
                         <th class="px-4 py-2">Representante</th>
+                        <th class="px-4 py-2">Gestor Responsável</th>
                         <th class="px-4 py-2">Email</th>
                         <th class="px-4 py-2">CNPJ</th>
                         <th class="px-4 py-2">Percentual (%)</th>
@@ -29,6 +30,9 @@
                         <tr class="border-t">
                             <td class="px-4 py-2">{{ $distribuidor->razao_social }}</td>
                             <td class="px-4 py-2">{{ $distribuidor->representante_legal }}</td>
+                            <td class="px-4 py-2">
+                                {{ $distribuidor->gestor->razao_social ?? '-' }}
+                            </td>
                             <td class="px-4 py-2">{{ $distribuidor->user->email }}</td>
                             <td class="px-4 py-2">{{ $distribuidor->cnpj }}</td>
                             <td class="px-4 py-2">{{ number_format($distribuidor->percentual_vendas, 2) }}%</td>

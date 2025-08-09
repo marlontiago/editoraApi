@@ -12,6 +12,7 @@ class Gestor extends Model
     protected $table = 'gestores';
     protected $fillable = [
         'user_id',
+        'estado_uf',
         'razao_social',
         'cnpj',
         'representante_legal',

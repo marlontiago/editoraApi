@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 
 class PedidoController extends Controller
 {
@@ -193,18 +194,19 @@ class PedidoController extends Controller
 
     public function update(Pedido $pedido, Request $request)
     {
-        // 🔒 mantém bloqueio de finalizado
+        
+        // Verifica e bloqueia se o status for finalizado
         if ($pedido->status === 'finalizado') {
             return back()->with('error', 'Não é mais possível editar: este pedido já foi finalizado.');
         }
 
-        // higieniza linhas
+        // Se alguma linha tiver valor null ou zero ele remove e passa apenas as linhas com todos os campos
         $produtosLimpos = collect($request->input('produtos', []))
             ->filter(fn ($row) => isset($row['id'], $row['quantidade']) && $row['id'] !== '' && (int)$row['quantidade'] > 0)
             ->values()->all();
         $request->merge(['produtos' => $produtosLimpos]);
 
-        // valida
+        // Valida requisição
         $validated = $request->validate([
             'data' => 'required|date',
             'gestor_id' => 'nullable|exists:gestores,id',
@@ -217,13 +219,14 @@ class PedidoController extends Controller
             'produtos.*.id' => 'required|exists:produtos,id',
             'produtos.*.quantidade' => 'required|integer|min:1',
         ]);
-
+    
+        // Inicia transação no banco de dados
         DB::beginTransaction();
         try {
-            // carrega estado atual
+            // Carrega o estado atual
             $pedido->load(['produtos', 'cidades']);
 
-            // snapshot "antes"
+            // Aqui cria um snapshot antes pra comparar com o próximo snapshot pra ver o que foi alterado
             $antes = [
                 'campos' => [
                     'data' => $pedido->data,
@@ -238,14 +241,14 @@ class PedidoController extends Controller
 
             $novoStatus = $validated['status'];
 
-            // ========== CASO ESPECIAL: CANCELAMENTO ==========
+            // Aqui caso o campo status seja alterado pra cancelado ele repôe no estoque
+            // todos aqueles itens daquele pedido  
             if ($antes['campos']['status'] !== 'cancelado' && $novoStatus === 'cancelado') {
-                // Repor no estoque TODAS as quantidades atuais do pedido
                 $ids = array_keys($antes['itens']);
                 if (!empty($ids)) {
-                    // trava e busca produtos
+                    // Trava e busca produtos
                     $produtosLock = Produto::whereIn('id', $ids)->lockForUpdate()->get()->keyBy('id');
-
+                    // Aqui mostra detalhes do que foi inserido ou removido
                     $detalhesReposicao = [];
                     foreach ($antes['itens'] as $pid => $qtd) {
                         if ($qtd <= 0) continue;
@@ -256,12 +259,11 @@ class PedidoController extends Controller
                             $detalhesReposicao[] = "{$prod->nome} (+{$qtd} un)";
                         }
                     }
-
-                    // mantém itens como histórico; apenas status muda
-                    // (se você preferir "zerar" itens de pedidos cancelados, dá pra fazer: $pedido->produtos()->detach();)
+                    // Ele mantém como histórico o que foi inserido ou removido,
+                    // a única mudança no banco é o status.
                 }
 
-                // campos simples + cidades (sem mexer nos itens)
+                // Aqui atualiza os campos simples sem mexer nos itens do pedido
                 $pedido->update([
                     'data' => $validated['data'],
                     'gestor_id' => $request->gestor_id,
@@ -271,7 +273,7 @@ class PedidoController extends Controller
                 ]);
                 $pedido->cidades()->sync(collect($request->cidades ?? [])->unique()->values());
 
-                // Log
+                // Mostra a log na view sobre o que foi alterado no pedido
                 $pedido->registrarLog(
                     'Pedido cancelado',
                     !empty($detalhesReposicao)
@@ -283,11 +285,11 @@ class PedidoController extends Controller
                 DB::commit();
                 return redirect()->route('admin.pedidos.show', $pedido)->with('success', 'Pedido cancelado e estoque devolvido.');
             }
-            // ======== FIM DO CASO ESPECIAL: CANCELAMENTO ========
+            // FIM DO CANCELAMENTO 
 
-            // ---- fluxo padrão (em_andamento/finalizado): DELTA de estoque + sync de itens ----
+            // Aqui segue o fluxo normal caso o status seja "em_andamento" ou "finalizado"
 
-            // atualiza campos simples e cidades
+            // Atualiza os campos simples e cidades
             $pedido->update([
                 'data' => $validated['data'],
                 'gestor_id' => $request->gestor_id,
@@ -297,37 +299,44 @@ class PedidoController extends Controller
             ]);
             $pedido->cidades()->sync(collect($request->cidades ?? [])->unique()->values());
 
-            // mapa "depois" vindo do form
+            // Aqui é o snapshot depois que são os dados vindos do form, que será comparado
+            // com o snap antes criado acima antes da verificação de status "cancelado".
             $depoisItens = collect($validated['produtos'])->mapWithKeys(fn($it) => [(int)$it['id'] => (int)$it['quantidade']])->toArray();
 
+            //Aqui pega apenas os itens do snapshot, salvando seus IDs nas variaveis $antesIds e $depoisIds.
             $antesItens = $antes['itens'];
             $antesIds   = array_keys($antesItens);
             $depoisIds  = array_keys($depoisItens);
 
+            // Aqui usa diff pra comparar os arrays, em $adicionados mostra os ids que nao existiam antes,
+            // em $removidos mostra os IDs que sumiram e em $comuns mostra os IDs que permanecem.
             $adicionados = array_values(array_diff($depoisIds, $antesIds));
             $removidos   = array_values(array_diff($antesIds, $depoisIds));
             $comuns      = array_values(array_intersect($antesIds, $depoisIds));
 
-            // trava todos os envolvidos e verifica disponibilidade para aumentos
+            // Em $envolvidos é feito o merge pra unir os 2 arrays e fazer a verificação se existe
+            // estoque suficiente pros produtos que estão sendo alterados.
             $envolvidos = array_values(array_unique(array_merge($antesIds, $depoisIds)));
             $produtosLock = Produto::whereIn('id', $envolvidos)->lockForUpdate()->get()->keyBy('id');
 
+            //Aqui para cada produto ele verifica as diferenças para cada produto, mas sem mexer no estoque ainda.
             foreach ($envolvidos as $pid) {
                 $qAntes  = (int)($antesItens[$pid]  ?? 0);
                 $qDepois = (int)($depoisItens[$pid] ?? 0);
                 $delta   = $qDepois - $qAntes;
-
+                //Se existir alguma diferença ela será maior que zero, então executará o if abaixo.                
                 if ($delta > 0) {
-                    $p = $produtosLock[$pid] ?? null;
+                    $p = $produtosLock[$pid] ?? null;                    
                     if (!$p) throw new \RuntimeException("Produto {$pid} não encontrado.");
-                    $disp = (int)$p->quantidade_estoque;
+                    //Aqui ele pega o estoque disponível e faz a verificação pra ver se a diferença não é maior que o estoque.
+                    $disp = (int)$p->quantidade_estoque;                    
                     if ($disp < $delta) {
                         throw new \RuntimeException("Estoque insuficiente para o produto {$p->nome}. Disponível: {$disp}, necessário: {$delta}");
                     }
                 }
             }
 
-            // aplica deltas
+            // Aqui ele aplica a diferença após validada em cima.
             foreach ($envolvidos as $pid) {
                 $qAntes  = (int)($antesItens[$pid]  ?? 0);
                 $qDepois = (int)($depoisItens[$pid] ?? 0);
@@ -341,11 +350,13 @@ class PedidoController extends Controller
                 }
             }
 
-            // recalcula pivot e totais
+            // Aqui ele inicializa o desconto com o que vier na requisição transformando em float ou zero caso não venha nada.
             $desconto = is_numeric($request->desconto) ? (float)$request->desconto : 0.0;
+            // Aqui inicializa com zero as demais variáveis.
             $pesoTotal = 0; $totalCaixas = 0; $valorBruto = 0; $valorComDesconto = 0;
             $sync = [];
 
+            // Pra cada item vindo do form($depoisItens) ele itera e atualiza os produtos.
             foreach ($depoisItens as $pid => $qtd) {
                 $produto = $produtosLock[$pid] ?? Produto::findOrFail($pid);
 
@@ -381,7 +392,7 @@ class PedidoController extends Controller
                 'valor_total'  => $valorComDesconto,
             ]);
 
-            // snapshot "depois" para log
+            // Aqui ele cria o snapshot depois para registro de log.
             $pedido->load(['produtos','cidades']);
             $depois = [
                 'campos' => [
@@ -395,7 +406,7 @@ class PedidoController extends Controller
                 'itens' => $pedido->produtos->mapWithKeys(fn($p) => [$p->id => (int)$p->pivot->quantidade])->toArray(),
             ];
 
-            // Mensagens detalhadas
+            // Aqui ele gera as mensagens do que foi alterado para disponibilizar na view.
             $mensagens = [];
             foreach ($antes['campos'] as $k => $vAntes) {
                 $vDepois = $depois['campos'][$k];
@@ -403,7 +414,7 @@ class PedidoController extends Controller
                     $mensagens[] = ucfirst($k) . " alterado: '{$vAntes}' → '{$vDepois}'";
                 }
             }
-
+            // Se o diff feito la em cima verificou se algo foi adicionado ele executa esse if.
             if ($adicionados) {
                 $nomes = [];
                 foreach ($adicionados as $pid) {
@@ -412,7 +423,7 @@ class PedidoController extends Controller
                 }
                 if ($nomes) $mensagens[] = 'Produtos adicionados: ' . implode(', ', $nomes);
             }
-
+            // Se o diff feito la em cima verificou se algo foi removido ele executa esse if.
             if ($removidos) {
                 $nomes = [];
                 foreach ($removidos as $pid) {
@@ -421,7 +432,7 @@ class PedidoController extends Controller
                 }
                 if ($nomes) $mensagens[] = 'Produtos removidos: ' . implode(', ', $nomes);
             }
-
+            // Se o diff feito la em cima verificou se algo foi alterado ele executa esse if.
             $alterados = [];
             foreach ($comuns as $pid) {
                 $a = $antesItens[$pid] ?? 0;
@@ -437,12 +448,14 @@ class PedidoController extends Controller
                 if ($nomes) $mensagens[] = 'Quantidades alteradas: ' . implode(', ', $nomes);
             }
 
+            // Aqui ele verifica apenas o status do pedido com match.
             $acaoLog = match ($pedido->status) {
                 'finalizado' => 'Pedido finalizado',
                 'cancelado'  => 'Pedido cancelado', // (não deve cair aqui porque tratamos acima)
                 default      => 'Pedido atualizado',
             };
 
+            // Aqui ele faz o registro com a função do model Pedido registrarLog.
             $pedido->registrarLog(
                 $acaoLog,
                 $mensagens ? implode(' | ', $mensagens) : 'Atualização sem mudanças relevantes',

@@ -180,16 +180,18 @@ class GestorController extends Controller
     }
 
     public function cidadesPorGestor(Gestor $gestor)
-{
-    if (!$gestor->estado_uf) {
-        return response()->json([]); // sem UF, sem cidades
+    {
+        if (!$gestor->estado_uf) {
+            return response()->json([]); // sem UF, sem cidades
+        }
+
+        return response()->json(
+            City::where('state', strtoupper($gestor->estado_uf))
+                ->orderBy('name')
+                ->get(['id','name'])
+        );
     }
 
-    return response()->json(
-        City::where('state', strtoupper($gestor->estado_uf))
-            ->orderBy('name')
-            ->get(['id','name'])
-    );
-}
+    
 
 }

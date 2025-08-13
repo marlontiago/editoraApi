@@ -3,124 +3,159 @@
         <h2 class="text-xl font-semibold text-gray-800">Cadastrar Novo Produto</h2>
     </x-slot>
 
-    <div class="p-6 max-w-6xl mt-6 mx-auto bg-white rounded shadow">
+    <div class="max-w-6xl mx-auto p-6">
+        {{-- Alerta de validação (resumo) --}}
         @if ($errors->any())
-            <div class="p-4 mb-6 bg-red-100 text-red-800 rounded">
-                <ul class="list-disc pl-5">
+            <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
+                <div class="font-semibold mb-2">Corrija os campos abaixo:</div>
+                <ul class="list-disc pl-5 space-y-1">
                     @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
+                        <li class="text-sm">{{ $error }}</li>
                     @endforeach
                 </ul>
             </div>
         @endif
 
-        <form action="{{ route('admin.produtos.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        <form action="{{ route('admin.produtos.store') }}" method="POST" enctype="multipart/form-data"
+              class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
             @csrf
 
-            <!-- Nome -->
-            <div>
-                <label for="nome" class="block text-sm font-medium text-gray-700">Nome</label>
-                <input type="text" name="nome" id="nome" class="form-input mt-1 block w-full" required>
+            {{-- Nome --}}
+            <div class="col-span-12">
+                <label for="nome" class="block text-sm font-medium text-gray-700">Nome <span class="text-red-600">*</span></label>
+                <input type="text" id="nome" name="nome" value="{{ old('nome') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                       required>
+                @error('nome') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <!-- Título e Coleção -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="titulo" class="block text-sm font-medium text-gray-700">Título</label>
-                    <input type="text" name="titulo" id="titulo" class="form-input mt-1 block w-full">
-                </div>
-                <div>
-                    <label for="colecao_id" class="block text-sm font-medium text-gray-700">Coleção</label>
-                    <select name="colecao_id" id="colecao_id" class="form-input mt-1 block w-full">
-                        <option value="">Selecione</option>
-                        @foreach ($colecoes as $colecao)
-                            <option value="{{ $colecao->id }}">{{ $colecao->nome }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            {{-- Título e Coleção --}}
+            <div class="col-span-12 md:col-span-8">
+                <label for="titulo" class="block text-sm font-medium text-gray-700">Título</label>
+                <input type="text" id="titulo" name="titulo" value="{{ old('titulo') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                @error('titulo') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-4">
+                <label for="colecao_id" class="block text-sm font-medium text-gray-700">Coleção</label>
+                <select id="colecao_id" name="colecao_id"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                    <option value="">Selecione</option>
+                    @foreach ($colecoes as $colecao)
+                        <option value="{{ $colecao->id }}" @selected(old('colecao_id') == $colecao->id)>{{ $colecao->nome }}</option>
+                    @endforeach
+                </select>
+                @error('colecao_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <!-- ISBN e Edição -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="isbn" class="block text-sm font-medium text-gray-700">ISBN</label>
-                    <input type="text" name="isbn" id="isbn" class="form-input mt-1 block w-full">
-                </div>
-                <div>
-                    <label for="edicao" class="block text-sm font-medium text-gray-700">Edição</label>
-                    <input type="text" name="edicao" id="edicao" class="form-input mt-1 block w-full">
-                </div>
+            {{-- ISBN e Edição --}}
+            <div class="col-span-12 md:col-span-6">
+                <label for="isbn" class="block text-sm font-medium text-gray-700">ISBN</label>
+                <input type="text" id="isbn" name="isbn" value="{{ old('isbn') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                @error('isbn') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-6">
+                <label for="edicao" class="block text-sm font-medium text-gray-700">Edição</label>
+                <input type="text" id="edicao" name="edicao" value="{{ old('edicao') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                @error('edicao') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <!-- Ano e Nº de Páginas -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="ano" class="block text-sm font-medium text-gray-700">Ano</label>
-                    <input type="number" name="ano" id="ano" class="form-input mt-1 block w-full">
-                </div>
-                <div>
-                    <label for="numero_paginas" class="block text-sm font-medium text-gray-700">Nº de Páginas</label>
-                    <input type="number" name="numero_paginas" id="numero_paginas" class="form-input mt-1 block w-full">
-                </div>
+            {{-- Ano, Nº de Páginas, Quantidade por Caixa --}}
+            <div class="col-span-12 md:col-span-4">
+                <label for="ano" class="block text-sm font-medium text-gray-700">Ano</label>
+                <input type="number" id="ano" name="ano" value="{{ old('ano') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                @error('ano') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-4">
+                <label for="numero_paginas" class="block text-sm font-medium text-gray-700">Nº de Páginas</label>
+                <input type="number" id="numero_paginas" name="numero_paginas" value="{{ old('numero_paginas') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                @error('numero_paginas') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-4">
+                <label for="quantidade_por_caixa" class="block text-sm font-medium text-gray-700">Quantidade por Caixa <span class="text-red-600">*</span></label>
+                <input type="number" id="quantidade_por_caixa" name="quantidade_por_caixa" min="1"
+                       value="{{ old('quantidade_por_caixa', $produto->quantidade_por_caixa ?? 1) }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500" required>
+                @error('quantidade_por_caixa') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <!-- Peso e Ano Escolar -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="peso" class="block text-sm font-medium text-gray-700">Peso (kg)</label>
-                    <input type="number" step="0.001" name="peso" id="peso" class="form-input mt-1 block w-full">
+            {{-- Peso e Ano Escolar --}}
+            <div class="col-span-12 md:col-span-4">
+                <label for="peso" class="block text-sm font-medium text-gray-700">Peso</label>
+                <div class="mt-1 flex rounded-md shadow-sm">
+                    <input type="number" step="0.001" id="peso" name="peso" value="{{ old('peso') }}"
+                           class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                    <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">kg</span>
                 </div>
-                <!-- Quantidade por Caixa -->
-                <div>
-                    <label for="quantidade_por_caixa" class="block font-medium text-sm text-gray-700">Quantidade por Caixa</label>
-                    <input type="number" name="quantidade_por_caixa" id="quantidade_por_caixa"
-                        value="{{ old('quantidade_por_caixa', $produto->quantidade_por_caixa ?? 1) }}"
-                        class="form-input mt-1 block w-full" required min="1">
-                </div>
-                <div>
-                    <label for="ano_escolar" class="block text-sm font-medium text-gray-700">Ano Escolar</label>
-                    <select name="ano_escolar" id="ano_escolar" class="form-input mt-1 block w-full">
-                        <option value="">Selecione</option>
-                        @foreach (['Ens Inf' => 'Educação Infantil', 'Fund 1' => 'Ens. Fundamental 1', 'Fund 2' => 'Ens. Fundamental 2', 'EM' => 'Ensino Médio'] as $valor => $label)
-                            <option value="{{ $valor }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                @error('peso') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-8">
+                <label for="ano_escolar" class="block text-sm font-medium text-gray-700">Ano Escolar</label>
+                <select id="ano_escolar" name="ano_escolar"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                    <option value="">Selecione</option>
+                    @foreach (['Ens Inf' => 'Educação Infantil', 'Fund 1' => 'Ens. Fundamental 1', 'Fund 2' => 'Ens. Fundamental 2', 'EM' => 'Ensino Médio'] as $valor => $label)
+                        <option value="{{ $valor }}" @selected(old('ano_escolar') == $valor)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                @error('ano_escolar') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <!-- Autores -->
-            <div>
+            {{-- Autores --}}
+            <div class="col-span-12">
                 <label for="autores" class="block text-sm font-medium text-gray-700">Autor(es)</label>
-                <input type="text" name="autores" id="autores" class="form-input mt-1 block w-full">
+                <input type="text" id="autores" name="autores" value="{{ old('autores') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                <p class="mt-1 text-xs text-gray-500">Separe múltiplos autores por vírgula.</p>
+                @error('autores') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <!-- Descrição -->
-            <div>
+            {{-- Descrição --}}
+            <div class="col-span-12">
                 <label for="descricao" class="block text-sm font-medium text-gray-700">Descrição</label>
-                <textarea name="descricao" id="descricao" rows="3" class="form-input mt-1 block w-full"></textarea>
+                <textarea id="descricao" name="descricao" rows="4"
+                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">{{ old('descricao') }}</textarea>
+                @error('descricao') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <!-- Preço e Estoque -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="preco" class="block text-sm font-medium text-gray-700">Preço</label>
-                    <input type="number" step="0.01" name="preco" id="preco" class="form-input mt-1 block w-full" required>
+            {{-- Preço e Estoque --}}
+            <div class="col-span-12 md:col-span-6">
+                <label for="preco" class="block text-sm font-medium text-gray-700">Preço <span class="text-red-600">*</span></label>
+                <div class="mt-1 flex rounded-md shadow-sm">
+                    <span class="inline-flex items-center rounded-l-md border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">R$</span>
+                    <input type="number" step="0.01" id="preco" name="preco" value="{{ old('preco') }}"
+                           class="flex-1 rounded-r-md border border-l-0 border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500" required>
                 </div>
-                <div>
-                    <label for="quantidade_estoque" class="block text-sm font-medium text-gray-700">Estoque</label>
-                    <input type="number" name="quantidade_estoque" id="quantidade_estoque" class="form-input mt-1 block w-full" required>
-                </div>
+                @error('preco') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-6">
+                <label for="quantidade_estoque" class="block text-sm font-medium text-gray-700">Estoque <span class="text-red-600">*</span></label>
+                <input type="number" id="quantidade_estoque" name="quantidade_estoque" value="{{ old('quantidade_estoque') }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500" required>
+                @error('quantidade_estoque') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            <!-- Imagem -->
-            <div>
+            {{-- Imagem --}}
+            <div class="col-span-12">
                 <label for="imagem" class="block text-sm font-medium text-gray-700">Imagem do Produto</label>
-                <input type="file" name="imagem" id="imagem" class="form-input mt-1 block w-full">
+                <input type="file" id="imagem" name="imagem"
+                       class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
+                @error('imagem') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                <p class="mt-1 text-xs text-gray-500">Formatos aceitos: JPG/PNG. Tamanho máximo recomendado 2MB.</p>
             </div>
 
-            <!-- Botão -->
-            <div>
-                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+            {{-- Ações --}}
+            <div class="col-span-12 flex items-center justify-end gap-3 pt-2">
+                <a href="{{ route('admin.produtos.index') }}"
+                   class="inline-flex h-10 items-center rounded-md border px-4 text-sm hover:bg-gray-50">
+                    Cancelar
+                </a>
+                <button type="submit"
+                        class="inline-flex h-10 items-center rounded-md bg-blue-600 px-5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     Salvar Produto
                 </button>
             </div>

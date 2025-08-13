@@ -112,7 +112,7 @@ class UserController extends Controller
     public function destroy(User $usuario)
     {
         $usuario->delete();
-        return response()->json(['message' => 'Usuário escluído com sucesso.'], 200);
+        return redirect()->route('admin.usuarios.index')->with('success', 'Usuário removido com sucesso!');
     }
 
     public function edit(User $usuario)

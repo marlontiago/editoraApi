@@ -3,84 +3,146 @@
         <h2 class="text-xl font-semibold text-gray-800">Lista de Produtos</h2>
     </x-slot>
 
-    <div class="p-6 space-y-6">
+    <div class="max-w-full mx-auto p-6 space-y-6">
+
+        {{-- Flash --}}
         @if (session('success'))
-            <div class="p-4 bg-green-100 text-green-800 rounded">
+            <div class="rounded-md border border-green-300 bg-green-50 p-4 text-green-800">
                 {{ session('success') }}
             </div>
         @endif
 
-        <div class="mb-4">
+        {{-- Toolbar: busca + novo --}}
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <form method="GET" action="{{ route('admin.produtos.index') }}" class="flex items-center gap-2">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ request('q') }}"
+                    placeholder="Buscar por nome, título, ISBN, autores ou coleção..."
+                    class="h-10 w-72 max-w-full rounded-md border-gray-300 px-3 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                >
+                <button type="submit"
+                        class="h-10 rounded-md border px-3 text-sm hover:bg-gray-50">
+                    Buscar
+                </button>
+                @if(request('q'))
+                    <a href="{{ route('admin.produtos.index') }}" class="text-sm text-gray-600 hover:underline">Limpar</a>
+                @endif
+            </form>
+
             <a href="{{ route('admin.produtos.create') }}"
-               class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+            class="inline-flex h-10 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
                 Novo Produto
             </a>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-white border rounded shadow text-sm">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="p-2 border">Imagem</th>
-                        <th class="p-2 border">Nome</th>
-                        <th class="p-2 border">Título</th>
-                        <th class="p-2 border">Coleção</th>
-                        <th class="p-2 border">ISBN</th>
-                        <th class="p-2 border">Autores</th>
-                        <th class="p-2 border">Edição</th>
-                        <th class="p-2 border">Ano</th>
-                        <th class="p-2 border">Nº Páginas</th>
-                        <th class="p-2 border">Peso (kg)</th>
-                        <th class="p-2 border">Ano Escolar</th>
-                        <th class="p-2 border">Preço</th>
-                        <th class="p-2 border">Estoque</th>
-                        <th class="p-2 border">Editar</th>
-                        <th class="p-2 border">Excluir</th>
+        {{-- Tabela --}}
+        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
+            <table class="min-w-[1000px] w-full text-sm">
+                <thead class="bg-gray-50 text-gray-700">
+                    <tr class="text-left text-xs font-semibold uppercase tracking-wide">
+                        <th class="px-3 py-2">Imagem</th>
+                        <th class="px-3 py-2">Nome</th>
+                        <th class="px-3 py-2 hidden md:table-cell">Título</th>
+                        <th class="px-3 py-2 hidden lg:table-cell">Coleção</th>
+                        <th class="px-3 py-2 hidden lg:table-cell">ISBN</th>
+                        <th class="px-3 py-2 hidden xl:table-cell">Autores</th>
+                        <th class="px-3 py-2 hidden xl:table-cell">Edição</th>
+                        <th class="px-3 py-2 hidden lg:table-cell">Ano</th>
+                        <th class="px-3 py-2 hidden xl:table-cell">Páginas</th>
+                        <th class="px-3 py-2 hidden xl:table-cell">Peso (kg)</th>
+                        <th class="px-3 py-2 hidden lg:table-cell">Ano Escolar</th>
+                        <th class="px-3 py-2 whitespace-nowrap">Preço</th>
+                        <th class="px-3 py-2">Estoque</th>
+                        <th class="px-3 py-2 text-center">Ações</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-gray-100">
                     @forelse ($produtos as $produto)
-                        <tr class="border-b">
-                            <td class="p-2 text-center">
+                        <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-100/70">
+                            {{-- Imagem --}}
+                            <td class="px-3 py-2">
                                 @if ($produto->imagem && Storage::disk('public')->exists($produto->imagem))
                                     <img src="{{ asset('storage/' . $produto->imagem) }}"
                                          alt="{{ $produto->nome }}"
-                                         class="w-16 h-16 object-cover rounded mx-auto">
+                                         class="h-12 w-12 rounded object-cover ring-1 ring-gray-200">
                                 @else
-                                    <span class="text-gray-500">Sem imagem</span>
+                                    <div class="h-12 w-12 rounded bg-gray-100 grid place-items-center text-[10px] text-gray-500 ring-1 ring-gray-200">
+                                        sem<br>imagem
+                                    </div>
                                 @endif
                             </td>
-                            <td class="p-2">{{ $produto->nome }}</td>
-                            <td class="p-2">{{ $produto->titulo ?? '—' }}</td>
-                            <td class="p-2">{{ $produto->colecao->nome ?? '—' }}</td>
-                            <td class="p-2">{{ $produto->isbn ?? '—' }}</td>
-                            <td class="p-2">{{ $produto->autores ?? '—' }}</td>
-                            <td class="p-2">{{ $produto->edicao ?? '—' }}</td>
-                            <td class="p-2">{{ $produto->ano ?? '—' }}</td>
-                            <td class="p-2">{{ $produto->numero_paginas ?? '—' }}</td>
-                            <td class="p-2">{{ $produto->peso ? number_format($produto->peso, 3, ',', '.') : '—' }}</td>
-                            <td class="p-2">{{ $produto->ano_escolar ?? '—' }}</td>
-                            <td class="p-2">R$ {{ number_format($produto->preco, 2, ',', '.') }}</td>
-                            <td class="p-2">{{ $produto->quantidade_estoque }}</td>
-                            <td class="p-2 text-blue-600 hover:underline">
-                                <a href="{{ route('admin.produtos.edit', $produto) }}">Editar</a>
+
+                            {{-- Nome (sempre visível) --}}
+                            <td class="px-3 py-2 align-top">
+                                <div class="font-medium text-gray-900">{{ $produto->nome }}</div>
+                                <div class="mt-0.5 text-xs text-gray-500 hidden md:block">
+                                    {{ $produto->colecao?->nome ?? '—' }}
+                                </div>
                             </td>
-                            <td class="p-2 text-red-600">
-                                <form action="{{ route('admin.produtos.destroy', $produto) }}" method="POST" class="inline"
-                                      onsubmit="return confirm('Tem certeza que deseja excluir este produto?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="hover:underline">Excluir</button>
-                                </form>
+
+                            <td class="px-3 py-2 hidden md:table-cell">{{ $produto->titulo ?? '—' }}</td>
+                            <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->colecao?->nome ?? '—' }}</td>
+                            <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->isbn ?? '—' }}</td>
+                            <td class="px-3 py-2 hidden xl:table-cell">
+                                <span class="line-clamp-2">{{ $produto->autores ?? '—' }}</span>
+                            </td>
+                            <td class="px-3 py-2 hidden xl:table-cell">{{ $produto->edicao ?? '—' }}</td>
+                            <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->ano ?? '—' }}</td>
+                            <td class="px-3 py-2 hidden xl:table-cell">{{ $produto->numero_paginas ?? '—' }}</td>
+                            <td class="px-3 py-2 hidden xl:table-cell">
+                                {{ $produto->peso ? number_format($produto->peso, 3, ',', '.') : '—' }}
+                            </td>
+                            <td class="px-3 py-2 hidden lg:table-cell">
+                                @if($produto->ano_escolar)
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                                        {{ $produto->ano_escolar }}
+                                    </span>
+                                @else
+                                    —
+                                @endif
+                            </td>
+
+                            {{-- Preço / Estoque (sempre visíveis) --}}
+                            <td class="px-3 py-2 font-semibold whitespace-nowrap">
+                                R$ {{ number_format((float)$produto->preco, 2, ',', '.') }}
+                            </td>
+                            <td class="px-3 py-2">{{ $produto->quantidade_estoque }}</td>
+
+                            {{-- Ações --}}
+                            <td class="px-3 py-2">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="{{ route('admin.produtos.edit', $produto) }}"
+                                       class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium text-blue-700 border-blue-200 hover:bg-blue-50">
+                                        Editar
+                                    </a>
+                                    <form action="{{ route('admin.produtos.destroy', $produto) }}" method="POST" class="inline"
+                                          onsubmit="return confirm('Tem certeza que deseja excluir este produto?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium text-red-700 border-red-200 hover:bg-red-50">
+                                            Excluir
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="15" class="p-4 text-center text-gray-500">Nenhum produto encontrado.</td>
+                            <td colspan="13" class="px-3 py-6 text-center text-gray-500">Nenhum produto encontrado.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+
+        {{-- Paginação (se usar LengthAwarePaginator) --}}
+        @if(method_exists($produtos, 'links'))
+            <div class="flex justify-end">
+                {{ $produtos->appends(request()->only('q'))->links() }}
+            </div>
+        @endif
     </div>
 </x-app-layout>

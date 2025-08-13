@@ -49,6 +49,12 @@
                                 <td>
                                     <a href="{{ route('admin.usuarios.edit', $user) }}" class="p-2" >Editar</a>
                                 </td>
+                                <td>
+                                    <form action="{{ route('admin.usuarios.destroy', $user->id) }}" method="POST">
+                                        @csrf @method('DELETE')
+                                    <button type="submit" class="text-red-600" onclick="return confirm('Tem certeza que deseja excluir?')">Excluir</button>
+                                    </form>
+                                </td>
                             </tr>
                         @empty
                             <tr>

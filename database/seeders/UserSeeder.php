@@ -29,10 +29,11 @@ class UserSeeder extends Seeder
         $userGestor->assignRole('gestor');
 
         $gestor = Gestor::create([
+            'estado_uf' => 'RJ',
             'user_id' => $userGestor->id,
-            'razao_social' => 'Gestor Representações LTDA',
+            'razao_social' => 'Jorge Gestor',
             'cnpj' => '12.345.678/0001-00',
-            'representante_legal' => 'João Representante',
+            'representante_legal' => 'Jorge Representante',
             'cpf' => '123.456.789-00',
             'rg' => '12.345.678-9',
             'telefone' => '41999999999',

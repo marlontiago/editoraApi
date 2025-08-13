@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CommissionController;
 use App\Http\Controllers\Admin\CidadeController;
 
+
 Route::get('/', function () {
     return view('auth.login');
 });
@@ -36,6 +37,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::resource('comissoes', CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
     Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor'])->except('show');
+    Route::get('/admin/distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('admin.distribuidores.por-gestor');
 
     Route::resource('gestores', GestorController::class)->parameters(['gestores' => 'gestor'])->except('show');
     Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('admin.gestores.vincular');
@@ -51,6 +53,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/pedidos/{pedido}/exportar/{tipo}', [PedidoController::class, 'exportar'])->name('pedidos.exportar');
     Route::get('/pedidos/{pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
+    Route::get('/dashboard/export/excel', [DashboardController::class, 'exportExcel'])->name('admin.dashboard.export.excel');
+    Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('admin.dashboard.export.pdf');
 
     Route::get('/cidades/por-gestor/{id}', [CidadeController::class, 'cidadesPorGestor']);
     Route::get('/cidades/por-distribuidor/{id}', [CidadeController::class, 'cidadesPorDistribuidor']);

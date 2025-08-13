@@ -22,13 +22,44 @@ class ProdutoController extends Controller
 
     public function index(Request $request)
     {
-        $produtos = Produto::with('colecao')->get();
+        $q = trim((string) $request->get('q', ''));
+
+        $query = Produto::query()
+            ->with('colecao')
+            ->when($q !== '', function ($qb) use ($q) {
+                $qb->where(function ($qbuilder) use ($q) {
+                    $qbuilder
+                        ->where('nome', 'like', "%{$q}%")
+                        ->orWhere('titulo', 'like', "%{$q}%")
+                        ->orWhere('isbn', 'like', "%{$q}%")
+                        ->orWhere('autores', 'like', "%{$q}%")
+                        ->orWhereHas('colecao', fn($cq) => $cq->where('nome', 'like', "%{$q}%"));
+                });
+            });
+
+        // Ordenação opcional (?sort=nome|preco|quantidade_estoque|ano&dir=asc|desc)
+        $sort = $request->get('sort', 'nome');
+        $dir  = strtolower($request->get('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $allowedSort = ['nome', 'preco', 'quantidade_estoque', 'ano'];
+        if (! in_array($sort, $allowedSort, true)) {
+            $sort = 'nome';
+        }
+        $query->orderBy($sort, $dir);
+
+        // Paginação
+        $perPage = (int) $request->get('per_page', 15);
+        $perPage = ($perPage > 0 && $perPage <= 100) ? $perPage : 15;
 
         if ($request->wantsJson()) {
+            // Retorna JSON paginado (Resource Collection inclui meta/links)
+            $produtos = $query->paginate($perPage);
             return ProdutoResource::collection($produtos);
         }
 
-        return view('admin.produtos.index', compact('produtos'));
+        // View com paginação e preservando parâmetros na navegação
+        $produtos = $query->paginate($perPage)->withQueryString();
+
+        return view('admin.produtos.index', compact('produtos', 'q', 'sort', 'dir'));
     }
 
     public function create()

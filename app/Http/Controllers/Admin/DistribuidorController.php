@@ -209,4 +209,23 @@ class DistribuidorController extends Controller
 
         return redirect()->route('admin.distribuidores.index')->with('success', 'Distribuidor removido com sucesso.');
     }
+
+    public function porGestor(\App\Models\Gestor $gestor)
+    {
+        // Ajuste os campos conforme seu schema; aqui uso id, razao_social e user->name.
+        $distribuidores = \App\Models\Distribuidor::query()
+            ->with('user:id,name')       // para exibir nome do user se houver
+            ->where('gestor_id', $gestor->id)
+            ->orderBy('razao_social')
+            ->get(['id', 'razao_social', 'gestor_id', 'user_id']);
+
+        // Formata para JSON simples pro <option>
+        return response()->json(
+            $distribuidores->map(fn($d) => [
+                'id'   => $d->id,
+                'text' => $d->user?->name ?? $d->razao_social,
+            ])
+        );
+    }
+
 }

@@ -24,7 +24,7 @@ class GestorSeeder extends Seeder
             'user_id' => $user->id,
         ], [
             'estado_uf' => 'PR',
-            'razao_social' => 'Gestor Representações LTDA',
+            'razao_social' => 'Daniel Gestor',
             'cnpj' => '12.345.678/0001-00',
             'representante_legal' => 'João Representante',
             'cpf' => '123.456.789-00',

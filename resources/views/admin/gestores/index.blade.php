@@ -13,7 +13,7 @@
 
         <div class="flex justify-between mb-4">
             <a href="{{ route('admin.gestores.create') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Novo Gestor</a>
-            <a href="{{ route('admin.admin.gestores.vincular') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Vincular Distribuidores</a>
+            <a href="{{ route('admin.gestores.vincular') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Vincular Distribuidores</a>
         </div>
 
         <div class="overflow-x-auto bg-white shadow-md rounded p-4">

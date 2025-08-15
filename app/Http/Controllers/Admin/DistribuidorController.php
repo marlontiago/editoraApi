@@ -3,229 +3,111 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreDistribuidorRequest;
+use App\Http\Requests\Admin\UpdateDistribuidorRequest;
+use App\Http\Resources\DistribuidorResource;
 use App\Models\Distribuidor;
-use App\Models\User;
-use App\Models\City;
 use App\Models\Gestor;
+use App\Services\DistribuidorService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 
 class DistribuidorController extends Controller
 {
-    public function index()
+    public function __construct(private DistribuidorService $service) {}
+
+    public function index(Request $request)
     {
-        $distribuidores = Distribuidor::with(['user', 'cities','gestor.user'])->get();
+        $distribuidores = Distribuidor::with(['user','cities','gestor.user'])->paginate(10);
+
+        if ($request->wantsJson()) {
+            return DistribuidorResource::collection($distribuidores)->additional([
+                'meta' => [
+                    'current_page' => $distribuidores->currentPage(),
+                    'per_page'     => $distribuidores->perPage(),
+                    'total'        => $distribuidores->total(),
+                    'last_page'    => $distribuidores->lastPage(),
+                ],
+            ]);
+        }
+
         return view('admin.distribuidores.index', compact('distribuidores'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $cities = City::orderBy('name')->get();
-        $gestores = Gestor::orderBy('razao_social')->get();
+        $gestores = Gestor::orderBy('razao_social')->get(['id','razao_social','estado_uf']);
+
+        if ($request->wantsJson()) {
+            return response()->json(['data' => ['gestores' => $gestores]]);
+        }
+
         return view('admin.distribuidores.create', compact('gestores'));
     }
 
-    public function store(Request $request)
+    public function store(StoreDistribuidorRequest $request)
     {
-        $request->validate([
-            'name' => 'nullable|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
-            'gestor_id' => 'required|exists:gestores,id',
-            'razao_social' => 'required|string|max:255',
-            'cnpj' => 'required|string|max:20',
-            'representante_legal' => 'required|string|max:255',
-            'cpf' => 'required|string|max:20',
-            'rg' => 'required|string|max:20',
-            'telefone' => 'nullable|string|max:20',
-            'endereco_completo' => 'nullable|string|max:255',
-            'percentual_vendas' => 'required|numeric|min:0|max:100',
-            'vencimento_contrato' => 'nullable|date',
-            'contrato_assinado' => 'boolean',
-            'contrato' => 'nullable|file|mimes:pdf|max:2048',
-            'cities' => 'required|array|min:1',
-            'cities.*' => 'exists:cities,id',
-        ]);
+        $distribuidor = $this->service->criar($request->validated());
 
-        $gestor = Gestor::findOrFail($request->gestor_id);
-        if (!$gestor->estado_uf) {
-            return back()->withErrors(['gestor_id' => 'O gestor selecionado não tem UF vinculada.'])->withInput();
+        if ($request->wantsJson()) {
+            return (new DistribuidorResource($distribuidor))
+                ->additional(['message' => 'Distribuidor cadastrado com sucesso.'])
+                ->response()->setStatusCode(201);
         }
 
-        // 1) nenhuma cidade pode estar ocupada
-        $cidadesEmUso = DB::table('city_distribuidor')
-            ->whereIn('city_id', $request->cities)
-            ->pluck('city_id')
-            ->toArray();
-
-        if (!empty($cidadesEmUso)) {
-            $nomesCidades = City::whereIn('id', $cidadesEmUso)->pluck('name')->toArray();
-            return back()->withErrors([
-                'cities' => 'As seguintes cidades já possuem um distribuidor: ' . implode(', ', $nomesCidades)
-            ])->withInput();
-        }
-
-        // 2) TODAS as cidades devem ser da UF do gestor
-        $foraDaUF = City::whereIn('id', $request->cities)
-            ->where('state', '!=', $gestor->estado_uf)
-            ->exists();
-
-        if ($foraDaUF) {
-            return back()->withErrors([
-                'cities' => 'Há cidades que não pertencem à UF do gestor selecionado.'
-            ])->withInput();
-        }
-
-
-        $contratoPath = $request->hasFile('contrato') 
-            ? $request->file('contrato')->store('contratos', 'public') 
-            : null;
-
-            $cidadesEmUso = DB::table('city_distribuidor')
-                ->whereIn('city_id', $request->cities)
-                ->pluck('city_id')
-                ->toArray();
-
-            if (!empty($cidadesEmUso)) {
-                $nomesCidades = \App\Models\City::whereIn('id', $cidadesEmUso)->pluck('name')->toArray();
-                return back()->withErrors([
-                    'cities' => 'As seguintes cidades já possuem um distribuidor: ' . implode(', ', $nomesCidades)
-                ])->withInput();
-            }
-
-        $user = User::create([
-            'name'     => $request->razao_social,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        $user->assignRole('distribuidor');
-
-        $distribuidor = Distribuidor::create([
-            'user_id' => $user->id,
-            'gestor_id' => $request->gestor_id,
-            'razao_social' => $request->razao_social,
-            'cnpj' => $request->cnpj,
-            'representante_legal' => $request->representante_legal,
-            'cpf' => $request->cpf,
-            'rg' => $request->rg,
-            'telefone' => $request->telefone,
-            'endereco_completo' => $request->endereco_completo,
-            'percentual_vendas' => $request->percentual_vendas,
-            'vencimento_contrato' => $request->vencimento_contrato,
-            'contrato_assinado' => $request->has('contrato_assinado'),
-            'contrato' => $contratoPath, // 📎 salvando o caminho do PDF
-        ]);
-
-        $distribuidor->cities()->sync($request->cities);
-
-        return redirect()->route('admin.distribuidores.index')->with('success', 'Distribuidor cadastrado com sucesso.');
+        return redirect()->route('admin.distribuidores.index')
+            ->with('success', 'Distribuidor cadastrado com sucesso.');
     }
 
-    public function edit(Distribuidor $distribuidor)
+    public function edit(Request $request, Distribuidor $distribuidor)
     {
-        $cities = City::orderBy('name')->get();
-        $gestores = Gestor::orderBy('razao_social')->get();
+        $distribuidor->load(['user','cities','gestor.user']);
+        $gestores = Gestor::orderBy('razao_social')->get(['id','razao_social','estado_uf']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'data' => [
+                    'distribuidor'   => new DistribuidorResource($distribuidor),
+                    'gestores'       => $gestores,
+                    'selectedCities' => $distribuidor->cities->pluck('id'),
+                ]
+            ]);
+        }
+
         $selectedCities = $distribuidor->cities->pluck('id')->toArray();
-        return view('admin.distribuidores.edit', compact('distribuidor', 'cities', 'selectedCities', 'gestores'));
+        return view('admin.distribuidores.edit', compact('distribuidor','gestores','selectedCities'));
     }
 
-    public function update(Request $request, Distribuidor $distribuidor)
+    public function update(UpdateDistribuidorRequest $request, Distribuidor $distribuidor)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $distribuidor->user_id . ',id',
-            'password' => 'nullable|string|min:6|confirmed',
-            'gestor_id' => 'required|exists:gestores,id',
-            'razao_social' => 'required|string|max:255',
-            'cnpj' => 'required|string|max:20',
-            'representante_legal' => 'required|string|max:255',
-            'cpf' => 'required|string|max:20',
-            'rg' => 'required|string|max:20',
-            'telefone' => 'nullable|string|max:20',
-            'endereco_completo' => 'nullable|string|max:255',
-            'percentual_vendas' => 'required|numeric|min:0|max:100',
-            'vencimento_contrato' => 'nullable|date',
-            'contrato_assinado' => 'boolean',
-            'contrato' => 'nullable|file|mimes:pdf|max:2048',
-            'cities' => 'required|array|min:1',
-            'cities.*' => 'exists:cities,id',
-        ]);
-        
-        $cidadesEmUso = DB::table('city_distribuidor')
-        ->whereIn('city_id', $request->cities)
-        ->where('distribuidor_id', '!=', $distribuidor->id)
-        ->pluck('city_id')
-        ->toArray();
+        $distribuidor = $this->service->atualizar($distribuidor, $request->validated());
 
-        if (!empty($cidadesEmUso)) {
-            $nomesCidades = City::whereIn('id', $cidadesEmUso)->pluck('name')->toArray();
-            return back()->withErrors([
-                'cities' => 'As seguintes cidades já possuem um distribuidor: ' . implode(', ', $nomesCidades)
-            ])->withInput();
+        if ($request->wantsJson()) {
+            return (new DistribuidorResource($distribuidor))
+                ->additional(['message' => 'Distribuidor atualizado com sucesso.'])
+                ->response()->setStatusCode(200);
         }
 
-        $user = $distribuidor->user;
-        $user->name  = $request->name;
-        $user->email = $request->email;
-
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
-        }
-
-        $user->save();
-
-        $distribuidor->update([
-            'gestor_id' => $request->gestor_id,
-            'razao_social' => $request->razao_social,
-            'cnpj' => $request->cnpj,
-            'representante_legal' => $request->representante_legal,
-            'cpf' => $request->cpf,
-            'rg' => $request->rg,
-            'telefone' => $request->telefone,
-            'endereco_completo' => $request->endereco_completo,
-            'percentual_vendas' => $request->percentual_vendas,
-            'vencimento_contrato' => $request->vencimento_contrato,
-            'contrato_assinado' => $request->has('contrato_assinado'),
-        ]);
-
-        if ($request->hasFile('contrato')) {
-            $contratoPath = $request->file('contrato')->store('contratos', 'public');
-            $distribuidor->contrato = $contratoPath;
-            $distribuidor->save();
-        }
-
-        $distribuidor->cities()->sync($request->cities);
-
-        return redirect()->route('admin.distribuidores.index')->with('success', 'Distribuidor atualizado com sucesso.');
+        return redirect()->route('admin.distribuidores.index')
+            ->with('success', 'Distribuidor atualizado com sucesso.');
     }
 
-    public function destroy(Distribuidor $distribuidor)
+    public function destroy(Request $request, Distribuidor $distribuidor)
     {
-        $distribuidor->cities()->detach();
-        $distribuidor->delete();
-        $distribuidor->user->delete();
+        $this->service->excluir($distribuidor);
 
-        return redirect()->route('admin.distribuidores.index')->with('success', 'Distribuidor removido com sucesso.');
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Distribuidor removido com sucesso.'], 200);
+        }
+
+        return redirect()->route('admin.distribuidores.index')
+            ->with('success', 'Distribuidor removido com sucesso.');
     }
 
+    /**
+     * Endpoint para popular <select> com distribuidores por gestor (sempre JSON).
+     */
     public function porGestor(\App\Models\Gestor $gestor)
     {
-        // Ajuste os campos conforme seu schema; aqui uso id, razao_social e user->name.
-        $distribuidores = \App\Models\Distribuidor::query()
-            ->with('user:id,name')       // para exibir nome do user se houver
-            ->where('gestor_id', $gestor->id)
-            ->orderBy('razao_social')
-            ->get(['id', 'razao_social', 'gestor_id', 'user_id']);
-
-        // Formata para JSON simples pro <option>
-        return response()->json(
-            $distribuidores->map(fn($d) => [
-                'id'   => $d->id,
-                'text' => $d->user?->name ?? $d->razao_social,
-            ])
-        );
+        return response()->json($this->service->opcoesPorGestor($gestor));
     }
-
 }

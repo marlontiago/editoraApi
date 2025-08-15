@@ -19,7 +19,7 @@
                     type="text"
                     name="q"
                     value="{{ request('q') }}"
-                    placeholder="Buscar por nome, título, ISBN, autores ou coleção..."
+                    placeholder="Buscar por nome, título, autores, coleção..."
                     class="h-10 w-72 max-w-full rounded-md border-gray-300 px-3 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                 >
                 <button type="submit"

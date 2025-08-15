@@ -3,195 +3,163 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreGestorRequest;
+use App\Http\Requests\Admin\UpdateGestorRequest;
+use App\Http\Requests\Admin\VincularDistribuidoresRequest;
+use App\Http\Resources\CidadesDisponiveisResource;
 use App\Models\Gestor;
-use App\Models\User;
 use App\Models\City;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use App\Models\Distribuidor;
+use App\Services\GestorService;
+use App\Http\Resources\GestorResource;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class GestorController extends Controller
 {
-    public function index()
+    public function __construct(private GestorService $service)
     {
-        $gestores = Gestor::with('user', 'distribuidores.user', 'cities')->paginate(10);
+        
+    }
+    public function index(Request $request)
+    {
+        $gestores = Gestor::with(['user', 'distribuidores.user', 'cities'])->paginate(10);
+
+        Log::info($gestores);
+
+        if ($request->wantsJson()) {
+            return GestorResource::collection($gestores)
+                ->additional([
+                    'meta' => [
+                        'current_page' => $gestores->currentPage(),
+                        'per_page'     => $gestores->perPage(),
+                        'total'        => $gestores->total(),
+                        'last_page'    => $gestores->lastPage(),
+                    ],
+                ]);
+        }
+
         return view('admin.gestores.index', compact('gestores'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $cities = City::all();
-        
-        return view('admin.gestores.create', compact('cities'));
-    }
-
-    public function store(Request $request)
-    {
-        $request->validate([
-            'razao_social' => 'required|string|max:255',
-            'estado_uf' => 'nullable|string|size:2',
-            'cnpj' => 'required|string|max:20',
-            'representante_legal' => 'required|string|max:255',
-            'cpf' => 'required|string|max:20',
-            'rg' => 'required|string|max:20',
-            'telefone' => 'required|string|max:20',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6',
-            'endereco_completo' => 'nullable|string|max:255',
-            'percentual_vendas' => 'requi                   red|numeric|min:0|max:100',
-            'vencimento_contrato' => 'nullable|date',
-            'contrato_assinado' => 'nullable|boolean',
-            'contrato' => 'nullable|file|mimes:pdf|max:2048',
-            'cities' => 'array|nullable',
-        ]);
-
-        $contratoPath = $request->hasFile('contrato')
-            ? $request->file('contrato')->store('contratos', 'public')
-            : null;
-
-        $user = User::create([
-            'name' => $request->razao_social,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-        $user->assignRole('gestor');
-
-        $gestor = Gestor::create([
-            'user_id' => $user->id,
-            'estado_uf' => $request->estado_uf,
-            'razao_social' => $request->razao_social,
-            'cnpj' => $request->cnpj,
-            'representante_legal' => $request->representante_legal,
-            'cpf' => $request->cpf,
-            'rg' => $request->rg,
-            'telefone' => $request->telefone,
-            'email' => $request->email,
-            'endereco_completo' => $request->endereco_completo,
-            'percentual_vendas' => $request->percentual_vendas,
-            'vencimento_contrato' => $request->vencimento_contrato,
-            'contrato_assinado' => $request->boolean('contrato_assinado'),
-            'contrato' => $contratoPath,
-        ]);
-
-        if ($request->has('cities')) {
-            $gestor->cities()->sync($request->cities);
+        if ($request->wantsJson()) {
+        return response()->json(['data' => []]);
         }
 
-        return redirect()->route('admin.gestores.index')->with('success', 'Gestor criado com sucesso!');
+        return view('admin.gestores.create');
     }
 
-    public function edit(Gestor $gestor)
+    public function store(StoreGestorRequest $request)
     {
-        $cities = City::orderBy('name')->get();
-        $gestor->load('user', 'cities');
-        return view('admin.gestores.edit', compact('gestor', 'cities'));
-    }
+        $gestor = $this->service->create($request->validated());
 
-    public function update(Request $request, Gestor $gestor)
-    {
-         $request->validate([
-            'razao_social' => 'required|string|max:255',
-            'estado_uf' => 'nullable|string|size:2',
-            'cnpj' => 'required|string|max:20',
-            'representante_legal' => 'required|string|max:255',
-            'cpf' => 'required|string|max:20',
-            'rg' => 'required|string|max:20',
-            'telefone' => 'required|string|max:20',
-            'email' => 'nullable|email|unique:users,email,' . $gestor->user_id,
-            'password' => 'nullable|string|min:6',
-            'endereco_completo' => 'nullable|string|max:255',
-            'percentual_vendas' => 'required|numeric|min:0|max:100',
-            'vencimento_contrato' => 'nullable|date',
-            'contrato_assinado' => 'nullable|boolean',
-            'contrato' => 'nullable|file|mimes:pdf|max:2048',
-            'cities' => 'array|nullable',
-        ]);
-
-        if ($request->hasFile('contrato')) {
-            $contratoPath = $request->file('contrato')->store('contratos', 'public');
-            $gestor->contrato = $contratoPath;
+        if ($request->wantsJson()) {
+            return (new GestorResource($gestor))
+                ->additional(['message' => 'Gestor criado com sucesso!'])
+                ->response()
+                ->setStatusCode(201);
         }
 
-        $gestor->update([
-            'razao_social' => $request->razao_social,
-            'estado_uf' => $request->estado_uf,
-            'cnpj' => $request->cnpj,
-            'representante_legal' => $request->representante_legal,
-            'cpf' => $request->cpf,
-            'rg' => $request->rg,
-            'telefone' => $request->telefone,
-            'email' => $request->email,
-            'endereco_completo' => $request->endereco_completo,
-            'percentual_vendas' => $request->percentual_vendas,
-            'vencimento_contrato' => $request->vencimento_contrato,
-            'contrato_assinado' => $request->boolean('contrato_assinado'),
-        ]);
-
-        $userData = [
-    'name' => $request->razao_social,
-];
-
-    if ($request->filled('email')) {
-        $userData['email'] = $request->email;
+        return redirect()
+            ->route('admin.gestores.index')
+            ->with('success', 'Gestor criado com sucesso!');
     }
 
-    $gestor->user->update($userData);
+    public function edit(Request $request, Gestor $gestor)
+    {
+        $gestor->load('user');
 
-        if ($request->has('cities')) {
-            $gestor->cities()->sync($request->cities);
+        if ($request->wantsJson()) {
+            return response()->json(['data' => ['gestor' => new GestorResource($gestor)]]);
         }
 
-        return redirect()->route('admin.gestores.index')->with('success', 'Gestor atualizado com sucesso!');
+        return view('admin.gestores.edit', compact('gestor'));
     }
 
-    public function destroy(Gestor $gestor)
+    public function update(UpdateGestorRequest $request, Gestor $gestor)
     {
-        $gestor->cities()->detach();
-        $gestor->user->delete(); // remove também o user
-        $gestor->delete();
+        $this->service->update($gestor, $request->validated());
 
-        return redirect()->route('admin.gestores.index')->with('success', 'Gestor removido com sucesso!');
+        if ($request->wantsJson()) {
+            return (new GestorResource($gestor))
+                ->additional(['message' => 'Gestor atualizado com sucesso!'])
+                ->response()
+                ->setStatusCode(200);
+        }
+
+        return redirect()
+            ->route('admin.gestores.index')
+            ->with('success', 'Gestor atualizado com sucesso!');
     }
 
-    public function vincularDistribuidores()
+    public function destroy(Request $request, Gestor $gestor)
     {
-        $gestores = Gestor::with('user')->get();
-        $distribuidores = Distribuidor::with('user')->get();
+        $this->service->delete($gestor);
+
+         if ($request->wantsJson()) {
+            return response()->json(['message' => 'Gestor removido com sucesso!'], 200);
+        }
+
+        return redirect()
+            ->route('admin.gestores.index')
+            ->with('success', 'Gestor removido com sucesso!');
+    }
+
+    public function vincularDistribuidores(Request $request)
+    {
+        $gestores = Gestor::with('user')->orderBy('razao_social')->get();
+        $distribuidores = Distribuidor::with('user')->orderBy('razao_social')->get();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'data' => [
+                    'gestores'      => $gestores->map(fn($g) => [
+                        'id' => $g->id,
+                        'razao_social' => $g->razao_social,
+                        'user' => ['id' => $g->user?->id, 'name' => $g->user?->name, 'email' => $g->user?->email],
+                    ]),
+                    'distribuidores' => $distribuidores->map(fn($d) => [
+                        'id' => $d->id,
+                        'razao_social' => $d->razao_social,
+                        'user' => ['id' => $d->user?->id, 'name' => $d->user?->name, 'email' => $d->user?->email],
+                    ]),
+                ]
+            ]);
+        }
 
         return view('admin.gestores.vincular', compact('gestores', 'distribuidores'));
     }
 
-    public function storeVinculo(Request $request)
+    public function storeVinculo(VincularDistribuidoresRequest $request)
     {
-        $request->validate([
-            'gestor_id' => 'required|exists:gestores,id',
-            'distribuidores' => 'array',
-            'distribuidores.*' => 'exists:distribuidores,id',
-        ]);
-
-        foreach ($request->distribuidores as $distribuidorId) {
-            $distribuidor = Distribuidor::find($distribuidorId);
-            $distribuidor->gestor_id = $request->gestor_id;
-            $distribuidor->save();
-        }
-
-        return redirect()->route('admin.admin.gestores.vincular')->with('success', 'Distribuidores vinculados com sucesso.');
-    }
-
-    public function cidadesPorGestor(Gestor $gestor)
-    {
-        if (!$gestor->estado_uf) {
-            return response()->json([]); // sem UF, sem cidades
-        }
-
-        return response()->json(
-            City::where('state', strtoupper($gestor->estado_uf))
-                ->orderBy('name')
-                ->get(['id','name'])
+        $this->service->vincularDistribuidores(
+            gestorId: (int)$request->gestor_id,
+            distribuidorIds: $request->validated()['distribuidores'] ?? []
         );
+
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Distribuidores vinculados com sucesso.'], 200);
+        }
+
+        return redirect()
+            ->route('admin.gestores.vincular')
+            ->with('success', 'Distribuidores vinculados com sucesso.');
     }
 
-    
+    public function cidadesPorGestor(Request $request, Gestor $gestor)
+    {
+        $data = $this->service->cidadesPorGestor($gestor);
 
+    if ($request->wantsJson()) {
+        return CidadesDisponiveisResource::collection($data);
+    }
+
+    // View para usar no painel, se quiser
+    return view('admin.gestores.cidades', [
+        'gestor'  => $gestor,
+        'cidades' => $data,
+    ]);
+    }
 }

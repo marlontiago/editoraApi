@@ -26,7 +26,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
     Route::get('/dashboard', [DashboardRedirectController::class, 'redirect'])->name('dashboard.redirect');
     
 });
@@ -34,17 +33,18 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('produtos',ProdutoController::class)->except("show");
-
+    Route::resource('usuarios', UserController::class);
     Route::resource('comissoes', CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
+
     Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor'])->except('show');
-    Route::get('/admin/distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('admin.distribuidores.por-gestor');
+    Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('admin.distribuidores.por-gestor');
+    Route::get('/cidades/por-distribuidor/{id}', [CidadeController::class, 'cidadesPorDistribuidor']);
 
     Route::resource('gestores', GestorController::class)->parameters(['gestores' => 'gestor'])->except('show');
-    Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('admin.gestores.vincular');
-    Route::post('gestores/vincular', [GestorController::class, 'storeVinculo'])->name('admin.gestores.vincular.salvar');
+    Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('gestores.vincular');
+    Route::post('gestores/vincular', [GestorController::class, 'storeVinculo'])->name('gestores.vincular.salvar');
     Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])->name('gestores.cidades');
-
-    Route::resource('usuarios', UserController::class);
+    Route::get('/cidades/por-gestor/{id}', [CidadeController::class, 'cidadesPorGestor']);    
 
     Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
     Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
@@ -54,10 +54,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/pedidos/{pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
     Route::get('/dashboard/export/excel', [DashboardController::class, 'exportExcel'])->name('admin.dashboard.export.excel');
-    Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('admin.dashboard.export.pdf');
-
-    Route::get('/cidades/por-gestor/{id}', [CidadeController::class, 'cidadesPorGestor']);
-    Route::get('/cidades/por-distribuidor/{id}', [CidadeController::class, 'cidadesPorDistribuidor']);
+    Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('admin.dashboard.export.pdf');   
     
 });
 

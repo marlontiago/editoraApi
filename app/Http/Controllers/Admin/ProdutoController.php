@@ -29,11 +29,10 @@ class ProdutoController extends Controller
             ->when($q !== '', function ($qb) use ($q) {
                 $qb->where(function ($qbuilder) use ($q) {
                     $qbuilder
-                        ->where('nome', 'like', "%{$q}%")
-                        ->orWhere('titulo', 'like', "%{$q}%")
-                        ->orWhere('isbn', 'like', "%{$q}%")
-                        ->orWhere('autores', 'like', "%{$q}%")
-                        ->orWhereHas('colecao', fn($cq) => $cq->where('nome', 'like', "%{$q}%"));
+                        ->where('nome', 'ilike', "%{$q}%")
+                        ->orWhere('titulo', 'ilike', "%{$q}%")
+                        ->orWhere('autores', 'ilike', "%{$q}%")
+                        ->orWhereHas('colecao', fn($cq) => $cq->where('nome', 'ilike', "%{$q}%"));
                 });
             });
 

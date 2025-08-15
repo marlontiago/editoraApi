@@ -10,7 +10,7 @@
             </div>
         @endif
 
-        <form action="{{ route('admin.admin.gestores.vincular.salvar') }}" method="POST">
+        <form action="{{ route('admin.gestores.vincular.salvar') }}" method="POST">
             @csrf
 
             <div class="mb-4">
@@ -18,7 +18,7 @@
                 <select name="gestor_id" class="w-full border rounded p-2">
                     @foreach($gestores as $gestor)
                         <option value="{{ $gestor->id }}">
-                            {{ $gestor->user->name }} ({{ $gestor->user->email }})
+                            {{ $gestor->razao_social }} ({{ $gestor->user->email }})
                         </option>
                     @endforeach
                 </select>

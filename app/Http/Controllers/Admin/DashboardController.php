@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\PedidosDashboardExport;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {

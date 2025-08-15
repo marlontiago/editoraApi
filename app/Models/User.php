@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\Traits\HasCommission;
+use Laravel\Sanctum\HasApiTokens;
 
 /**
  * @mixin \Spatie\Permission\Traits\HasRoles
@@ -16,7 +17,7 @@ use App\Models\Traits\HasCommission;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, HasCommission;
+    use HasFactory, Notifiable, HasRoles, HasCommission, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.

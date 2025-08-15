@@ -176,47 +176,69 @@
 
     {{-- JS: carrega cidades por gestor (mantido) --}}
     <script>
-      const gestorSelect = document.getElementById('gestor_id');
-      const citiesSelect = document.getElementById('cities');
+        const gestorSelect = document.getElementById('gestor_id');
+        const citiesSelect = document.getElementById('cities');
 
-      async function carregarCidades(gestorId) {
-        citiesSelect.innerHTML = '';
-        citiesSelect.disabled = true;
-        if (!gestorId) return;
+        async function carregarCidades(gestorId) {
+            citiesSelect.innerHTML = '';
+            citiesSelect.disabled = true;
+            if (!gestorId) return;
 
-        try {
-          const resp = await fetch(`/admin/gestores/${gestorId}/cidades`, { credentials: 'same-origin' });
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            try {
+            const resp = await fetch(`/admin/gestores/${gestorId}/cidades`, {
+                credentials: 'same-origin',
+                headers: {
+                // 👇 força o controller a retornar JSON (cai no $request->wantsJson())
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
 
-          const ct = resp.headers.get('content-type') || '';
-          if (!ct.includes('application/json')) throw new Error('Resposta não é JSON');
-
-          const cidades = await resp.json();
-
-          const oldCities = @json(old('cities', []));
-          for (const c of cidades) {
-            const opt = document.createElement('option');
-            opt.value = c.id;
-            opt.textContent = c.name;
-            if (oldCities.includes(String(c.id)) || oldCities.includes(Number(c.id))) {
-              opt.selected = true;
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const ct = resp.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) {
+                throw new Error('Resposta não é JSON (verifique se o header Accept foi enviado)');
             }
-            citiesSelect.appendChild(opt);
-          }
-          citiesSelect.disabled = cidades.length === 0;
-        } catch (e) {
-          // feedback simples
-          citiesSelect.innerHTML = '';
-          citiesSelect.disabled = true;
-          alert('Não foi possível carregar as cidades para o gestor selecionado.');
-          console.error(e);
+
+            const payload = await resp.json();
+            // 👇 Compatível com retorno direto (array) ou via Resource ({ data: [...] })
+            const cidades = Array.isArray(payload) ? payload : (payload.data ?? []);
+
+            const oldCities = @json(old('cities', []));
+            for (const c of cidades) {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+
+                if (c.occupied) {
+                const quem = c.distribuidor_name ? ` — ocupada por ${c.distribuidor_name}` : ' — já ocupada';
+                opt.textContent = `${c.name}${quem}`;
+                opt.disabled = true;
+                opt.classList.add('text-gray-500');
+                } else {
+                opt.textContent = c.name;
+                if (oldCities.includes(String(c.id)) || oldCities.includes(Number(c.id))) {
+                    opt.selected = true;
+                }
+                }
+
+                citiesSelect.appendChild(opt);
+            }
+
+            citiesSelect.disabled = cidades.length === 0;
+            } catch (e) {
+            citiesSelect.innerHTML = '';
+            citiesSelect.disabled = true;
+            alert('Não foi possível carregar as cidades para o gestor selecionado.');
+            console.error('[carregarCidades] erro:', e);
+            }
         }
-      }
 
-      gestorSelect.addEventListener('change', e => carregarCidades(e.target.value));
+        gestorSelect.addEventListener('change', e => carregarCidades(e.target.value));
 
-      @if (old('gestor_id'))
-        carregarCidades(@json((int) old('gestor_id')));
-      @endif
-    </script>
+        @if (old('gestor_id'))
+            carregarCidades(@json((int) old('gestor_id')));
+        @endif
+</script>
+
+
 </x-app-layout>

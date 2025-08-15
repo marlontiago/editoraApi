@@ -319,7 +319,7 @@ class PedidoController extends Controller
             $envolvidos = array_values(array_unique(array_merge($antesIds, $depoisIds)));
             $produtosLock = Produto::whereIn('id', $envolvidos)->lockForUpdate()->get()->keyBy('id');
 
-            //Aqui para cada produto ele verifica as diferenças para cada produto, mas sem mexer no estoque ainda.
+            //Aqui para cada produto ele verifica as diferenças mas sem mexer no estoque ainda.
             foreach ($envolvidos as $pid) {
                 $qAntes  = (int)($antesItens[$pid]  ?? 0);
                 $qDepois = (int)($depoisItens[$pid] ?? 0);
@@ -469,8 +469,5 @@ class PedidoController extends Controller
             return back()->withErrors(['error' => 'Erro ao atualizar: ' . $e->getMessage()])->withInput();
         }
     }
-
-
-
 
 }

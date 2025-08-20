@@ -84,7 +84,7 @@
                         Exportar Excel
                     </a>
 
-                    <a href="{{ route('admin.admin.dashboard.export.pdf', request()->only('data_inicio','data_fim','gestor_id','distribuidor_id',)) }}"
+                    <a href="{{ route('admin.admin.dashboard.export.pdf', request()->only('data_inicio','data_fim','gestor_id','distribuidor_id', 'status')) }}"
                        class="inline-flex h-9 px-4 py-2 text-sm rounded bg-gray-900 hover:bg-gray-800 text-white whitespace-nowrap">
                         Exportar PDF
                     </a>
@@ -132,6 +132,8 @@
                         R$ {{ number_format((float)$somaGeralTodosPedidos, 2, ',', '.') }}
                     </div>
                 </div>
+
+                
             </div>
 
         </div>
@@ -146,8 +148,9 @@
                         <th class="p-3">#</th>
                         <th class="p-3">Data</th>
                         <th class="p-3">Gestor</th>
+                        <th class="p-3">UF</th>
                         <th class="p-3">Distribuidores Vinculados</th>
-                        <th class="p-3">Cidade(s)</th>
+                        <th class="p-3">Cidade(s) de atuação do distribuidor</th>
                         <th class="p-3">Valor</th>
                         <th class="p-3">Status</th>
                     </tr>
@@ -161,6 +164,9 @@
                             </td>
                             <td class="p-3">
                                 {{ $pedido->gestor?->user?->name ?? $pedido->gestor?->razao_social ?? '-' }}
+                            </td>
+                            <td>
+                                {{ $pedido->gestor?->estado_uf ?? '-' }}
                             </td>
                             <td class="p-3">
                                 @php $dists = optional($pedido->gestor)->distribuidores ?? collect(); @endphp

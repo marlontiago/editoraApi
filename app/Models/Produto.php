@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Formatters;
 
 class Produto extends Model
 {
@@ -49,4 +50,10 @@ class Produto extends Model
             ])
             ->withTimestamps();
     }
+
+    public function getIsbnFormatadoAttribute(): string
+    {        
+        return Formatters::formatIsbn($this->isbn);
+    }
+
 }

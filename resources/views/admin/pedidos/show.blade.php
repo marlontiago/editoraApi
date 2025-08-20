@@ -120,7 +120,7 @@
         {{-- Ações --}}
         <div class="flex flex-wrap gap-3">
             <a href="{{ route('admin.pedidos.index') }}"
-               class="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100">
+               class="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-black hover:text-white">
                 ← Voltar
             </a>
 

@@ -12,8 +12,11 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\PedidosDashboardExport;
+use App\Models\City;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
 
 class DashboardController extends Controller
 {
@@ -38,7 +41,7 @@ class DashboardController extends Controller
         'data_fim'        => ['nullable', 'date', 'after_or_equal:data_inicio'],
         'gestor_id'       => ['nullable', 'integer', 'exists:gestores,id'],
         'distribuidor_id' => ['nullable', 'integer', 'exists:distribuidores,id'],
-        'status'          => ['nullable', 'in:em_andamento,finalizado,cancelado'], // [novo]
+        'status'          => ['nullable', 'in:em_andamento,finalizado,cancelado'], 
     ]);
 
     // Filtros (variáveis)
@@ -46,7 +49,7 @@ class DashboardController extends Controller
     $dataFim        = $request->input('data_fim');
     $gestorId       = $request->input('gestor_id');
     $distribuidorId = $request->input('distribuidor_id');
-    $status         = $request->input('status'); // [novo]
+    $status         = $request->input('status'); 
 
     // Query base
     $baseQuery = Pedido::with([
@@ -76,7 +79,7 @@ class DashboardController extends Controller
         $baseQuery->where('distribuidor_id', $distribuidorId);
     }
 
-    // Filtro por status [novo]
+    // Filtro por status
     if ($status) {
         $baseQuery->where('status', $status);
     }
@@ -95,7 +98,8 @@ class DashboardController extends Controller
     $somaPagina = $pedidos->getCollection()->sum('valor_total');
 
     // Soma geral (sem filtros)
-    $somaGeralTodosPedidos = Pedido::sum('valor_total');
+    $somaGeralTodosPedidos = Pedido::sum('valor_total');       
+    
 
     return view('admin.dashboard', [
         'pedidos'                   => $pedidos,
@@ -113,7 +117,8 @@ class DashboardController extends Controller
         'gestoresList'              => $gestoresList,
         'distribuidoresList'        => $distribuidoresList,
         'gestoresComDistribuidores' => $gestoresComDistribuidores,
-        'status'                    => $status, // [novo] envia pra view
+        'status'                    => $status,
+
     ]);
 }
 
@@ -164,7 +169,7 @@ class DashboardController extends Controller
 
     public function exportPdf(Request $request)
     {
-        // mesma query, mas aqui sem paginação (cuidado com volume muito grande)
+        // mesma query, mas aqui sem paginação
         $pedidosQuery = $this->buildBaseQuery($request)->orderByDesc('id');
         $pedidos = $pedidosQuery->get();
 

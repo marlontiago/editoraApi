@@ -108,10 +108,8 @@
                         <select name="ano_escolar"
                                 class="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Selecione</option>
-                            @foreach(['Educação Infantil', 'Ensino Fundamental 1', 'Ensino Fundamental 2', 'Ensino Médio'] as $opcao)
-                                <option value="{{ $opcao }}" {{ old('ano_escolar', $produto->ano_escolar) == $opcao ? 'selected' : '' }}>
-                                    {{ $opcao }}
-                                </option>
+                            @foreach (['Ens Inf' => 'Educação Infantil', 'Fund 1' => 'Ens. Fundamental 1', 'Fund 2' => 'Ens. Fundamental 2', 'EM' => 'Ensino Médio'] as $valor => $label)
+                                <option value="{{ $valor }}" @selected(old('ano_escolar') == $valor)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>

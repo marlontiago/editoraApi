@@ -3,7 +3,7 @@
         <h2 class="text-xl font-semibold text-gray-800">Distribuidores</h2>
     </x-slot>
 
-    <div class="max-w-7xl mx-auto p-6">
+    <div class="max-w-full mx-auto p-6">
         <a href="{{ route('admin.distribuidores.create') }}" class="bg-green-600 text-white px-4 py-2 rounded">Novo Distribuidor</a>
 
         @if(session('success'))
@@ -17,11 +17,11 @@
                         <th class="px-4 py-2">Razão Social</th>
                         <th class="px-4 py-2">Representante</th>
                         <th class="px-4 py-2">Gestor Responsável</th>
-                        <th class="px-4 py-2">Email</th>
+                        <th class="px-4 py-2">Telefone</th>
                         <th class="px-4 py-2">CNPJ</th>
                         <th class="px-4 py-2">Percentual (%)</th>
                         <th class="px-4 py-2">Contrato</th>
-                        <th class="px-4 py-2">Cidades</th>
+                        <th class="px-4 py-2">Cidades Vinculadas</th>
                         <th class="px-4 py-2">Ações</th>
                     </tr>
                 </thead>
@@ -33,12 +33,12 @@
                             <td class="px-4 py-2">
                                 {{ $distribuidor->gestor->razao_social ?? '-' }}
                             </td>
-                            <td class="px-4 py-2">{{ $distribuidor->user->email }}</td>
-                            <td class="px-4 py-2">{{ $distribuidor->cnpj }}</td>
+                            <td>{{ $distribuidor->telefone_formatado }}</td>
+                            <td class="px-4 py-2">{{ $distribuidor->cnpj_formatado }}</td>
                             <td class="px-4 py-2">{{ number_format($distribuidor->percentual_vendas, 2) }}%</td>
                             <td class="px-4 py-2">
                                 @if($distribuidor->contrato)
-                                    <a href="{{ Storage::url($distribuidor->contrato) }}" target="_blank" class="text-blue-600 underline">Ver PDF</a>
+                                    <a href="{{ Storage::url($distribuidor->contrato) }}" target="_blank" class="text-blue-600 underline">Ver Contrato</a>
                                 @else
                                     <span class="text-gray-400">Nenhum</span>
                                 @endif

@@ -84,7 +84,7 @@
 
                             <td class="px-3 py-2 hidden md:table-cell">{{ $produto->titulo ?? '—' }}</td>
                             <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->colecao?->nome ?? '—' }}</td>
-                            <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->isbn ?? '—' }}</td>
+                           <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->isbn_formatado }}</td>
                             <td class="px-3 py-2 hidden xl:table-cell">
                                 <span class="line-clamp-2">{{ $produto->autores ?? '—' }}</span>
                             </td>

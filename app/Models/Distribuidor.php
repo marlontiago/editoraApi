@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Formatters;
 
 class Distribuidor extends Model
 {
@@ -44,5 +45,15 @@ class Distribuidor extends Model
     public function cities()
     {
         return $this->belongsToMany(City::class);
+    }
+
+    public function getCnpjFormatadoAttribute(): string
+    {
+        return Formatters::formatCnpj($this->cnpj);
+    }
+
+    public function getTelefoneFormatadoAttribute(): string
+    {
+        return Formatters::formatTelefone($this->telefone);
     }
 }

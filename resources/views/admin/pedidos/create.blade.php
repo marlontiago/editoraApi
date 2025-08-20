@@ -47,6 +47,15 @@
                 </select>
             </div>
 
+            {{-- Cidade da Venda --}}
+            <div class="col-span-12 md:col-span-6">
+                <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
+                <select name="cidade_id" id="cidade_id" disabled
+                        class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Selecione o distribuidor primeiro --</option>
+                </select>
+            </div>
+
 
             {{-- Desconto --}}
             <div class="col-span-12 md:col-span-6">
@@ -105,124 +114,220 @@
         </form>
     </div>
 
-    {{-- JS --}}
+
     <script>
-    let produtoIndex = 1;
+        const ALL_PRODUCTS = @json($produtos->map(fn($p)=>['id'=>$p->id,'nome'=>$p->nome])->values());
+    </script>
 
-    function adicionarProduto() {
+    <script>
+    
+        let produtoIndex = 0;
+
         const container = document.getElementById('produtos-container');
-        const novo = document.createElement('div');
-        novo.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4 mt-4';
-        novo.innerHTML = `
-            <div class="col-span-12 md:col-span-8">
-                <label class="block text-sm font-medium text-gray-700">Produto</label>
-                <select name="produtos[${produtoIndex}][id]"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    @foreach($produtos as $produto)
-                        <option value="{{ $produto->id }}">{{ $produto->nome }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-span-12 md:col-span-4">
-                <label class="block text-sm font-medium text-gray-700">Quantidade</label>
-                <input type="number" name="produtos[${produtoIndex}][quantidade]"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-            </div>`;
-        container.appendChild(novo);
-        produtoIndex++;
-    }
+        const addBtn    = document.querySelector('button[onclick="adicionarProduto()"]');
 
-    const gestorSelect       = document.getElementById('gestor_id');
-    const distribuidorSelect = document.getElementById('distribuidor_id');
-
-    async function carregarDistribuidores(gestorId, selectedId = null) {
-        // Reseta select
-        distribuidorSelect.innerHTML = '';
-        distribuidorSelect.disabled  = true;
-        distribuidorSelect.classList.add('bg-gray-50');
-
-        if (!gestorId) {
-            const opt = new Option('-- Selecione o gestor primeiro --', '');
-            distribuidorSelect.add(opt);
-            return;
+        // util: ids selecionados atualmente
+        function getSelectedProductIds() {
+            return Array.from(container.querySelectorAll('select[name^="produtos["][name$="[id]"]'))
+                .map(sel => sel.value)
+                .filter(v => v !== '');
         }
 
-        try {
-            const url  = `{{ route('admin.admin.distribuidores.por-gestor', ':id') }}`.replace(':id', gestorId);
-            const resp = await fetch(url, { credentials: 'same-origin' });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
-            const data = await resp.json(); // [{id, text}]
-            // Preenche
-            distribuidorSelect.add(new Option('-- Selecione --', ''));
-            data.forEach(item => {
-                const opt = new Option(item.text, item.id);
-                if (selectedId && String(selectedId) === String(item.id)) opt.selected = true;
-                distribuidorSelect.add(opt);
+        // util: monta <option> com base nos que não podem aparecer
+        function buildOptions(excludeIds = [], selectedId = null) {
+            const frag = document.createDocumentFragment();
+            frag.append(new Option('-- Selecione --', ''));
+            ALL_PRODUCTS.forEach(p => {
+                const isSelected = String(p.id) === String(selectedId);
+                const isExcluded = excludeIds.includes(String(p.id));
+                if (isExcluded && !isSelected) return;
+                const opt = new Option(p.nome, p.id);
+                if (isSelected) opt.selected = true;
+                frag.append(opt);
             });
-
-            distribuidorSelect.disabled = false;
-            distribuidorSelect.classList.remove('bg-gray-50');
-        } catch (e) {
-            console.error(e);
-            distribuidorSelect.add(new Option('Falha ao carregar distribuidores', ''));
+            return frag;
         }
-    }
 
-    // Mantém sua lógica de cidades:
-    function preencherCidades(cidades) {
-        const cidadeTextarea = document.getElementById('cidade_nome');
-        const cidadeInput    = document.getElementById('cidade_id');
-        if (Array.isArray(cidades) && cidades.length > 0) {
-            cidadeTextarea.value = cidades.map(c => c.name).join(', ');
-            cidadeInput.value    = cidades.map(c => c.id).join(',');
-        } else {
-            cidadeTextarea.value = 'Nenhuma cidade encontrada.';
-            cidadeInput.value    = '';
+        // recria as opções de TODOS os selects respeitando o que já foi escolhido
+        function refreshAllProductSelects() {
+            const chosen = getSelectedProductIds();
+            const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
+            selects.forEach(sel => {
+                const current = sel.value || null;
+                sel.innerHTML = '';
+                const exclude = chosen.filter(id => id !== current);
+                sel.append(buildOptions(exclude, current));
+            });
+            const maxReached = chosen.length >= ALL_PRODUCTS.length;
+            addBtn.disabled = maxReached;
+            addBtn.classList.toggle('opacity-50', maxReached);
+            addBtn.title = maxReached ? 'Todos os produtos já foram adicionados' : '';
         }
-    }
 
-    // Eventos
-    gestorSelect.addEventListener('change', function () {
-        const gestorId = this.value;
-
-        // 1) Carrega distribuidores do gestor
-        carregarDistribuidores(gestorId);
-
-        // 2) Carrega cidades pelo gestor (sua rota atual)
-        if (gestorId) {
-            fetch(`/admin/cidades/por-gestor/${gestorId}`)
-                .then(r => r.json())
-                .then(preencherCidades)
-                .catch(() => preencherCidades([]));
-        } else {
-            preencherCidades([]);
+        // cria um bloco de produto
+        function makeProdutoRow() {
+            const idx = produtoIndex++;
+            const row = document.createElement('div');
+            row.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4';
+            row.innerHTML = `
+                <div class="col-span-12 md:col-span-8">
+                    <label class="block text-sm font-medium text-gray-700">Produto</label>
+                    <select name="produtos[${idx}][id]"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+                </div>
+                <div class="col-span-12 md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700">Quantidade</label>
+                    <input type="number" min="1" value="1" name="produtos[${idx}][quantidade]"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="col-span-12 md:col-span-1 flex items-end">
+                    <button type="button" class="remove-row inline-flex items-center rounded-md border px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700">
+                        Remover
+                    </button>
+                </div>
+            `;
+            const sel = row.querySelector('select');
+            sel.append(buildOptions(getSelectedProductIds()));
+            return row;
         }
-    });
 
-    distribuidorSelect.addEventListener('change', function () {
-        const distribuidorId = this.value;
-        if (distribuidorId) {
-            fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`)
-                .then(r => r.json())
-                .then(preencherCidades)
-                .catch(() => preencherCidades([]));
+        function adicionarProduto() {
+            const row = makeProdutoRow();
+            container.appendChild(row);
+            refreshAllProductSelects();
         }
-    });
 
-    // Estado inicial (ex.: retorno com erro de validação)
-    document.addEventListener('DOMContentLoaded', () => {
-        const oldGestor        = @json(old('gestor_id'));
-        const oldDistribuidor  = @json(old('distribuidor_id'));
-        if (oldGestor) {
-            carregarDistribuidores(oldGestor, oldDistribuidor);
-            // também recarrega cidades do gestor escolhido
-            fetch(`/admin/cidades/por-gestor/${oldGestor}`)
-                .then(r => r.json())
-                .then(preencherCidades)
-                .catch(() => preencherCidades([]));
+        // delegação de eventos: change nos selects → atualizar filtros
+        container.addEventListener('change', (e) => {
+            if (e.target.matches('select[name^="produtos["][name$="[id]"]')) {
+                refreshAllProductSelects();
+            }
+        });
+
+        // remover linha
+        container.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-row')) {
+                const row = e.target.closest('.produto');
+                row.remove();
+                refreshAllProductSelects();
+            }
+        });
+
+        // inicial: transforma a primeira linha existente do teu HTML em “controlada”
+        document.addEventListener('DOMContentLoaded', () => {
+            const first = container.querySelector('.produto');
+            if (first) first.remove();
+            adicionarProduto();
+        });
+    </script>
+
+    <script>
+        // ======================= GESTOR / DISTRIBUIDOR / CIDADE DA VENDA =======================
+        const gestorSelect       = document.getElementById('gestor_id');
+        const distribuidorSelect = document.getElementById('distribuidor_id');
+        const cidadeSelect       = document.getElementById('cidade_id');
+
+        // Reseta o select de cidades
+        function resetCidadeSelect(placeholder = '-- Selecione --') {
+            cidadeSelect.innerHTML = '';
+            cidadeSelect.add(new Option(placeholder, ''));
+            cidadeSelect.disabled = true;
+            cidadeSelect.classList.add('bg-gray-50');
         }
-    });
-</script>
 
+        // Carrega distribuidores do gestor (rota: GET /admin/distribuidores/por-gestor/{gestor})
+        async function carregarDistribuidores(gestorId, selectedId = null) {
+            distribuidorSelect.innerHTML = '';
+            distribuidorSelect.disabled  = true;
+            distribuidorSelect.classList.add('bg-gray-50');
+
+            // ao trocar gestor, limpa cidades
+            resetCidadeSelect('-- Selecione o distribuidor primeiro --');
+
+            if (!gestorId) {
+                distribuidorSelect.add(new Option('-- Selecione o gestor primeiro --', ''));
+                return;
+            }
+
+            try {
+                const url  = `/admin/distribuidores/por-gestor/${gestorId}`;
+                const resp = await fetch(url, { credentials: 'same-origin' });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                const data = await resp.json(); // [{id, text}]
+                distribuidorSelect.add(new Option('-- Selecione --', ''));
+                data.forEach(item => {
+                    const opt = new Option(item.text, item.id);
+                    if (selectedId && String(selectedId) === String(item.id)) opt.selected = true;
+                    distribuidorSelect.add(opt);
+                });
+
+                distribuidorSelect.disabled = false;
+                distribuidorSelect.classList.remove('bg-gray-50');
+
+                // se já veio selectedId (ex.: old input), carrega cidades
+                if (selectedId) {
+                    await carregarCidadesPorDistribuidor(selectedId, @json(old('cidade_id')));
+                }
+            } catch (e) {
+                console.error(e);
+                distribuidorSelect.add(new Option('Falha ao carregar distribuidores', ''));
+            }
+        }
+
+        // Carrega cidades do distribuidor (rota: GET /admin/cidades/por-distribuidor/{id})
+        async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
+            resetCidadeSelect('-- Carregando... --');
+
+            try {
+                const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                const cidades = await resp.json(); // [{id, name}]
+                cidadeSelect.innerHTML = '';
+                cidadeSelect.add(new Option('-- Selecione --', ''));
+
+                cidades.forEach(c => {
+                    const opt = new Option(c.name, c.id);
+                    if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+                    cidadeSelect.add(opt);
+                });
+
+                cidadeSelect.disabled = false;
+                cidadeSelect.classList.remove('bg-gray-50');
+            } catch (e) {
+                console.error(e);
+                resetCidadeSelect('Falha ao carregar cidades');
+            }
+        }
+
+        // Eventos
+        gestorSelect.addEventListener('change', async function () {
+            const gestorId = this.value || null;
+            await carregarDistribuidores(gestorId);
+        });
+
+        distribuidorSelect.addEventListener('change', async function () {
+            const distribuidorId = this.value || null;
+            if (distribuidorId) {
+                await carregarCidadesPorDistribuidor(distribuidorId);
+            } else {
+                resetCidadeSelect('-- Selecione o distribuidor primeiro --');
+            }
+        });
+
+        // Estado inicial (old: pós validação)
+        document.addEventListener('DOMContentLoaded', async () => {
+            const oldGestor       = @json(old('gestor_id'));
+            const oldDistribuidor = @json(old('distribuidor_id'));
+            const oldCidade       = @json(old('cidade_id'));
+
+            if (oldGestor) {
+                await carregarDistribuidores(oldGestor, oldDistribuidor);
+                if (oldDistribuidor) {
+                    await carregarCidadesPorDistribuidor(oldDistribuidor, oldCidade);
+                }
+            }
+        });
+    </script>
 </x-app-layout>

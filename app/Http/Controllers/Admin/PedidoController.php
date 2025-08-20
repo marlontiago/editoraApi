@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 
 class PedidoController extends Controller
 {
@@ -35,12 +37,24 @@ class PedidoController extends Controller
 
     public function store(Request $request)
     {
+        // Valida também distribuidor e a "cidade da venda"
         $validated = $request->validate([
-            'data' => 'required|date',
+            'data' => ['required', 'date', 'after_or_equal:' . Carbon::now('America/Sao_Paulo')->toDateString()],
+            'gestor_id' => 'nullable|exists:gestores,id',
+            'distribuidor_id' => ['required','exists:distribuidores,id'],
+            'cidade_id' => [
+                'required','integer',
+                Rule::exists('city_distribuidor', 'city_id')
+                    ->where(fn($q) => $q->where('distribuidor_id', $request->distribuidor_id)),
+            ],
             'produtos' => 'required|array|min:1',
-            'produtos.*.id' => 'required|exists:produtos,id',
+            'produtos.*.id' => 'required|exists:produtos,id|distinct',
             'produtos.*.quantidade' => 'required|integer|min:1',
             'desconto' => 'nullable|numeric|min:0|max:100',
+        ], [
+            'data.after_or_equal' => 'A data do pedido não pode ser anterior à data atual.',
+            'cidade_id.required' => 'Selecione a cidade da venda.',
+            'cidade_id.exists'   => 'A cidade selecionada não pertence ao distribuidor escolhido.',
         ]);
 
         try {
@@ -54,17 +68,8 @@ class PedidoController extends Controller
                 'desconto' => $request->desconto ?? 0,
             ]);
 
-            // Relacionar cidades (do gestor e distribuidor)
-            $cidadesGestor = $request->gestor_id
-                ? Gestor::with('cities')->find($request->gestor_id)?->cities ?? collect()
-                : collect();
-
-            $cidadesDistribuidor = $request->distribuidor_id
-                ? Distribuidor::with('cities')->find($request->distribuidor_id)?->cities ?? collect()
-                : collect();
-
-            $todasCidades = $cidadesGestor->merge($cidadesDistribuidor)->unique('id');
-            $pedido->cidades()->sync($todasCidades->pluck('id'));
+            // Vincula SOMENTE a "cidade da venda" escolhida no formulário
+            $pedido->cidades()->sync([$request->cidade_id]);
 
             $pesoTotal = 0;
             $totalCaixas = 0;
@@ -72,7 +77,15 @@ class PedidoController extends Controller
             $valorComDesconto = 0;
             $desconto = is_numeric($request->desconto) ? floatval($request->desconto) : 0;
 
-            foreach ($validated['produtos'] as $produtoData) {
+            // (opcional) agrega duplicatas caso o front envie repetidos
+            $itens = collect($validated['produtos'])
+                ->groupBy('id')
+                ->map(fn($g) => [
+                    'id' => (int)$g->first()['id'],
+                    'quantidade' => (int)$g->sum('quantidade'),
+                ])->values()->all();
+
+            foreach ($itens as $produtoData) {
                 //  trava a linha do produto
                 $produto = Produto::whereKey($produtoData['id'])->lockForUpdate()->firstOrFail();
                 $quantidade = (int) $produtoData['quantidade'];
@@ -202,22 +215,35 @@ class PedidoController extends Controller
 
         // Se alguma linha tiver valor null ou zero ele remove e passa apenas as linhas com todos os campos
         $produtosLimpos = collect($request->input('produtos', []))
-            ->filter(fn ($row) => isset($row['id'], $row['quantidade']) && $row['id'] !== '' && (int)$row['quantidade'] > 0)
-            ->values()->all();
+    ->filter(function ($row) {
+        $id = $row['id'] ?? null;
+        $q  = $row['quantidade'] ?? null;
+        return is_numeric($id) && (int)$id > 0 && is_numeric($q) && (int)$q > 0;
+    })
+    ->map(fn ($r) => ['id' => (int)$r['id'], 'quantidade' => (int)$r['quantidade']])
+    ->values()
+    ->all();
         $request->merge(['produtos' => $produtosLimpos]);
 
-        // Valida requisição
+        // Validar distribuidor e a "cidade da venda" (cidade deve pertencer ao distribuidor)
         $validated = $request->validate([
-            'data' => 'required|date',
+            'data' => ['required', 'date', 'after_or_equal:' . Carbon::now('America/Sao_Paulo')->toDateString()],
             'gestor_id' => 'nullable|exists:gestores,id',
-            'distribuidor_id' => 'nullable|exists:distribuidores,id',
+            'distribuidor_id' => ['required','exists:distribuidores,id'],
+            'cidade_id' => [
+                'required','integer',
+                Rule::exists('city_distribuidor', 'city_id')
+                    ->where(fn($q) => $q->where('distribuidor_id', $request->distribuidor_id)),
+            ],
             'desconto' => 'nullable|numeric|min:0|max:100',
             'status' => 'required|in:em_andamento,finalizado,cancelado',
-            'cidades' => 'array',
-            'cidades.*' => 'exists:cities,id',
+            // >>> AJUSTE: não usamos mais array de cidades aqui
             'produtos' => 'required|array|min:1',
-            'produtos.*.id' => 'required|exists:produtos,id',
+            'produtos.*.id' => 'required|exists:produtos,id|distinct',
             'produtos.*.quantidade' => 'required|integer|min:1',
+        ], [
+            'cidade_id.required' => 'Selecione a cidade da venda.',
+            'cidade_id.exists'   => 'A cidade selecionada não pertence ao distribuidor escolhido.',
         ]);
     
         // Inicia transação no banco de dados
@@ -271,14 +297,52 @@ class PedidoController extends Controller
                     'desconto' => $request->desconto ?? 0,
                     'status' => 'cancelado',
                 ]);
-                $pedido->cidades()->sync(collect($request->cidades ?? [])->unique()->values());
+                // Mantém apenas a cidade selecionada
+                $pedido->cidades()->sync([$request->cidade_id]);
+
+                // Logar mudança de cidade no cancelamento 
+                $cidadesDepoisIds = [$request->cidade_id];
+                $cityNamesAntes   = City::whereIn('id', $antes['cidades'])->pluck('name','id');
+                $cityNamesDepois  = City::whereIn('id', $cidadesDepoisIds)->pluck('name','id');
+
+                $addedCityIds   = array_values(array_diff($cidadesDepoisIds, $antes['cidades']));
+                $removedCityIds = array_values(array_diff($antes['cidades'], $cidadesDepoisIds));
+
+                $mensagemCidade = null;
+                if (count($antes['cidades']) === 1 && count($cidadesDepoisIds) === 1) {
+                    $idFrom = $antes['cidades'][0] ?? null;
+                    $idTo   = $cidadesDepoisIds[0] ?? null;
+                    if ($idFrom !== $idTo) {
+                        $from = $cityNamesAntes[$idFrom] ?? ('ID ' . $idFrom);
+                        $to   = $cityNamesDepois[$idTo] ?? ('ID ' . $idTo);
+                        $mensagemCidade = "Cidade da venda alterada: '{$from}' → '{$to}'";
+                    }
+                } else {
+                    $partes = [];
+                    if ($addedCityIds) {
+                        $nomesAdd = array_map(fn($id) => $cityNamesDepois[$id] ?? ('ID ' . $id), $addedCityIds);
+                        $partes[] = 'Cidades adicionadas: ' . implode(', ', $nomesAdd);
+                    }
+                    if ($removedCityIds) {
+                        $nomesRem = array_map(fn($id) => $cityNamesAntes[$id] ?? ('ID ' . $id), $removedCityIds);
+                        $partes[] = 'Cidades removidas: ' . implode(', ', $nomesRem);
+                    }
+                    if ($partes) $mensagemCidade = implode(' | ', $partes);
+                }
 
                 // Mostra a log na view sobre o que foi alterado no pedido
+                // Incluir a mensagem de cidade (se houver) na mensagem final
+                $mensagemBase = !empty($detalhesReposicao)
+                    ? 'Estoque devolvido: ' . implode(', ', $detalhesReposicao)
+                    : 'Pedido cancelado sem itens.';
+
+                $mensagemFinal = $mensagemCidade
+                    ? ($mensagemBase . ' | ' . $mensagemCidade)
+                    : $mensagemBase;
+
                 $pedido->registrarLog(
                     'Pedido cancelado',
-                    !empty($detalhesReposicao)
-                        ? 'Estoque devolvido: ' . implode(', ', $detalhesReposicao)
-                        : 'Pedido cancelado sem itens.',
+                    $mensagemFinal,
                     ['antes' => $antes]
                 );
 
@@ -297,11 +361,16 @@ class PedidoController extends Controller
                 'desconto' => $request->desconto ?? 0,
                 'status' => $novoStatus,
             ]);
-            $pedido->cidades()->sync(collect($request->cidades ?? [])->unique()->values());
+            // >>> AJUSTE: sincroniza SOMENTE a cidade da venda escolhida
+            $pedido->cidades()->sync([$request->cidade_id]);
 
             // Aqui é o snapshot depois que são os dados vindos do form, que será comparado
             // com o snap antes criado acima antes da verificação de status "cancelado".
-            $depoisItens = collect($validated['produtos'])->mapWithKeys(fn($it) => [(int)$it['id'] => (int)$it['quantidade']])->toArray();
+            // >>> AJUSTE: agrega possíveis duplicatas de produtos vindos do form
+           $depoisItens = collect($validated['produtos'])
+            ->groupBy(fn ($it) => (int) $it['id'])     // chave é SEMPRE int > 0
+            ->map(fn ($group) => (int) $group->sum('quantidade'))
+            ->toArray();
 
             //Aqui pega apenas os itens do snapshot, salvando seus IDs nas variaveis $antesIds e $depoisIds.
             $antesItens = $antes['itens'];
@@ -414,6 +483,37 @@ class PedidoController extends Controller
                     $mensagens[] = ucfirst($k) . " alterado: '{$vAntes}' → '{$vDepois}'";
                 }
             }
+
+            // Diff de cidades 
+            $cityNamesAntes  = City::whereIn('id', $antes['cidades'])->pluck('name', 'id');
+            $cityNamesDepois = City::whereIn('id', $depois['cidades'])->pluck('name', 'id');
+
+            $addedCityIds   = array_values(array_diff($depois['cidades'], $antes['cidades']));
+            $removedCityIds = array_values(array_diff($antes['cidades'], $depois['cidades']));
+
+            if (!empty($addedCityIds) || !empty($removedCityIds)) {
+                // Caso típico: 1 cidade antes e 1 depois
+                if (count($antes['cidades']) === 1 && count($depois['cidades']) === 1) {
+                    $idFrom = $antes['cidades'][0] ?? null;
+                    $idTo   = $depois['cidades'][0] ?? null;
+                    if ($idFrom !== $idTo) {
+                        $from = $cityNamesAntes[$idFrom]  ?? ('ID ' . $idFrom);
+                        $to   = $cityNamesDepois[$idTo]   ?? ('ID ' . $idTo);
+                        $mensagens[] = "Cidade da venda alterada: '{$from}' → '{$to}'";
+                    }
+                } else {
+                    if ($addedCityIds) {
+                        $nomesAdd = array_map(fn($id) => $cityNamesDepois[$id] ?? ('ID ' . $id), $addedCityIds);
+                        $mensagens[] = 'Cidades adicionadas: ' . implode(', ', $nomesAdd);
+                    }
+                    if ($removedCityIds) {
+                        $nomesRem = array_map(fn($id) => $cityNamesAntes[$id] ?? ('ID ' . $id), $removedCityIds);
+                        $mensagens[] = 'Cidades removidas: ' . implode(', ', $nomesRem);
+                    }
+                }
+            }
+
+
             // Se o diff feito la em cima verificou se algo foi adicionado ele executa esse if.
             if ($adicionados) {
                 $nomes = [];

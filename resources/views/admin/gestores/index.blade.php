@@ -22,7 +22,6 @@
                     <tr>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Razão Social</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">CNPJ</th>
-                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Representante Legal</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">CPF</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">RG</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600">Telefone</th>
@@ -40,11 +39,10 @@
                     @foreach($gestores as $gestor)
                         <tr>
                             <td class="px-4 py-2">{{ $gestor->razao_social }}</td>
-                            <td class="px-4 py-2">{{ $gestor->cnpj }}</td>
-                            <td class="px-4 py-2">{{ $gestor->representante_legal }}</td>
-                            <td class="px-4 py-2">{{ $gestor->cpf }}</td>
-                            <td class="px-4 py-2">{{ $gestor->rg }}</td>
-                            <td class="px-4 py-2">{{ $gestor->telefone }}</td>
+                            <td class="px-4 py-2">{{ $gestor->cnpj_formatado }}</td>
+                            <td class="px-4 py-2">{{ $gestor->cpf_formatado }}</td>
+                            <td class="px-4 py-2">{{ $gestor->rg_formatado }}</td>
+                            <td class="px-4 py-2">{{ $gestor->telefone_formatado }}</td>
                             <td class="px-4 py-2">{{ $gestor->user->email }}</td>
                             <td class="px-4 py-2">{{ $gestor->endereco_completo }}</td>
                             <td class="px-4 py-2">

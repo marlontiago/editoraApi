@@ -47,7 +47,7 @@
                                     @endforeach
                                 </td>
                                 <td>
-                                    <a href="{{ route('admin.usuarios.edit', $user) }}" class="p-2" >Editar</a>
+                                    <a href="{{ route('admin.usuarios.edit', $user) }}" class="p-2 text-blue-600" >Editar</a>
                                 </td>
                                 <td>
                                     <form action="{{ route('admin.usuarios.destroy', $user->id) }}" method="POST">

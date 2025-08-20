@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Support\Formatters;
+use PhpOffice\PhpSpreadsheet\Calculation\TextData\Format;
 
 class Gestor extends Model
 {
@@ -46,4 +48,24 @@ class Gestor extends Model
     {
         return $this->belongsToMany(City::class, 'city_gestor');
     }
+
+    public function getCpfFormatadoAttribute(): string
+    {
+        return Formatters::formatCpf($this->cpf);
+    }
+
+    public function getCnpjFormatadoAttribute(): string
+    {
+        return Formatters::formatCnpj($this->cnpj);
+    }
+
+    public function getTelefoneFormatadoAttribute(): string
+    {
+        return Formatters::formatTelefone($this->telefone);
+    }
+
+    public function getRgFormatadoAttribute(): string
+    {
+        return Formatters::formatRg($this->rg);
+    }   
 }

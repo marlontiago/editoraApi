@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Commission;
+use App\Models\Gestor;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -11,6 +12,7 @@ class CommissionController extends Controller
 {
     public function index()
     {
+
         $commissions = Commission::with('user')->paginate(10);
         return view('admin.comissoes.index', compact('commissions'));
     }

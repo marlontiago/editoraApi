@@ -53,6 +53,7 @@
                             <td class="px-4 py-2">
                                 @forelse($gestor->distribuidores as $dist)
                                     <span class="block text-sm">{{ $dist->user->name ?? '-' }}</span>
+                                    
                                 @empty
                                     <span class="italic text-gray-500">Nenhum</span>
                                 @endforelse

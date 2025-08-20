@@ -12,7 +12,7 @@ use App\Http\Controllers\Admin\DistribuidorController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CommissionController;
 use App\Http\Controllers\Admin\CidadeController;
-
+use App\Http\Controllers\Admin\ClienteController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -44,7 +44,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('gestores.vincular');
     Route::post('gestores/vincular', [GestorController::class, 'storeVinculo'])->name('gestores.vincular.salvar');
     Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])->name('gestores.cidades');
-    Route::get('/cidades/por-gestor/{id}', [CidadeController::class, 'cidadesPorGestor']);    
+    Route::get('/cidades/por-gestor/{id}', [CidadeController::class, 'cidadesPorGestor']);  
+    
+    Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente'])->except('show');
 
     Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
     Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');

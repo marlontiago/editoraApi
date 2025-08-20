@@ -15,6 +15,10 @@
                     <x-nav-link href="{{ route('admin.produtos.index') }}" :active="request()->routeIs('dashboard')">
                         {{ __('Produtos') }}
                     </x-nav-link>
+                    
+                    <x-nav-link href="{{ route('admin.clientes.index') }}" :active="request()->routeIs('dashboard')">
+                        {{ __('Clientes') }}
+                    </x-nav-link>
 
                     <x-nav-link href="{{ route('admin.gestores.index') }}" :active="request()->routeIs('dashboard')">
                         {{ __('Gestores') }}

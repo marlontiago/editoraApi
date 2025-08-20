@@ -50,7 +50,7 @@
             {{-- Email --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="email" class="block text-sm font-medium text-gray-700">E-mail <span class="text-red-600">*</span></label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}"
+                <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="email@example.com"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -79,7 +79,7 @@
             {{-- CNPJ / Representante / CPF / RG --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ <span class="text-red-600">*</span></label>
-                <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}"
+                <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}" minlength="14" maxlength="14" placeholder="00.000.000/0000-00"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -93,14 +93,14 @@
 
             <div class="col-span-12 md:col-span-3">
                 <label for="cpf" class="block text-sm font-medium text-gray-700">CPF <span class="text-red-600">*</span></label>
-                <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}"
+                <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}" minlength="11" maxlength="11" placeholder="000.000.000-00"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             <div class="col-span-12 md:col-span-3">
                 <label for="rg" class="block text-sm font-medium text-gray-700">RG <span class="text-red-600">*</span></label>
-                <input type="text" id="rg" name="rg" value="{{ old('rg') }}"
+                <input type="text" id="rg" name="rg" value="{{ old('rg') }}" minlength="7" maxlength="10"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('rg') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -108,7 +108,7 @@
             {{-- Telefone / Endereço --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="telefone" class="block text-sm font-medium text-gray-700">Telefone</label>
-                <input type="text" id="telefone" name="telefone" value="{{ old('telefone') }}"
+                <input type="text" id="telefone" name="telefone" value="{{ old('telefone') }}" minlength="10" maxlength="11" placeholder="(00) 00000-0000"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('telefone') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -174,7 +174,7 @@
         </form>
     </div>
 
-    {{-- JS: carrega cidades por gestor (mantido) --}}
+    {{-- JS: carrega cidades por gestor --}}
     <script>
         const gestorSelect = document.getElementById('gestor_id');
         const citiesSelect = document.getElementById('cities');
@@ -188,7 +188,7 @@
             const resp = await fetch(`/admin/gestores/${gestorId}/cidades`, {
                 credentials: 'same-origin',
                 headers: {
-                // 👇 força o controller a retornar JSON (cai no $request->wantsJson())
+                
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -201,7 +201,6 @@
             }
 
             const payload = await resp.json();
-            // 👇 Compatível com retorno direto (array) ou via Resource ({ data: [...] })
             const cidades = Array.isArray(payload) ? payload : (payload.data ?? []);
 
             const oldCities = @json(old('cities', []));

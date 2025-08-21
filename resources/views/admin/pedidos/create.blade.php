@@ -4,14 +4,12 @@
     </x-slot>
 
     <div class="max-w-6xl mx-auto p-6">
-        {{-- Mensagens de sucesso --}}
         @if(session('success'))
             <div class="mb-6 rounded-md border border-green-300 bg-green-50 p-4 text-green-800">
                 {{ session('success') }}
             </div>
         @endif
 
-        {{-- Erros de validação --}}
         @if($errors->any())
             <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
                 <ul class="list-disc pl-5 space-y-1">
@@ -26,73 +24,65 @@
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
             @csrf
 
-            {{-- Gestor --}}
+            {{-- Cliente (obrigatório) --}}
             <div class="col-span-12 md:col-span-6">
-                <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor</label>
-                <select name="gestor_id" id="gestor_id"
+                <label for="cliente_id" class="block text-sm font-medium text-gray-700">Cliente</label>
+                <select name="cliente_id" id="cliente_id" required
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">-- Selecione --</option>
+                    @foreach($clientes as $cliente)
+                        <option value="{{ $cliente->id }}" @selected(old('cliente_id') == $cliente->id)>{{ $cliente->razao_social ?? $cliente->nome }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Gestor (opcional) --}}
+            <div class="col-span-12 md:col-span-6">
+                <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor (opcional)</label>
+                <select name="gestor_id" id="gestor_id"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Sem gestor --</option>
                     @foreach($gestores as $gestor)
                         <option value="{{ $gestor->id }}" @selected(old('gestor_id') == $gestor->id)>{{ $gestor->razao_social }}</option>
                     @endforeach
                 </select>
             </div>
 
-            {{-- Distribuidor (dependente do gestor) --}}
+            {{-- Distribuidor (opcional) --}}
             <div class="col-span-12 md:col-span-6">
-                <label for="distribuidor_id" class="block text-sm font-medium text-gray-700">Distribuidor</label>
-                <select name="distribuidor_id" id="distribuidor_id" disabled
-                        class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">-- Selecione o gestor primeiro --</option>
+                <label for="distribuidor_id" class="block text-sm font-medium text-gray-700">Distribuidor (opcional)</label>
+                <select name="distribuidor_id" id="distribuidor_id"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Sem distribuidor --</option>
+                    @foreach($distribuidores as $d)
+                        <option value="{{ $d->id }}" @selected(old('distribuidor_id') == $d->id)>{{ $d->razao_social }}</option>
+                    @endforeach
                 </select>
             </div>
 
-            {{-- Cidade da Venda --}}
+            {{-- Cidade da Venda (via gestor/UF ou distribuidor) --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
-                <select name="cidade_id" id="cidade_id" disabled
-                        class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">-- Selecione o distribuidor primeiro --</option>
+                @php
+                    $temDistOuGestor = old('distribuidor_id') || old('gestor_id');
+                @endphp
+                <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
+                        class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor ou distribuidor --' }}</option>
                 </select>
-            </div>
-
-
-            {{-- Desconto --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="desconto" class="block text-sm font-medium text-gray-700">Desconto Geral (%)</label>
-                <input type="number" name="desconto" id="desconto" min="0" max="100" step="0.01" value="0"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             </div>
 
             {{-- Data --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="data" class="block text-sm font-medium text-gray-700">Data</label>
-                <input type="date" name="data" id="data"
+                <input type="date" name="data" id="data" value="{{ old('data') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
             </div>
 
             {{-- Produtos --}}
             <div class="col-span-12">
                 <label class="block text-sm font-medium text-gray-700">Produtos</label>
-                <div id="produtos-container" class="space-y-4 mt-2">
-                    <div class="produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4">
-                        <div class="col-span-12 md:col-span-8">
-                            <label class="block text-sm font-medium text-gray-700">Produto</label>
-                            <select name="produtos[0][id]"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                @foreach($produtos as $produto)
-                                    <option value="{{ $produto->id }}">{{ $produto->nome }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-span-12 md:col-span-4">
-                            <label class="block text-sm font-medium text-gray-700">Quantidade</label>
-                            <input type="number" name="produtos[0][quantidade]"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                    </div>
-                </div>
+                <div id="produtos-container" class="space-y-4 mt-2"></div>
 
                 <button type="button" onclick="adicionarProduto()"
                         class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
@@ -114,26 +104,26 @@
         </form>
     </div>
 
-
+    {{-- Dados para JS --}}
     <script>
-        const ALL_PRODUCTS = @json($produtos->map(fn($p)=>['id'=>$p->id,'nome'=>$p->nome])->values());
+        const ALL_PRODUCTS     = @json($produtos->map(fn($p)=>['id'=>$p->id,'nome'=>$p->nome])->values());
+        const OLD_PRODUTOS     = @json(old('produtos', []));
+        const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
+        const OLD_GESTOR       = @json(old('gestor_id'));
+        const OLD_CIDADE       = @json(old('cidade_id'));
     </script>
 
     <script>
-    
+        // ================== PRODUTOS (sem duplicados + desconto por item) ==================
         let produtoIndex = 0;
-
         const container = document.getElementById('produtos-container');
         const addBtn    = document.querySelector('button[onclick="adicionarProduto()"]');
 
-        // util: ids selecionados atualmente
         function getSelectedProductIds() {
             return Array.from(container.querySelectorAll('select[name^="produtos["][name$="[id]"]'))
-                .map(sel => sel.value)
-                .filter(v => v !== '');
+                .map(sel => sel.value).filter(v => v !== '');
         }
 
-        // util: monta <option> com base nos que não podem aparecer
         function buildOptions(excludeIds = [], selectedId = null) {
             const frag = document.createDocumentFragment();
             frag.append(new Option('-- Selecione --', ''));
@@ -148,7 +138,6 @@
             return frag;
         }
 
-        // recria as opções de TODOS os selects respeitando o que já foi escolhido
         function refreshAllProductSelects() {
             const chosen = getSelectedProductIds();
             const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
@@ -164,21 +153,25 @@
             addBtn.title = maxReached ? 'Todos os produtos já foram adicionados' : '';
         }
 
-        // cria um bloco de produto
-        function makeProdutoRow() {
+        function makeProdutoRow(preset = {}) {
             const idx = produtoIndex++;
             const row = document.createElement('div');
             row.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4';
             row.innerHTML = `
-                <div class="col-span-12 md:col-span-8">
+                <div class="col-span-12 md:col-span-6">
                     <label class="block text-sm font-medium text-gray-700">Produto</label>
                     <select name="produtos[${idx}][id]"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
                 </div>
                 <div class="col-span-12 md:col-span-3">
                     <label class="block text-sm font-medium text-gray-700">Quantidade</label>
-                    <input type="number" min="1" value="1" name="produtos[${idx}][quantidade]"
+                    <input type="number" min="1" value="${preset.quantidade ?? 1}" name="produtos[${idx}][quantidade]"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <div class="col-span-12 md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700">Desc. item (%)</label>
+                    <input type="number" min="0" max="100" step="0.01" value="${preset.desconto ?? 0}" name="produtos[${idx}][desconto]"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div class="col-span-12 md:col-span-1 flex items-end">
                     <button type="button" class="remove-row inline-flex items-center rounded-md border px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700">
@@ -187,47 +180,44 @@
                 </div>
             `;
             const sel = row.querySelector('select');
-            sel.append(buildOptions(getSelectedProductIds()));
+            sel.append(buildOptions(getSelectedProductIds(), preset.id ?? null));
             return row;
         }
 
-        function adicionarProduto() {
-            const row = makeProdutoRow();
+        function adicionarProduto(preset = {}) {
+            const row = makeProdutoRow(preset);
             container.appendChild(row);
             refreshAllProductSelects();
         }
 
-        // delegação de eventos: change nos selects → atualizar filtros
         container.addEventListener('change', (e) => {
             if (e.target.matches('select[name^="produtos["][name$="[id]"]')) {
                 refreshAllProductSelects();
             }
         });
 
-        // remover linha
         container.addEventListener('click', (e) => {
             if (e.target.closest('.remove-row')) {
-                const row = e.target.closest('.produto');
-                row.remove();
+                e.target.closest('.produto').remove();
                 refreshAllProductSelects();
             }
         });
 
-        // inicial: transforma a primeira linha existente do teu HTML em “controlada”
         document.addEventListener('DOMContentLoaded', () => {
-            const first = container.querySelector('.produto');
-            if (first) first.remove();
-            adicionarProduto();
+            if (Array.isArray(OLD_PRODUTOS) && OLD_PRODUTOS.length) {
+                OLD_PRODUTOS.forEach(p => adicionarProduto(p));
+            } else {
+                adicionarProduto();
+            }
         });
     </script>
 
+    {{-- =================== GESTOR / DISTRIBUIDOR / CIDADE =================== --}}
     <script>
-        // ======================= GESTOR / DISTRIBUIDOR / CIDADE DA VENDA =======================
-        const gestorSelect       = document.getElementById('gestor_id');
         const distribuidorSelect = document.getElementById('distribuidor_id');
+        const gestorSelect       = document.getElementById('gestor_id');
         const cidadeSelect       = document.getElementById('cidade_id');
 
-        // Reseta o select de cidades
         function resetCidadeSelect(placeholder = '-- Selecione --') {
             cidadeSelect.innerHTML = '';
             cidadeSelect.add(new Option(placeholder, ''));
@@ -235,98 +225,80 @@
             cidadeSelect.classList.add('bg-gray-50');
         }
 
-        // Carrega distribuidores do gestor (rota: GET /admin/distribuidores/por-gestor/{gestor})
-        async function carregarDistribuidores(gestorId, selectedId = null) {
-            distribuidorSelect.innerHTML = '';
-            distribuidorSelect.disabled  = true;
-            distribuidorSelect.classList.add('bg-gray-50');
-
-            // ao trocar gestor, limpa cidades
-            resetCidadeSelect('-- Selecione o distribuidor primeiro --');
-
-            if (!gestorId) {
-                distribuidorSelect.add(new Option('-- Selecione o gestor primeiro --', ''));
-                return;
-            }
-
-            try {
-                const url  = `/admin/distribuidores/por-gestor/${gestorId}`;
-                const resp = await fetch(url, { credentials: 'same-origin' });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
-                const data = await resp.json(); // [{id, text}]
-                distribuidorSelect.add(new Option('-- Selecione --', ''));
-                data.forEach(item => {
-                    const opt = new Option(item.text, item.id);
-                    if (selectedId && String(selectedId) === String(item.id)) opt.selected = true;
-                    distribuidorSelect.add(opt);
-                });
-
-                distribuidorSelect.disabled = false;
-                distribuidorSelect.classList.remove('bg-gray-50');
-
-                // se já veio selectedId (ex.: old input), carrega cidades
-                if (selectedId) {
-                    await carregarCidadesPorDistribuidor(selectedId, @json(old('cidade_id')));
-                }
-            } catch (e) {
-                console.error(e);
-                distribuidorSelect.add(new Option('Falha ao carregar distribuidores', ''));
-            }
-        }
-
-        // Carrega cidades do distribuidor (rota: GET /admin/cidades/por-distribuidor/{id})
         async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
             resetCidadeSelect('-- Carregando... --');
-
             try {
                 const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
-                const cidades = await resp.json(); // [{id, name}]
+                const cidades = await resp.json();
                 cidadeSelect.innerHTML = '';
                 cidadeSelect.add(new Option('-- Selecione --', ''));
-
                 cidades.forEach(c => {
                     const opt = new Option(c.name, c.id);
                     if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
                     cidadeSelect.add(opt);
                 });
-
                 cidadeSelect.disabled = false;
                 cidadeSelect.classList.remove('bg-gray-50');
+                if (!cidades.length) resetCidadeSelect('Distribuidor sem cidades vinculadas');
             } catch (e) {
                 console.error(e);
                 resetCidadeSelect('Falha ao carregar cidades');
             }
         }
 
-        // Eventos
-        gestorSelect.addEventListener('change', async function () {
-            const gestorId = this.value || null;
-            await carregarDistribuidores(gestorId);
-        });
+        async function carregarCidadesPorGestor(gestorId, selectedCidadeId = null) {
+            resetCidadeSelect('-- Carregando... --');
+            try {
+                const resp = await fetch(`/admin/cidades/por-gestor/${gestorId}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const cidades = await resp.json();
+                cidadeSelect.innerHTML = '';
+                cidadeSelect.add(new Option('-- Selecione --', ''));
+                cidades.forEach(c => {
+                    const opt = new Option(c.name, c.id);
+                    if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+                    cidadeSelect.add(opt);
+                });
+                cidadeSelect.disabled = false;
+                cidadeSelect.classList.remove('bg-gray-50');
+                if (!cidades.length) resetCidadeSelect('Nenhuma cidade para a UF do gestor');
+            } catch (e) {
+                console.error(e);
+                resetCidadeSelect('Falha ao carregar cidades');
+            }
+        }
 
+        // Prioridade: se tiver distribuidor, usa distribuidor. Senão, gestor.
         distribuidorSelect.addEventListener('change', async function () {
             const distribuidorId = this.value || null;
             if (distribuidorId) {
-                await carregarCidadesPorDistribuidor(distribuidorId);
+                await carregarCidadesPorDistribuidor(distribuidorId, null);
+            } else if (gestorSelect.value) {
+                await carregarCidadesPorGestor(gestorSelect.value, null);
             } else {
-                resetCidadeSelect('-- Selecione o distribuidor primeiro --');
+                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
             }
         });
 
-        // Estado inicial (old: pós validação)
-        document.addEventListener('DOMContentLoaded', async () => {
-            const oldGestor       = @json(old('gestor_id'));
-            const oldDistribuidor = @json(old('distribuidor_id'));
-            const oldCidade       = @json(old('cidade_id'));
+        gestorSelect.addEventListener('change', async function () {
+            if (distribuidorSelect.value) return; // prioridade do distribuidor
+            const gestorId = this.value || null;
+            if (gestorId) {
+                await carregarCidadesPorGestor(gestorId, null);
+            } else {
+                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
+            }
+        });
 
-            if (oldGestor) {
-                await carregarDistribuidores(oldGestor, oldDistribuidor);
-                if (oldDistribuidor) {
-                    await carregarCidadesPorDistribuidor(oldDistribuidor, oldCidade);
-                }
+        // Estado inicial (old)
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (OLD_DISTRIBUIDOR) {
+                await carregarCidadesPorDistribuidor(OLD_DISTRIBUIDOR, OLD_CIDADE);
+            } else if (OLD_GESTOR) {
+                await carregarCidadesPorGestor(OLD_GESTOR, OLD_CIDADE);
+            } else {
+                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
             }
         });
     </script>

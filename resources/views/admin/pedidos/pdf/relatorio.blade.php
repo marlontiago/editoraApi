@@ -15,7 +15,6 @@
         .brand img { height: 48px; }
         .brand h1 { margin: 0; font-size: 18px; }
 
-        .meta { margin-top: 8px; }
         .chip { display: inline-block; background: #f2f2f2; border: 1px solid #ddd; padding: 4px 8px; border-radius: 4px; margin-right: 6px; font-size: 11px; }
 
         table { width: 100%; border-collapse: collapse; }
@@ -25,21 +24,23 @@
 
         .right { text-align: right; }
         .muted { color: #666; }
-        .section-title { font-weight: bold; margin: 12px 0 6px; }
     </style>
 </head>
 <body>
 @php
-    // Logo em Base64
-    $logoPath = public_path('images/logo.jpeg'); // ajuste se necessário
-    $logoBase64 = '';
-    if (file_exists($logoPath)) {
-        $logoBase64 = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath));
-    }
+    // Logo
+    $logoPath = public_path('images/logo.jpeg');
+    $logoBase64 = file_exists($logoPath) ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath)) : '';
 
-    // Helpers de formatação
+    // Helpers
     $fmtMoeda = fn($v) => 'R$ ' . number_format((float)$v, 2, ',', '.');
-    $fmtNum    = fn($v) => number_format((float)$v, 2, ',', '.');
+    $fmtNum   = fn($v) => number_format((float)$v, 2, ',', '.');
+
+    // Totais (já salvos)
+    $valorBruto   = (float)$pedido->valor_bruto;
+    $valorTotal   = (float)$pedido->valor_total;
+    $totalDesc    = max($valorBruto - $valorTotal, 0);
+    $percDescTot  = $valorBruto > 0 ? (100 * $totalDesc / $valorBruto) : 0;
 @endphp
 
 {{-- Cabeçalho --}}
@@ -54,7 +55,7 @@
                     <h1>Relatório Interno do Pedido #{{ $pedido->id }}</h1>
                 </div>
             </td>
-            <td style="text-align:right; border:0;">
+            <td class="right" style="border:0;">
                 <div style="font-size:12px;">
                     Data do Pedido: {{ \Carbon\Carbon::parse($pedido->data)->format('d/m/Y') }}<br>
                     Status: {{ ucfirst(str_replace('_',' ',$pedido->status)) }}
@@ -76,22 +77,23 @@
     </table>
 </div>
 
-{{-- Conteúdo --}}
+{{-- Meta --}}
 <br>
-<div class="meta">
-    <div class="section-title">Informações</div>
-    <div class="chip"><strong>Gestor:</strong> {{ $pedido->gestor->razao_social ?? '-' }}</div>
-    <div class="chip"><strong>Distribuidor:</strong> {{ $pedido->distribuidor->user->name ?? '-' }}</div>
-    <div class="chip"><strong>Cidades:</strong>
+<div>
+    <span class="chip"><strong>Cliente:</strong> {{ $pedido->cliente->razao_social ?? $pedido->cliente->nome ?? '-' }}</span>
+    <span class="chip"><strong>Gestor:</strong> {{ $pedido->gestor->razao_social ?? '-' }}</span>
+    <span class="chip"><strong>Distribuidor:</strong> {{ $pedido->distribuidor->user->name ?? '-' }}</span>
+    <span class="chip"><strong>Cidades:</strong>
         @forelse ($pedido->cidades as $c)
             {{ $c->name }}@if(!$loop->last), @endif
         @empty
             -
         @endforelse
-    </div>
+    </span>
 </div>
 
-<div class="section-title">Itens do Pedido</div>
+{{-- Itens --}}
+<div class="section-title" style="margin: 12px 0 6px; font-weight: bold;">Itens do Pedido</div>
 <table>
     <thead>
         <tr>
@@ -99,6 +101,7 @@
             <th class="right" style="width:60px;">Qtd</th>
             <th class="right" style="width:90px;">Preço Unit.</th>
             <th class="right" style="width:80px;">Desc. (%)</th>
+            <th class="right" style="width:100px;">Desc. (R$)</th>
             <th class="right" style="width:100px;">Subtotal</th>
             <th class="right" style="width:90px;">Peso (kg)</th>
             <th class="right" style="width:60px;">Caixas</th>
@@ -106,6 +109,16 @@
     </thead>
     <tbody>
         @foreach($pedido->produtos as $produto)
+            @php
+                $qtd        = (int)($produto->pivot->quantidade ?? 0);
+                $precoUnit  = (float)($produto->pivot->preco_unitario ?? 0);
+                $percItem   = (float)($produto->pivot->desconto_item ?? 0);
+                $subBruto   = $precoUnit * $qtd;
+                $subDesc    = (float)($produto->pivot->subtotal ?? ($precoUnit * (1 - $percItem/100) * $qtd));
+                $descValor  = max($subBruto - $subDesc, 0);
+                $pesoTotal  = (float)($produto->pivot->peso_total_produto ?? (($produto->peso ?? 0) * $qtd));
+                $caixas     = (int)($produto->pivot->caixas ?? 0);
+            @endphp
             <tr>
                 <td>
                     <strong>{{ $produto->nome }}</strong>
@@ -116,29 +129,35 @@
                         </div>
                     @endif
                 </td>
-                <td class="right">{{ $produto->pivot->quantidade }}</td>
-                <td class="right">{{ $fmtMoeda($produto->pivot->preco_unitario) }}</td>
-                <td class="right">{{ number_format((float)$produto->pivot->desconto_aplicado, 0, ',', '.') }}%</td>
-                <td class="right">{{ $fmtMoeda($produto->pivot->subtotal) }}</td>
-                <td class="right">{{ $fmtNum($produto->pivot->peso_total_produto) }}</td>
-                <td class="right">{{ $produto->pivot->caixas }}</td>
+                <td class="right">{{ $qtd }}</td>
+                <td class="right">{{ $fmtMoeda($precoUnit) }}</td>
+                <td class="right">{{ number_format($percItem, 2, ',', '.') }}%</td>
+                <td class="right">{{ $fmtMoeda($descValor) }}</td>
+                <td class="right">{{ $fmtMoeda($subDesc) }}</td>
+                <td class="right">{{ $fmtNum($pesoTotal) }}</td>
+                <td class="right">{{ $caixas }}</td>
             </tr>
         @endforeach
     </tbody>
 </table>
 
+{{-- Totais --}}
 <table style="margin-top: 12px;">
     <tr>
         <td class="right" style="width:80%;"><strong>Valor Bruto</strong></td>
-        <td class="right">{{ $fmtMoeda($pedido->valor_bruto) }}</td>
+        <td class="right">{{ $fmtMoeda($valorBruto) }}</td>
     </tr>
     <tr>
-        <td class="right"><strong>Desconto</strong></td>
-        <td class="right">{{ number_format((float)$pedido->desconto, 0, ',', '.') }}%</td>
+        <td class="right"><strong>Total de Descontos</strong></td>
+        <td class="right">{{ $fmtMoeda($totalDesc) }}</td>
+    </tr>
+    <tr>
+        <td class="right"><strong>Percentual de Desconto</strong></td>
+        <td class="right">{{ number_format($percDescTot, 2, ',', '.') }}%</td>
     </tr>
     <tr>
         <td class="right"><strong>Valor com Desconto</strong></td>
-        <td class="right">{{ $fmtMoeda($pedido->valor_total) }}</td>
+        <td class="right">{{ $fmtMoeda($valorTotal) }}</td>
     </tr>
     <tr>
         <td class="right"><strong>Peso Total</strong></td>
@@ -150,8 +169,8 @@
     </tr>
 </table>
 
-{{-- Assinatura opcional (uso interno) --}}
-<div style="margin-top: 48px;">
+{{-- Assinatura opcional --}}
+<div style="margin-top: 40px;">
     <p>__________________________________________</p>
     <p class="muted">Responsável Interno</p>
 </div>

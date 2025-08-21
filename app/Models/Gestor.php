@@ -5,13 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Support\Formatters;
-use PhpOffice\PhpSpreadsheet\Calculation\TextData\Format;
 
 class Gestor extends Model
 {
     use HasFactory;
 
     protected $table = 'gestores';
+
     protected $fillable = [
         'user_id',
         'estado_uf',
@@ -32,7 +32,6 @@ class Gestor extends Model
     protected $casts = [
         'vencimento_contrato' => 'date',
     ];
-    
 
     public function user()
     {
@@ -49,6 +48,7 @@ class Gestor extends Model
         return $this->belongsToMany(City::class, 'city_gestor');
     }
 
+    // ===== Helpers de formatação =====
     public function getCpfFormatadoAttribute(): string
     {
         return Formatters::formatCpf($this->cpf);
@@ -67,5 +67,11 @@ class Gestor extends Model
     public function getRgFormatadoAttribute(): string
     {
         return Formatters::formatRg($this->rg);
-    }   
+    }
+
+    // ===== Accessor para não quebrar quando usar $gestor->uf =====
+    public function getUfAttribute(): ?string
+    {
+        return $this->estado_uf;
+    }
 }

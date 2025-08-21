@@ -12,12 +12,10 @@
         protected $table = 'pedidos';
 
         protected $fillable = [
-            'user_id',
+            'cliente_id',
             'gestor_id',
             'distribuidor_id',
-            'cidade_id',
             'data',
-            'desconto',
             'peso_total',
             'total_caixas',
             'valor_bruto',
@@ -35,6 +33,7 @@
                 ->withPivot([
                     'quantidade',
                     'preco_unitario',
+                    'desconto_item',
                     'desconto_aplicado',
                     'subtotal',
                     'peso_total_produto',
@@ -47,9 +46,9 @@
             return $this->belongsToMany(City::class, 'cidade_pedido');
         }
 
-        public function user()
+        public function cliente()
         {
-            return $this->belongsTo(User::class);
+            return $this->belongsTo(Cliente::class);
         }
 
         public function gestor()

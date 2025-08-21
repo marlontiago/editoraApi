@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('pedido_id')->constrained()->onDelete('cascade');
 
             $table->integer('quantidade');
+            $table->decimal('desconto_item', 5, 2);
             $table->decimal('preco_unitario', 10, 2);
             $table->decimal('desconto_aplicado', 5, 2);
             $table->decimal('subtotal', 10, 2);

@@ -44,7 +44,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('gestores.vincular');
     Route::post('gestores/vincular', [GestorController::class, 'storeVinculo'])->name('gestores.vincular.salvar');
     Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])->name('gestores.cidades');
-    Route::get('/cidades/por-gestor/{id}', [CidadeController::class, 'cidadesPorGestor']);  
+    Route::get('/cidades/por-gestor/{gestor}', [CidadeController::class, 'cidadesPorGestor'])->name('cidades.por-gestor');
     
     Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente'])->except('show');
 

@@ -21,17 +21,23 @@
                 <thead class="bg-gray-100">
                     <tr class="text-left">
                         <th class="px-4 py-2">Razão Social</th>
+                        <th class="px-4 py-2">CNPJ</th>
+                        <th class="px-4 py-2">RG</th>
                         <th class="px-4 py-2">Email</th>
                         <th class="px-4 py-2">Telefone</th>
+                        <th class="px-4 py-2">Endereço</th>
                         <th class="px-4 py-2">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($clientes as $cliente)
                         <tr class="border-t">
-                            <td class="px-4 py-2">{{ $cliente->nome }}</td>
+                            <td class="px-4 py-2">{{ $cliente->razao_social }}</td>
+                            <td class="px-4 py-2">{{ $cliente->cnpj_formatado }}</td>
+                            <td class="px-4 py-2">{{ $cliente->rg_formatado}}</td>
                             <td class="px-4 py-2">{{ $cliente->email }}</td>
                             <td class="px-4 py-2">{{ $cliente->telefone_formatado }}</td>
+                            <td class="px-4 py-2">{{ $cliente->endereco_completo }}</td>
                             <td class="px-4 py-2 space-x-2">
                                 <a href="{{ route('admin.clientes.edit', $cliente->id) }}" class="text-blue-600">Editar</a>
                                 <form action="{{ route('admin.clientes.destroy', $cliente->id) }}" method="POST" class="inline">

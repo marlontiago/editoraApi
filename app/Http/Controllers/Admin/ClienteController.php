@@ -48,19 +48,44 @@ class ClienteController extends Controller
             ->with('success', 'Cliente cadastrado com sucesso!');
     }
 
-    public function edit($id)
-    {
-        // Lógica para exibir o formulário de edição de cliente
-        return view('admin.clientes.edit', compact('id'));
+    public function edit(Cliente $cliente)
+    {        
+        return view('admin.clientes.edit', compact('cliente'));
     }
 
     public function update(Request $request, $id)
     {
-        // Lógica para atualizar os dados do cliente
+        $validated = $request->validate([
+            'razao_social'      => 'required|string|max:255',
+            'email'             => 'required|email|unique:clientes,email,' . $id,
+            'cnpj'              => 'nullable|string|max:18',
+            'cpf'               => 'nullable|string|max:14',
+            'rg'                => 'nullable|string|max:20',
+            'telefone'          => 'nullable|string|max:20',
+            'endereco_completo' => 'nullable|string|max:255',
+        ]);
+
+        $cliente = Cliente::findOrFail($id);
+
+        $cliente->update([
+            'razao_social'      => $validated['razao_social'],
+            'email'             => $validated['email'],
+            'cnpj'              => $validated['cnpj'] ?? null,
+            'cpf'               => $validated['cpf'] ?? null,
+            'rg'                => $validated['rg'] ?? null,
+            'telefone'          => $validated['telefone'] ?? null,
+            'endereco_completo' => $validated['endereco_completo'] ?? null,
+        ]);
+        return redirect()->route('admin.clientes.index')
+            ->with('success', 'Cliente atualizado com sucesso!');
     }
 
     public function destroy($id)
     {
-        // Lógica para excluir um cliente
+        $cliente = Cliente::findOrFail($id);
+        $cliente->delete();
+
+        return redirect()->route('admin.clientes.index')
+            ->with('success', 'Cliente excluído com sucesso!');
     }
 }

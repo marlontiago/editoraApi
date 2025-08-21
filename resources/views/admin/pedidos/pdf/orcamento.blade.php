@@ -5,7 +5,7 @@
     <title>Orçamento</title>
     <style>
         @page { margin: 110px 40px 90px 40px; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; line-height: 1.35; }
+        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; line-height: 1.35; color:#111; }
 
         .header { position: fixed; top: -80px; left: 0; right: 0; height: 80px; }
         .footer { position: fixed; bottom: -65px; left: 0; right: 0; height: 60px; font-size: 11px; color: #666; }
@@ -19,154 +19,160 @@
         th, td { border: 1px solid #999; padding: 6px; text-align: left; vertical-align: top; }
         thead th { background: #f2f2f2; }
         .right { text-align: right; }
+        .muted { color:#666; }
     </style>
 </head>
 <body>
-    {{-- Cabeçalho --}}
-    <div class="header">
-        <table style="width:100%; border:0; border-collapse:separate;">
-            <tr>
-                <td style="border:0;">
-                    <div class="brand">
-                        @php
-                            $logoPath = public_path('images/logo.jpeg');
-                            $logoBase64 = '';
-                            if (file_exists($logoPath)) {
-                                $logoBase64 = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath));
-                            }
-                        @endphp
-                        @if($logoBase64)
-                            <img src="{{ $logoBase64 }}" alt="Logo" style="height:60px;">
-                        @endif
-                        <h1>Orçamento Comercial #{{ $pedido->id }}</h1>
-                    </div>
-                </td>
-                <td style="text-align:right; border:0;">
-                    <div style="font-size:12px;">
-                        Data: {{ \Carbon\Carbon::parse($pedido->data)->format('d/m/Y') }}<br>
-                        Status: {{ ucfirst(str_replace('_',' ',$pedido->status)) }}
-                    </div>
-                </td>
-            </tr>
-        </table>
-        <hr>
-    </div>
+@php
+    // Logo (base64)
+    $logoPath = public_path('images/logo.jpeg');
+    $logoBase64 = file_exists($logoPath) ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath)) : '';
 
-    {{-- Rodapé --}}
-    <div class="footer">
-        <hr>
-        <table style="width:100%; border:0; border-collapse:separate;">
-            <tr>
-                <td style="border:0;">Empresa • CNPJ 00.000.000/0000-00 • (00) 0000-0000 • contato@empresa.com</td>
-                <td style="text-align:right; border:0;">Página <span class="page-number"></span></td>
-            </tr>
-        </table>
-    </div>
+    // Helpers
+    $fmtMoeda = fn($v) => 'R$ ' . number_format((float)$v, 2, ',', '.');
 
-    @php
-        /**
-         * Gera um src base64 para a imagem (evita problema de caminho no Dompdf).
-         */
-        function img_src_or_placeholder($pathRelative) {
-            $full = $pathRelative
-                ? (str_starts_with($pathRelative, 'storage/')
-                    ? public_path($pathRelative)                 
-                    : public_path('storage/' . ltrim($pathRelative, '/'))) 
-                : public_path('images/placeholder.png');
+    // Totais do pedido (já salvos pelo controller)
+    $valorBruto   = (float)$pedido->valor_bruto;
+    $valorTotal   = (float)$pedido->valor_total;
+    $totalDesc    = max($valorBruto - $valorTotal, 0);
+    $percDescTot  = $valorBruto > 0 ? (100 * $totalDesc / $valorBruto) : 0;
 
-            if (!file_exists($full)) {
-                $full = public_path('images/placeholder.png');
-            }
+    // Função p/ carregar imagem de produto
+    function img_src_or_placeholder($pathRelative) {
+        $full = $pathRelative
+            ? ((strpos($pathRelative, 'storage/') === 0)
+                ? public_path($pathRelative)
+                : public_path('storage/' . ltrim($pathRelative, '/')))
+            : public_path('images/placeholder.png');
 
-            $ext = pathinfo($full, PATHINFO_EXTENSION) ?: 'png';
-            $data = @file_get_contents($full);
-            return $data ? ('data:image/'.$ext.';base64,'.base64_encode($data)) : '';
-        }
+        if (!file_exists($full)) $full = public_path('images/placeholder.png');
+        $ext  = pathinfo($full, PATHINFO_EXTENSION) ?: 'png';
+        $data = @file_get_contents($full);
+        return $data ? ('data:image/'.$ext.';base64,'.base64_encode($data)) : '';
+    }
+@endphp
 
-        // Helpers e totais
-        $fmtMoeda = fn($v) => 'R$ ' . number_format((float)$v, 2, ',', '.');
+{{-- Cabeçalho --}}
+<div class="header">
+    <table style="width:100%; border:0; border-collapse:separate;">
+        <tr>
+            <td style="border:0;">
+                <div class="brand">
+                    @if($logoBase64)
+                        <img src="{{ $logoBase64 }}" alt="Logo">
+                    @endif
+                    <h1>Orçamento Comercial #{{ $pedido->id }}</h1>
+                </div>
+            </td>
+            <td class="right" style="border:0;">
+                <div style="font-size:12px;">
+                    Data: {{ \Carbon\Carbon::parse($pedido->data)->format('d/m/Y') }}<br>
+                    Status: {{ ucfirst(str_replace('_',' ',$pedido->status)) }}
+                </div>
+            </td>
+        </tr>
+    </table>
+    <hr>
+</div>
 
-        $valorBruto    = (float) $pedido->valor_bruto;    // salvo no banco
-        $valorComDesc  = (float) $pedido->valor_total;    // salvo no banco
-        $percDesc      = (float) $pedido->desconto;       // %
-        $valorDescReal = max($valorBruto - $valorComDesc, 0); // R$ de desconto
-    @endphp
+{{-- Rodapé --}}
+<div class="footer">
+    <hr>
+    <table style="width:100%; border:0; border-collapse:separate;">
+        <tr>
+            <td style="border:0;">Empresa • CNPJ 00.000.000/0000-00 • (00) 0000-0000 • contato@empresa.com</td>
+            <td class="right" style="border:0;">Página <span class="page-number"></span></td>
+        </tr>
+    </table>
+</div>
 
-    {{-- Conteúdo --}}
-    <div style="margin-top: 10px;">
-        <p><strong>Distribuidor:</strong> {{ $pedido->distribuidor->user->name ?? '-' }}</p>
-        <p><strong>Cidades:</strong>
-            @foreach ($pedido->cidades as $c)
-                {{ $c->name }}@if(!$loop->last), @endif
-            @endforeach
-        </p>
-    </div>
+{{-- Meta --}}
+<div style="margin-top: 8px;">
+    <p><strong>Cliente:</strong> {{ $pedido->cliente->razao_social ?? $pedido->cliente->nome ?? '-' }}</p>
+    <p><strong>Distribuidor:</strong> {{ $pedido->distribuidor->user->name ?? '-' }}</p>
+    <p><strong>Cidades:</strong>
+        @forelse ($pedido->cidades as $c)
+            {{ $c->name }}@if(!$loop->last), @endif
+        @empty
+            -
+        @endforelse
+    </p>
+</div>
 
-    <table style="margin-top: 8px;">
-        <thead>
-            <tr>
-                <th style="width:70px;">Imagem</th>
-                <th>Produto</th>
-                <th style="width:60px;">Qtd</th>
-                <th style="width:90px;" class="right">Preço Unit.</th>
-                <th style="width:100px;" class="right">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
+{{-- Itens --}}
+<table style="margin-top: 8px;">
+    <thead>
+        <tr>
+            <th style="width:70px;">Imagem</th>
+            <th>Produto</th>
+            <th style="width:60px;" class="right">Qtd</th>
+            <th style="width:90px;" class="right">Preço Unit.</th>
+            <th style="width:80px;" class="right">Desc. (%)</th>
+            <th style="width:100px;" class="right">Desc. (R$)</th>
+            <th style="width:110px;" class="right">Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
         @foreach($pedido->produtos as $produto)
             @php
-                // Campo imagem
-                $campoImagem = $produto->imagem ?? null;
-
-                $src = img_src_or_placeholder($campoImagem);
-
-                // Preço unitário com desconto do pedido
-                $precoUnitComDesc = (float) $produto->pivot->preco_unitario * (1 - ($percDesc / 100));
+                $qtd        = (int)($produto->pivot->quantidade ?? 0);
+                $precoUnit  = (float)($produto->pivot->preco_unitario ?? 0);
+                $percItem   = (float)($produto->pivot->desconto_item ?? 0);
+                $subBruto   = $precoUnit * $qtd;
+                $subDesc    = (float)($produto->pivot->subtotal ?? ($precoUnit * (1 - $percItem/100) * $qtd));
+                $descValor  = max($subBruto - $subDesc, 0);
+                $imgSrc     = img_src_or_placeholder($produto->imagem ?? null);
             @endphp
             <tr>
                 <td style="text-align:center;">
-                    @if($src)
-                        <img src="{{ $src }}" style="max-height:60px; max-width:60px;">
+                    @if($imgSrc)
+                        <img src="{{ $imgSrc }}" style="max-height:60px; max-width:60px;">
                     @endif
                 </td>
                 <td>
-                    <strong>{{ $produto->nome }}</strong><br>
+                    <strong>{{ $produto->nome }}</strong>
                     @if(!empty($produto->isbn) || !empty($produto->autor))
-                        <span style="font-size:11px; color:#666;">
+                        <div class="muted" style="font-size:11px;">
                             @if(!empty($produto->isbn)) ISBN: {{ $produto->isbn }} @endif
                             @if(!empty($produto->autor)) • Autor: {{ $produto->autor }} @endif
-                        </span>
+                        </div>
                     @endif
                 </td>
-                <td class="right">{{ $produto->pivot->quantidade }}</td>
-                <td class="right">{{ $fmtMoeda($precoUnitComDesc) }}</td>
-                <td class="right">{{ $fmtMoeda($produto->pivot->subtotal) }}</td>
+                <td class="right">{{ $qtd }}</td>
+                <td class="right">{{ $fmtMoeda($precoUnit) }}</td>
+                <td class="right">{{ number_format($percItem, 2, ',', '.') }}%</td>
+                <td class="right">{{ $fmtMoeda($descValor) }}</td>
+                <td class="right">{{ $fmtMoeda($subDesc) }}</td>
             </tr>
         @endforeach
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="4" class="right" style="font-weight:bold;">Valor Bruto</td>
-                <td class="right" style="font-weight:bold;">{{ $fmtMoeda($valorBruto) }}</td>
-            </tr>
-            <tr>
-                <td colspan="4" class="right">Desconto ({{ number_format($percDesc, 0, ',', '.') }}%)</td>
-                <td class="right">{{ $fmtMoeda($valorDescReal) }}</td>
-            </tr>
-            <tr>
-                <td colspan="4" class="right" style="font-weight:bold;">Total com Desconto</td>
-                <td class="right" style="font-weight:bold;">{{ $fmtMoeda($valorComDesc) }}</td>
-            </tr>
-        </tfoot>
-    </table>
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="6" class="right" style="font-weight:bold;">Valor Bruto</td>
+            <td class="right" style="font-weight:bold;">{{ $fmtMoeda($valorBruto) }}</td>
+        </tr>
+        <tr>
+            <td colspan="6" class="right">Total de Descontos</td>
+            <td class="right">{{ $fmtMoeda($totalDesc) }}</td>
+        </tr>
+        <tr>
+            <td colspan="6" class="right">Percentual de Desconto</td>
+            <td class="right">{{ number_format($percDescTot, 2, ',', '.') }}%</td>
+        </tr>
+        <tr>
+            <td colspan="6" class="right" style="font-weight:bold;">Total com Desconto</td>
+            <td class="right" style="font-weight:bold;">{{ $fmtMoeda($valorTotal) }}</td>
+        </tr>
+    </tfoot>
+</table>
 
-    <div style="margin-top: 28px; font-size: 11px;">
-        * Este orçamento é válido por 15 dias. Valores sujeitos a alteração sem aviso prévio.
-    </div>
+<div style="margin-top: 20px; font-size: 11px;">
+    * Este orçamento é válido por 15 dias. Valores sujeitos a alteração sem aviso prévio.
+</div>
 
-    <div style="margin-top: 48px;">
-        <p>__________________________________________</p>
-        <p>Assinatura / Carimbo</p>
-    </div>
+<div style="margin-top: 40px;">
+    <p>__________________________________________</p>
+    <p>Assinatura / Carimbo</p>
+</div>
 </body>
 </html>

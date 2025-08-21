@@ -7,37 +7,94 @@
 
     <div class="p-6 space-y-8 max-w-7xl mx-auto">
 
-        {{-- Mensagem de erro --}}
+        {{-- Mensagens de feedback --}}
         @if (session('error'))
             <div class="bg-red-50 text-red-800 border border-red-200 px-4 py-3 rounded-md shadow-sm">
                 {{ session('error') }}
+            </div>
+        @endif
+        @if (session('success'))
+            <div class="bg-green-50 text-green-800 border border-green-200 px-4 py-3 rounded-md shadow-sm">
+                {{ session('success') }}
             </div>
         @endif
 
         {{-- Informações principais --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
             <h3 class="text-lg font-semibold mb-4 text-gray-700">Informações Gerais</h3>
+
+            @php
+                $status = $pedido->status;
+                $statusMap = [
+                    'em_andamento' => ['Em andamento', 'bg-yellow-100 text-yellow-800 border-yellow-200'],
+                    'finalizado'   => ['Finalizado',   'bg-green-100  text-green-800  border-green-200'],
+                    'cancelado'    => ['Cancelado',    'bg-red-100    text-red-800    border-red-200'],
+                ];
+                [$statusLabel, $statusClasses] = $statusMap[$status] ?? [ucfirst(str_replace('_',' ',$status)), 'bg-gray-100 text-gray-800 border-gray-200'];
+            @endphp
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
-                <div><strong>Data:</strong> {{ \Carbon\Carbon::parse($pedido->data)->format('d/m/Y') }}</div>
-                <div><strong>Status:</strong> {{ ucfirst(str_replace('_', ' ', $pedido->status)) }}</div>
                 <div>
+                    <strong>Data:</strong>
+                    {{ \Carbon\Carbon::parse($pedido->data)->format('d/m/Y') }}
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <strong>Status:</strong>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $statusClasses }}">
+                        {{ $statusLabel }}
+                    </span>
+                </div>
+
+                <div class="md:col-span-2">
                     <strong>Cidades:</strong>
                     @forelse($pedido->cidades as $cidade)
-                        <span class="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full mr-1 border border-gray-200">
+                        <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full mr-1 mb-1 border border-gray-200">
                             {{ $cidade->name }}
+                            @if($cidade->state)
+                                <span class="text-[10px] opacity-70">({{ strtoupper($cidade->state) }})</span>
+                            @endif
                         </span>
                     @empty
                         <span class="text-gray-500">-</span>
-                    @endforelse
+                    @endforelse>
                 </div>
-                <div><strong>Gestor:</strong> {{ $pedido->gestor->razao_social ?? '-' }}</div>
-                <div><strong>Distribuidor:</strong> {{ $pedido->distribuidor->user->name ?? '-' }}</div>
+
+                <div>
+                    <strong>Cliente:</strong>
+                    {{ optional($pedido->cliente)->razao_social ?? optional($pedido->cliente)->nome ?? '-' }}
+                </div>
+
+                <div>
+                    <strong>Gestor:</strong>
+                    @if($pedido->gestor)
+                        {{ $pedido->gestor->razao_social }}
+                        @if($pedido->gestor->estado_uf)
+                            <span class="text-xs text-gray-500">/ UF: {{ strtoupper($pedido->gestor->estado_uf) }}</span>
+                        @endif
+                    @else
+                        -
+                    @endif
+                </div>
+
+                <div>
+                    <strong>Distribuidor:</strong>
+                    @if($pedido->distribuidor)
+                        {{ $pedido->distribuidor->razao_social ?? '-' }}
+                        @if(optional($pedido->distribuidor->user)->name)
+                            <span class="text-xs text-gray-500">({{ $pedido->distribuidor->user->name }})</span>
+                        @endif
+                    @else
+                        -
+                    @endif
+                </div>
             </div>
         </div>
 
         {{-- Produtos --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
             <h3 class="text-lg font-semibold mb-4 text-gray-700">Produtos do Pedido</h3>
+
             <div class="overflow-x-auto">
                 <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden text-sm">
                     <thead class="bg-gray-50 text-gray-600">
@@ -45,7 +102,8 @@
                             <th class="px-4 py-2 text-left">Produto</th>
                             <th class="px-4 py-2 text-center">Qtd</th>
                             <th class="px-4 py-2 text-right">Preço Unit.</th>
-                            <th class="px-4 py-2 text-center">Desc. (%)</th>
+                            <th class="px-4 py-2 text-right">Desc. (%)</th>
+                            <th class="px-4 py-2 text-right">Desconto (R$)</th>
                             <th class="px-4 py-2 text-right">Subtotal</th>
                             <th class="px-4 py-2 text-right">Peso Total (kg)</th>
                             <th class="px-4 py-2 text-center">Caixas</th>
@@ -53,46 +111,119 @@
                     </thead>
                     <tbody>
                         @foreach ($pedido->produtos as $produto)
+                            @php
+                                $qtd          = (int) ($produto->pivot->quantidade ?? 0);
+                                $precoUnit    = (float) ($produto->pivot->preco_unitario ?? 0);
+                                $brutoItem    = $precoUnit * $qtd;
+                                $subtotalItem = (float) ($produto->pivot->subtotal ?? 0);
+                                $valorDesc    = max(0, $brutoItem - $subtotalItem);
+                                $percDesc     = $brutoItem > 0 ? ($valorDesc / $brutoItem) * 100 : 0;
+                                $pesoTotalProd= (float) ($produto->pivot->peso_total_produto ?? 0);
+                                $caixas       = (int) ($produto->pivot->caixas ?? 0);
+                            @endphp
                             <tr class="border-t">
                                 <td class="px-4 py-2">{{ $produto->nome }}</td>
-                                <td class="px-4 py-2 text-center">{{ $produto->pivot->quantidade }}</td>
-                                <td class="px-4 py-2 text-right">R$ {{ number_format($produto->pivot->preco_unitario, 2, ',', '.') }}</td>
-                                <td class="px-4 py-2 text-center">{{ $produto->pivot->desconto_aplicado }}%</td>
-                                <td class="px-4 py-2 text-right">R$ {{ number_format($produto->pivot->subtotal, 2, ',', '.') }}</td>
-                                <td class="px-4 py-2 text-right">{{ number_format($produto->pivot->peso_total_produto, 2, ',', '.') }}</td>
-                                <td class="px-4 py-2 text-center">{{ $produto->pivot->caixas }}</td>
+                                <td class="px-4 py-2 text-center">{{ $qtd }}</td>
+                                <td class="px-4 py-2 text-right">R$ {{ number_format($precoUnit, 2, ',', '.') }}</td>
+                                <td class="px-4 py-2 text-right">{{ number_format($percDesc, 2, ',', '.') }}%</td>
+                                <td class="px-4 py-2 text-right">R$ {{ number_format($valorDesc, 2, ',', '.') }}</td>
+                                <td class="px-4 py-2 text-right">R$ {{ number_format($subtotalItem, 2, ',', '.') }}</td>
+                                <td class="px-4 py-2 text-right">{{ number_format($pesoTotalProd, 2, ',', '.') }}</td>
+                                <td class="px-4 py-2 text-center">{{ $caixas }}</td>
                             </tr>
                         @endforeach
                     </tbody>
+
+                    @php
+                        $valorBruto = (float) ($pedido->valor_bruto ?? 0);
+                        $valorTotal = (float) ($pedido->valor_total ?? 0);
+                        $pesoTotal  = (float) ($pedido->peso_total ?? 0);
+                        $totalCaixas= (int)   ($pedido->total_caixas ?? 0);
+
+                        $totalDescontos = $pedido->produtos->sum(function ($p) {
+                            $q  = (int) ($p->pivot->quantidade ?? 0);
+                            $pu = (float) ($p->pivot->preco_unitario ?? 0);
+                            $bruto = $pu * $q;
+                            $sub   = (float) ($p->pivot->subtotal ?? 0);
+                            return max(0, $bruto - $sub);
+                        });
+
+                        // Percentual total ponderado pelo valor bruto dos itens
+                        $percTotal = $valorBruto > 0 ? ($totalDescontos / $valorBruto) * 100 : 0;
+                    @endphp
+
                     <tfoot class="bg-gray-50 font-medium">
                         <tr>
                             <td colspan="4" class="px-4 py-2 text-right">Valor Bruto:</td>
-                            <td class="px-4 py-2 text-right">R$ {{ number_format($pedido->valor_bruto, 2, ',', '.') }}</td>
+                            <td class="px-4 py-2 text-right">R$ {{ number_format($valorBruto, 2, ',', '.') }}</td>
                             <td colspan="2"></td>
                         </tr>
                         <tr>
-                            <td colspan="4" class="px-4 py-2 text-right">Desconto:</td>
-                            <td class="px-4 py-2 text-right">{{ $pedido->desconto }}%</td>
+                            <td colspan="4" class="px-4 py-2 text-right">Percentual de Desconto:</td>
+                            <td class="px-4 py-2 text-right">{{ number_format($percTotal, 2, ',', '.') }}%</td>
+                            <td colspan="2"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="px-4 py-2 text-right">Total de Descontos:</td>
+                            <td class="px-4 py-2 text-right">R$ {{ number_format($totalDescontos, 2, ',', '.') }}</td>
                             <td colspan="2"></td>
                         </tr>
                         <tr>
                             <td colspan="4" class="px-4 py-2 text-right">Valor com Desconto:</td>
-                            <td class="px-4 py-2 text-right">R$ {{ number_format($pedido->valor_total, 2, ',', '.') }}</td>
+                            <td class="px-4 py-2 text-right">R$ {{ number_format($valorTotal, 2, ',', '.') }}</td>
                             <td colspan="2"></td>
                         </tr>
                         <tr>
                             <td colspan="4" class="px-4 py-2 text-right">Peso Total:</td>
-                            <td class="px-4 py-2 text-right">{{ number_format($pedido->peso_total, 2, ',', '.') }} kg</td>
+                            <td class="px-4 py-2 text-right">{{ number_format($pesoTotal, 2, ',', '.') }} kg</td>
                             <td colspan="2"></td>
                         </tr>
                         <tr>
                             <td colspan="4" class="px-4 py-2 text-right">Total de Caixas:</td>
-                            <td class="px-4 py-2 text-right">{{ $pedido->total_caixas }}</td>
+                            <td class="px-4 py-2 text-right">{{ $totalCaixas }}</td>
                             <td colspan="2"></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
+
+            {{-- RESUMO: Produtos com desconto --}}
+            @php
+                $produtosComDesc = $pedido->produtos->filter(function ($p) {
+                    $q  = (int) ($p->pivot->quantidade ?? 0);
+                    $pu = (float) ($p->pivot->preco_unitario ?? 0);
+                    $bruto = $pu * $q;
+                    $sub   = (float) ($p->pivot->subtotal ?? 0);
+                    return ($bruto - $sub) > 0.00001;
+                });
+            @endphp
+
+            @if($produtosComDesc->count())
+                <div class="mt-4 rounded-md border border-green-200 bg-green-50 p-4">
+                    <h4 class="text-sm font-semibold text-green-800 mb-2">Produtos com desconto</h4>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-green-900">
+                        @foreach($produtosComDesc as $p)
+                            @php
+                                $q  = (int) ($p->pivot->quantidade ?? 0);
+                                $pu = (float) ($p->pivot->preco_unitario ?? 0);
+                                $bruto = $pu * $q;
+                                $sub   = (float) ($p->pivot->subtotal ?? 0);
+                                $val   = max(0, $bruto - $sub);
+                                $pct   = $bruto > 0 ? ($val / $bruto) * 100 : 0;
+                            @endphp
+                            <li>
+                                <span class="font-medium">{{ $p->nome }}</span> — desconto de
+                                <strong>R$ {{ number_format($val, 2, ',', '.') }}</strong>
+                                ({{ number_format($pct, 2, ',', '.') }}%)
+                            </li>
+                        @endforeach
+                    </ul>
+                    <p class="px-1 pt-2 text-xs text-gray-500">
+                        Obs.: o percentual de desconto do pedido é ponderado pelo valor bruto de cada item:
+                        Σ(Brutoᵢ × %Descᵢ) ÷ Σ(Brutoᵢ).
+                    </p>
+                </div>
+            @endif
         </div>
 
         {{-- Linha do tempo --}}
@@ -102,11 +233,25 @@
                 @forelse($pedido->logs as $log)
                     <li class="relative pl-6">
                         <span class="absolute left-0 top-2 h-4 w-4 bg-blue-500 rounded-full"></span>
-                        <div class="text-xs text-gray-500">{{ $log->created_at->format('d/m/Y H:i') }}</div>
+                        <div class="text-xs text-gray-500">{{ optional($log->created_at)->format('d/m/Y H:i') }}</div>
                         <div class="font-medium">{{ $log->acao }}</div>
-                        @if($log->detalhes)
-                            <div class="text-sm text-gray-700">{{ $log->detalhes }}</div>
+
+                        @php
+                            // $log->detalhes pode ser string ou array/JSON dependendo da sua implementação
+                            $linhas = [];
+                            if (is_string($log->detalhes) && strlen($log->detalhes)) {
+                                $linhas = explode(' | ', $log->detalhes);
+                            } elseif (is_array($log->detalhes)) {
+                                $linhas = array_map(fn($x) => is_string($x) ? $x : json_encode($x, JSON_UNESCAPED_UNICODE), $log->detalhes);
+                            }
+                        @endphp
+
+                        @if(!empty($linhas))
+                            @foreach($linhas as $linha)
+                                <div class="text-sm text-gray-700">{{ $linha }}</div>
+                            @endforeach
                         @endif
+
                         @if($log->user)
                             <div class="text-xs text-gray-400">Por: {{ $log->user->name }}</div>
                         @endif

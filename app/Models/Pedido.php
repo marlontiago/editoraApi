@@ -25,6 +25,7 @@
 
         protected $casts = [
             'data' => 'date',
+            'meta' => 'array', 
         ];
 
         public function produtos()
@@ -66,13 +67,13 @@
             return $this->hasMany(PedidoLog::class)->latest();
         }
 
-        public function registrarLog(string $acao, ?string $detalhes = null, array $changes = [])
+        public function registrarLog(string $acao, ?string $detalhes = null, array $meta = []): void
         {
             $this->logs()->create([
-                'user_id'  => auth()->id(),
-                'acao'     => $acao,
-                'detalhes' => $detalhes,
-                'changes'  => $changes ?: null,
+                'acao'      => $acao,
+                'detalhes'  => $detalhes,          // texto "bonitinho" pra linha do tempo
+                'meta'      => $meta ?: null,      // JSON com o diff completo
+                'user_id'   => auth()->id(),       // quem fez
             ]);
         }
 

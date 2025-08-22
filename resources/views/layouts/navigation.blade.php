@@ -13,7 +13,7 @@
                     </x-nav-link>
                     @role('admin')
                     <x-nav-link href="{{ route('admin.produtos.index') }}" :active="request()->routeIs('dashboard')">
-                        {{ __('Produtos') }}
+                        {{ __('Estoque') }}
                     </x-nav-link>
                     
                     <x-nav-link href="{{ route('admin.clientes.index') }}" :active="request()->routeIs('dashboard')">

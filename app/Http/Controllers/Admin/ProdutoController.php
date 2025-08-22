@@ -8,8 +8,10 @@ use App\Http\Requests\UpdateProdutoRequest;
 use App\Http\Resources\ProdutoResource;
 use App\Models\Produto;
 use App\Models\Colecao;
+use App\Models\Pedido;
 use App\Services\ProdutoService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProdutoController extends Controller
 {
@@ -22,6 +24,22 @@ class ProdutoController extends Controller
 
     public function index(Request $request)
     {
+        $produtosComEstoqueBaixo = Produto::where('quantidade_estoque', '<=', 100)->get();
+
+        $estoqueParaPedidosEmPotencial = DB::table('pedido_produto as pp')
+        ->join('pedidos as pe', 'pe.id', '=', 'pp.pedido_id')
+        ->join('produtos as pr', 'pr.id', '=', 'pp.produto_id')
+        ->where('pe.status', 'em_andamento')
+        ->groupBy('pp.produto_id', 'pr.nome', 'pr.quantidade_estoque')
+        ->havingRaw('SUM(pp.quantidade) > pr.quantidade_estoque')
+        ->get([
+            'pp.produto_id',
+            'pr.nome',
+            DB::raw('SUM(pp.quantidade) as qtd_em_pedidos'),
+            'pr.quantidade_estoque',
+            DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
+        ]);
+
         $q = trim((string) $request->get('q', ''));
 
         $query = Produto::query()
@@ -58,7 +76,7 @@ class ProdutoController extends Controller
         // View com paginação e preservando parâmetros na navegação
         $produtos = $query->paginate($perPage)->withQueryString();
 
-        return view('admin.produtos.index', compact('produtos', 'q', 'sort', 'dir'));
+        return view('admin.produtos.index', compact('produtos', 'q', 'sort', 'dir', 'produtosComEstoqueBaixo', 'estoqueParaPedidosEmPotencial'));
     }
 
     public function create()

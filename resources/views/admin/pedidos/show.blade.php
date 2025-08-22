@@ -57,7 +57,7 @@
                         </span>
                     @empty
                         <span class="text-gray-500">-</span>
-                    @endforelse>
+                    @endforelse
                 </div>
 
                 <div>

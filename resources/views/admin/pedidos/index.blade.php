@@ -8,6 +8,47 @@
             <div class="bg-green-100 text-green-800 p-4 rounded">{{ session('success') }}</div>
         @endif
 
+       {{-- Produtos com estoque baixo --}}
+        @if($produtosComEstoqueBaixo->isNotEmpty())
+            <div x-data="{ open: false }" class="bg-red-100 p-3 rounded shadow mb-4">
+                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
+                    ⚠️ Produtos com estoque baixo 
+                    <span class="ml-auto text-sm text-red-600">({{ $produtosComEstoqueBaixo->count() }} itens)</span>
+                </button>
+                <ul x-show="open" x-transition 
+                    class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                    @foreach($produtosComEstoqueBaixo as $produto)
+                        <li>
+                            {{ $produto->nome }} 
+                            <span class="text-red-600 font-semibold">
+                                - {{ $produto->quantidade_estoque }} em estoque
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Estoque em pedidos em potencial --}}
+        @if($estoqueParaPedidosEmPotencial->isNotEmpty())
+            <div x-data="{ open: false }" class="bg-yellow-100 p-3 rounded shadow">
+                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
+                    ⚠️ Estoque em risco para pedidos futuros
+                    <span class="ml-auto text-sm text-yellow-700">({{ $estoqueParaPedidosEmPotencial->count() }} itens)</span>
+                </button>
+                <ul x-show="open" x-transition 
+                    class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-2">
+                    @foreach($estoqueParaPedidosEmPotencial as $produto)
+                        <li>
+                            Produto: <strong>{{ $produto->nome }}</strong> <br>
+                            Em pedidos: <span class="font-medium text-green-700">{{ $produto->qtd_em_pedidos }}</span> <br>
+                            Disponível: <span class="font-medium text-red-600">{{ $produto->quantidade_estoque }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+        
         <div class="mt-4">
             <a href="{{ route('admin.pedidos.create') }}"
                class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">

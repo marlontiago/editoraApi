@@ -47,4 +47,12 @@ class CidadeController extends Controller
                 ->values()
         );
     }
+
+    public function porUf(string $uf)
+    {
+        
+        $uf = strtoupper(substr($uf, 0, 2));
+        return City::where('state', $uf)->orderBy('name')->get(['id','name']);
+    }
+
 }

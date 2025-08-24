@@ -60,11 +60,22 @@
                 </select>
             </div>
 
+            {{-- UF --}}
+            <div>
+                <label for="state" class="block text-sm font-medium text-gray-800">UF</label>
+                <select name="state" id="state" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Selecione --</option>
+                    @foreach($cidadesUF as $uf)
+                        <option value="{{ $uf }}" @selected(old('state') == $uf)>{{ $uf }}</option>
+                    @endforeach
+                </select>
+            </div>
+
             {{-- Cidade da Venda (via gestor/UF ou distribuidor) --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
                 @php
-                    $temDistOuGestor = old('distribuidor_id') || old('gestor_id');
+                    $temDistOuGestor = old('distribuidor_id') || old('gestor_id') || old('state');
                 @endphp
                 <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
                         class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -214,92 +225,143 @@
 
     {{-- =================== GESTOR / DISTRIBUIDOR / CIDADE =================== --}}
     <script>
-        const distribuidorSelect = document.getElementById('distribuidor_id');
-        const gestorSelect       = document.getElementById('gestor_id');
-        const cidadeSelect       = document.getElementById('cidade_id');
+    const distribuidorSelect = document.getElementById('distribuidor_id');
+    const gestorSelect       = document.getElementById('gestor_id');
+    const cidadeSelect       = document.getElementById('cidade_id');
+    const stateSelect        = document.getElementById('state');
 
-        function resetCidadeSelect(placeholder = '-- Selecione --') {
+    function resetCidadeSelect(placeholder = '-- Selecione --') {
+        cidadeSelect.innerHTML = '';
+        cidadeSelect.add(new Option(placeholder, ''));
+        cidadeSelect.disabled = true;
+        cidadeSelect.classList.add('bg-gray-50');
+    }
+
+    async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
+        resetCidadeSelect('-- Carregando... --');
+        try {
+            const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const cidades = await resp.json();
             cidadeSelect.innerHTML = '';
-            cidadeSelect.add(new Option(placeholder, ''));
-            cidadeSelect.disabled = true;
-            cidadeSelect.classList.add('bg-gray-50');
+            cidadeSelect.add(new Option('-- Selecione --', ''));
+            cidades.forEach(c => {
+                const opt = new Option(c.name, c.id);
+                if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+                cidadeSelect.add(opt);
+            });
+            cidadeSelect.disabled = false;
+            cidadeSelect.classList.remove('bg-gray-50');
+            if (!cidades.length) resetCidadeSelect('Distribuidor sem cidades vinculadas');
+        } catch (e) {
+            console.error(e);
+            resetCidadeSelect('Falha ao carregar cidades');
         }
+    }
 
-        async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
-            resetCidadeSelect('-- Carregando... --');
-            try {
-                const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const cidades = await resp.json();
-                cidadeSelect.innerHTML = '';
-                cidadeSelect.add(new Option('-- Selecione --', ''));
-                cidades.forEach(c => {
-                    const opt = new Option(c.name, c.id);
-                    if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                    cidadeSelect.add(opt);
-                });
-                cidadeSelect.disabled = false;
-                cidadeSelect.classList.remove('bg-gray-50');
-                if (!cidades.length) resetCidadeSelect('Distribuidor sem cidades vinculadas');
-            } catch (e) {
-                console.error(e);
-                resetCidadeSelect('Falha ao carregar cidades');
-            }
+    async function carregarCidadesPorGestor(gestorId, selectedCidadeId = null) {
+        resetCidadeSelect('-- Carregando... --');
+        try {
+            const resp = await fetch(`/admin/cidades/por-gestor/${gestorId}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const cidades = await resp.json();
+            cidadeSelect.innerHTML = '';
+            cidadeSelect.add(new Option('-- Selecione --', ''));
+            cidades.forEach(c => {
+                const opt = new Option(c.name, c.id);
+                if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+                cidadeSelect.add(opt);
+            });
+            cidadeSelect.disabled = false;
+            cidadeSelect.classList.remove('bg-gray-50');
+            if (!cidades.length) resetCidadeSelect('Nenhuma cidade para a UF do gestor');
+        } catch (e) {
+            console.error(e);
+            resetCidadeSelect('Falha ao carregar cidades');
         }
+    }
 
-        async function carregarCidadesPorGestor(gestorId, selectedCidadeId = null) {
-            resetCidadeSelect('-- Carregando... --');
-            try {
-                const resp = await fetch(`/admin/cidades/por-gestor/${gestorId}`);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const cidades = await resp.json();
-                cidadeSelect.innerHTML = '';
-                cidadeSelect.add(new Option('-- Selecione --', ''));
-                cidades.forEach(c => {
-                    const opt = new Option(c.name, c.id);
-                    if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                    cidadeSelect.add(opt);
-                });
-                cidadeSelect.disabled = false;
-                cidadeSelect.classList.remove('bg-gray-50');
-                if (!cidades.length) resetCidadeSelect('Nenhuma cidade para a UF do gestor');
-            } catch (e) {
-                console.error(e);
-                resetCidadeSelect('Falha ao carregar cidades');
-            }
+    async function carregarCidadesPorUF(uf, selectedCidadeId = null) {
+    resetCidadeSelect('-- Carregando... --');
+    try {
+        const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}`);
+        if (!resp.ok) {
+            const text = await resp.text();
+            console.error('Falha ao carregar cidades:', resp.status, text);
+            throw new Error(`HTTP ${resp.status}`);
         }
-
-        // Prioridade: se tiver distribuidor, usa distribuidor. Senão, gestor.
-        distribuidorSelect.addEventListener('change', async function () {
-            const distribuidorId = this.value || null;
-            if (distribuidorId) {
-                await carregarCidadesPorDistribuidor(distribuidorId, null);
-            } else if (gestorSelect.value) {
-                await carregarCidadesPorGestor(gestorSelect.value, null);
-            } else {
-                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
-            }
+        const cidades = await resp.json();
+        cidadeSelect.innerHTML = '';
+        cidadeSelect.add(new Option('-- Selecione --', ''));
+        cidades.forEach(c => {
+            const opt = new Option(c.name, c.id);
+            if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+            cidadeSelect.add(opt);
         });
+        cidadeSelect.disabled = false;
+        cidadeSelect.classList.remove('bg-gray-50');
+        if (!cidades.length) resetCidadeSelect('UF sem cidades cadastradas');
+    } catch (e) {
+        console.error(e);
+        resetCidadeSelect('Falha ao carregar cidades');
+    }
+}
 
-        gestorSelect.addEventListener('change', async function () {
-            if (distribuidorSelect.value) return; // prioridade do distribuidor
-            const gestorId = this.value || null;
-            if (gestorId) {
-                await carregarCidadesPorGestor(gestorId, null);
-            } else {
-                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
-            }
-        });
 
-        // Estado inicial (old)
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (OLD_DISTRIBUIDOR) {
-                await carregarCidadesPorDistribuidor(OLD_DISTRIBUIDOR, OLD_CIDADE);
-            } else if (OLD_GESTOR) {
-                await carregarCidadesPorGestor(OLD_GESTOR, OLD_CIDADE);
-            } else {
-                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
-            }
-        });
-    </script>
+    // Prioridade: 1) distribuidor  2) gestor  3) UF
+    distribuidorSelect.addEventListener('change', async function () {
+        const distribuidorId = this.value || null;
+        if (distribuidorId) {
+            await carregarCidadesPorDistribuidor(distribuidorId, null);
+        } else if (gestorSelect.value) {
+            await carregarCidadesPorGestor(gestorSelect.value, null);
+        } else if (stateSelect.value) {
+            await carregarCidadesPorUF(stateSelect.value, null);
+        } else {
+            resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+        }
+    });
+
+    gestorSelect.addEventListener('change', async function () {
+        if (distribuidorSelect.value) return; // prioridade do distribuidor
+        const gestorId = this.value || null;
+        if (gestorId) {
+            await carregarCidadesPorGestor(gestorId, null);
+        } else if (stateSelect.value) {
+            await carregarCidadesPorUF(stateSelect.value, null);
+        } else {
+            resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+        }
+    });
+
+    stateSelect.addEventListener('change', async function () {
+        // Só carrega por UF se não houver distribuidor nem gestor selecionados
+        if (distribuidorSelect.value || gestorSelect.value) return;
+        const uf = this.value || null;
+        if (uf) {
+            await carregarCidadesPorUF(uf, null);
+        } else {
+            resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+        }
+    });
+
+    // Estado inicial (old)
+    document.addEventListener('DOMContentLoaded', async () => {
+        const OLD_CIDADE = @json(old('cidade_id'));
+        const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
+        const OLD_GESTOR = @json(old('gestor_id'));
+        const OLD_STATE = @json(old('state'));
+
+        if (OLD_DISTRIBUIDOR) {
+            await carregarCidadesPorDistribuidor(OLD_DISTRIBUIDOR, OLD_CIDADE);
+        } else if (OLD_GESTOR) {
+            await carregarCidadesPorGestor(OLD_GESTOR, OLD_CIDADE);
+        } else if (OLD_STATE) {
+            await carregarCidadesPorUF(OLD_STATE, OLD_CIDADE);
+        } else {
+            resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+        }
+    });
+</script>
+
 </x-app-layout>

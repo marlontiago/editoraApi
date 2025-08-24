@@ -48,8 +48,9 @@ class PedidoController extends Controller
         $produtos       = Produto::orderBy('nome')->get();
         $cidades        = City::orderBy('name')->get();
         $clientes       = Cliente::orderBy('razao_social')->get();
+        $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
 
-        return view('admin.pedidos.create', compact('produtos', 'cidades', 'gestores', 'distribuidores', 'clientes'));
+        return view('admin.pedidos.create', compact('produtos', 'cidades', 'gestores', 'distribuidores', 'clientes', 'cidadesUF'));
     }
 
     public function store(Request $request)

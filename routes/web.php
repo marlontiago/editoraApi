@@ -36,10 +36,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('produtos',ProdutoController::class)->except("show");
     Route::resource('usuarios', UserController::class);
     Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente'])->except('show');
-    Route::resource('comissoes', CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
 
     Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor'])->except('show');
-    Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('admin.distribuidores.por-gestor');
+    Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('distribuidores.por-gestor');
     Route::get('/cidades/por-distribuidor/{id}', [CidadeController::class, 'cidadesPorDistribuidor']);
 
     Route::resource('gestores', GestorController::class)->parameters(['gestores' => 'gestor'])->except('show');
@@ -48,6 +47,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])->name('gestores.cidades');
     Route::get('/cidades/por-gestor/{gestor}', [CidadeController::class, 'cidadesPorGestor'])->name('cidades.por-gestor');
     
+    Route::get('cidades/por-uf/{uf}', [CidadeController::class, 'porUf']);
 
     Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
     Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');

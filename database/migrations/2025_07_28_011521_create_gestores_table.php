@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->string('cnpj');
             $table->string('representante_legal');
             $table->string('cpf');
-            $table->string('rg');
+            $table->string('rg')->nullable();
             $table->string('telefone')->nullable();
             $table->string('email')->nullable();          // opcional se já vem via user
             $table->string('endereco_completo')->nullable();

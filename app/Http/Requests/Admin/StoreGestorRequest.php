@@ -19,7 +19,7 @@ class StoreGestorRequest extends FormRequest
             'cnpj'                => 'required|string|max:20',
             'representante_legal' => 'required|string|max:255',
             'cpf'                 => 'required|string|max:20',
-            'rg'                  => 'required|string|max:20',
+            'rg'                  => 'nullable|string|max:20',
             'telefone'            => 'required|string|max:20',
             'email'               => 'required|email|unique:users,email',
             'password'            => 'required|string|min:6',

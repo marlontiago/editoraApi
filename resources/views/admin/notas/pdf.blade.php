@@ -139,7 +139,7 @@
         </div>
         <div class="tcell" style="padding-right:6px;">
             <table class="grid" width="100%">
-                <tr><th colspan="2">TRANSPORTADOR / VOLUMES (opcional)</th></tr>
+                <tr><th colspan="2">TRANSPORTADOR / VOLUMES</th></tr>
                 <tr><td>Frete por conta</td><td>—</td></tr>
                 <tr><td>Placa/UF</td><td>—</td></tr>
                 <tr><td>Quantidade/Volumes</td><td>{{ $nota->total_caixas }}</td></tr>

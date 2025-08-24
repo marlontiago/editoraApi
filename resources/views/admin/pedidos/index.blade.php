@@ -117,7 +117,7 @@
                             <td class="px-4 py-2">{{ number_format($pedido->peso_total, 2, ',', '.') }}</td>
                             <td class="px-4 py-2 capitalize">{{ str_replace('_', ' ', $pedido->status) }}</td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('admin.pedidos.show', $pedido) }}" class="text-blue-600 hover:underline">Ver</a>
+                                <a href="{{ route('admin.pedidos.show', $pedido) }}" class="inline-flex items-center px-4 py-2 rounded-md bg-cyan-400 text-black hover:bg-cyan-900">Ver</a>
                             </td>
                         </tr>
                     @empty

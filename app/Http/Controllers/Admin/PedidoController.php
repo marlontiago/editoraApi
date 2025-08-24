@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
+use App\Models\NotaFiscal;
 
 class PedidoController extends Controller
 {
@@ -235,16 +236,36 @@ class PedidoController extends Controller
 
     public function show(Pedido $pedido)
     {
+        // Carrega tudo que a view usa (evita N+1)
         $pedido->load([
-            'cidades',
-            'gestor',
-            'distribuidor.user',
+            'produtos' => function ($q) {
+                $q->withPivot([
+                    'quantidade',
+                    'preco_unitario',
+                    'desconto_aplicado',
+                    'subtotal',
+                    'peso_total_produto',
+                    'caixas',
+                ]);
+            },
             'cliente',
-            'produtos',
+            'gestor',
+            'distribuidor',
+            'cidades',
             'logs.user',
         ]);
 
-        return view('admin.pedidos.show', compact('pedido'));
+        // Nota mais recente (qualquer status) e nota emitida ativa
+        $notaAtual = NotaFiscal::where('pedido_id', $pedido->id)
+            ->latest('id')
+            ->first();
+
+        $notaEmitida = NotaFiscal::where('pedido_id', $pedido->id)
+            ->where('status', 'emitida')
+            ->latest('id')
+            ->first();
+
+        return view('admin.pedidos.show', compact('pedido', 'notaAtual', 'notaEmitida'));
     }
 
     public function exportar(Pedido $pedido, string $tipo)

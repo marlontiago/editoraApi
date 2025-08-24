@@ -1,0 +1,52 @@
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; }
+body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #111; }
+@page { margin: 12mm; }         /* margem da página em milímetros */
+thead { display: table-header-group; }
+tfoot { display: table-footer-group; }
+
+.wrap { width: 100%; padding: 0; }   /* sem padding para não “estourar” a largura */
+.row { display: table; width: 100%; }
+.col { display: table-cell; vertical-align: top; }
+
+.box { border: 1px solid #000; padding: 6px 8px; margin-bottom: 6px; }
+.box h4 { margin: 0 0 4px 0; font-size: 11px; font-weight: 700; }
+.right { text-align:right; } .center { text-align:center; }
+.tiny { font-size: 10px; } .big { font-size: 16px; font-weight: 700; }
+.b { font-weight: 700; } .mb4 { margin-bottom: 4px; }
+
+.recibo { border:1px solid #000; padding:5px 8px; margin: 0 0 6px 0; }
+.recibo .cells { display: table; width:100%; }
+.recibo .cell { display: table-cell; border-left:1px solid #000; padding: 3px 6px; }
+.recibo .cell:first-child { border-left:0; }
+
+.danfe { display: table; width: 100%; border:1px solid #000; margin-bottom:6px; }
+.danfe > div { display: table-cell; vertical-align: top; }
+.danfe-left { width: 66%; border-right:1px solid #000; padding:8px; }
+.danfe-right { width: 34%; padding:8px; text-align:center; }
+.logo { height: 100px; margin-bottom: 6px; }
+.chip { display:inline-block; border:1px solid #000; padding:2px 6px; font-weight:700; }
+
+.acesso { border:1px solid #000; padding:6px; margin-bottom:6px; }
+.acesso .chave { font-size: 13px; letter-spacing: .5px; font-weight: 700; word-break: break-all; }
+.barcode { margin-top:6px; max-width:100%; }
+
+table.items { width:100%; border-collapse: collapse; table-layout: fixed; }
+table.items th, table.items td { border:1px solid #000; padding:5px; font-size:10px; }
+table.items th { background:#efefef; }
+table.items th:nth-child(2) { width:auto; } /* descrição cresce */
+table.items th:nth-child(1){ width:12%; }
+table.items th:nth-child(3){ width:8%; }
+table.items th:nth-child(4){ width:10%; }
+table.items th:nth-child(5){ width:9%; }
+table.items th:nth-child(6){ width:12%; }
+table.items th:nth-child(7){ width:10%; }
+table.items th:nth-child(8){ width:8%; }
+
+.totais { display: table; width:100%; }
+.totais .tcell { display: table-cell; width: 33%; vertical-align: top; }
+.totais .grid td, .totais .grid th { border:1px solid #000; padding:6px; font-size: 10px; }
+.totais .grid th { background:#efefef; text-align:left; }
+
+.footer { position: fixed; bottom: 8mm; left: 12mm; right: 12mm; font-size: 10px; color:#444; }
+.avoid-break { page-break-inside: avoid; }

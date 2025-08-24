@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CommissionController;
 use App\Http\Controllers\Admin\CidadeController;
 use App\Http\Controllers\Admin\ClienteController;
+use App\Http\Controllers\Admin\NotaFiscalController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -34,6 +35,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('produtos',ProdutoController::class)->except("show");
     Route::resource('usuarios', UserController::class);
+    Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente'])->except('show');
     Route::resource('comissoes', CommissionController::class)->parameters(['comissoes' => 'commission'])->except(['show']);
 
     Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor'])->except('show');
@@ -46,7 +48,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])->name('gestores.cidades');
     Route::get('/cidades/por-gestor/{gestor}', [CidadeController::class, 'cidadesPorGestor'])->name('cidades.por-gestor');
     
-    Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente'])->except('show');
 
     Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
     Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
@@ -56,8 +57,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/pedidos/{pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
     Route::get('/dashboard/export/excel', [DashboardController::class, 'exportExcel'])->name('admin.dashboard.export.excel');
-    Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('admin.dashboard.export.pdf');   
-    
+    Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('admin.dashboard.export.pdf');
+        
+    Route::post('/pedidos/{pedido}/emitir-nota', [NotaFiscalController::class, 'emitir'])->name('pedidos.emitir-nota');
+    Route::get('/notas/{nota}', [NotaFiscalController::class, 'show'])->name('notas.show');
+    Route::post('/notas/{nota}/faturar', [NotaFiscalController::class, 'faturar'])->name('notas.faturar');
+    Route::get('/notas/{nota}/pdf', [NotaFiscalController::class, 'pdf'])->name('notas.pdf');    
 });
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {

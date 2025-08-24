@@ -153,6 +153,7 @@
                         <th class="p-3">Cidade(s) de atuação do distribuidor</th>
                         <th class="p-3">Valor</th>
                         <th class="p-3">Status</th>
+                        <th class="p-3">Ação</th>
                     </tr>
                 </thead>
                 <tbody class="text-sm">
@@ -184,6 +185,12 @@
                             </td>
                             <td class="p-3">
                                 {{ ucfirst(str_replace('_',' ', $pedido->status ?? '-')) }}
+                            </td>
+                            <td class="p-3">
+                                <a href="{{ route('admin.pedidos.show', $pedido) }}"
+                                   class="inline-flex items-center px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-900">
+                                    Ver
+                                </a>
                             </td>
                         </tr>
                     @empty

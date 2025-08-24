@@ -19,19 +19,83 @@
             </div>
         @endif
 
+        @php
+            // Mapas de status (somente lógica de apresentação)
+            $statusMap = [
+                'em_andamento' => ['Em andamento', 'bg-yellow-100 text-yellow-800 border-yellow-200'],
+                'finalizado'   => ['Finalizado',   'bg-green-100 text-green-800 border-green-200'],
+                'cancelado'    => ['Cancelado',    'bg-red-100 text-red-800 border-red-200'],
+            ];
+            $notaStatusMap = [
+                'emitida'   => ['Emitida',   'bg-blue-100 text-blue-800 border-blue-200'],
+                'faturada'  => ['Faturada',  'bg-emerald-100 text-emerald-800 border-emerald-200'],
+                'cancelada' => ['Cancelada', 'bg-red-100 text-red-800 border-red-200'],
+            ];
+
+            $status = $pedido->status;
+            [$statusLabel, $statusClasses] = $statusMap[$status]
+                ?? [ucfirst(str_replace('_',' ',$status)), 'bg-gray-100 text-gray-800 border-gray-200'];
+
+            if (!empty($notaAtual)) {
+                [$notaLabel, $notaClasses] = $notaStatusMap[$notaAtual->status]
+                    ?? [ucfirst($notaAtual->status), 'bg-gray-100 text-gray-800 border-gray-200'];
+            }
+        @endphp
+
+        {{-- Ações --}}
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ route('admin.pedidos.index') }}"
+               class="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-black hover:text-white">
+                ← Voltar
+            </a>
+
+            <a href="{{ route('admin.pedidos.edit', $pedido) }}"
+               class="inline-flex items-center px-4 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600">
+                Editar
+            </a>
+
+            <a href="{{ route('admin.pedidos.exportar', ['pedido' => $pedido->id, 'tipo' => 'relatorio']) }}"
+               class="inline-flex items-center px-4 py-2 rounded-md bg-gray-700 text-white hover:bg-gray-800">
+                Exportar Relatório
+            </a>
+
+            <a href="{{ route('admin.pedidos.exportar', ['pedido' => $pedido->id, 'tipo' => 'orcamento']) }}"
+               class="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
+                Exportar Orçamento
+            </a>
+
+            {{-- Botões de Nota Fiscal --}}
+            @if(empty($notaEmitida))
+                <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
+                      onsubmit="return confirm('Emitir nota interna para este pedido?');">
+                    @csrf
+                    <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                        Emitir Nota
+                    </button>
+                </form>
+            @else
+                <form action="{{ route('admin.notas.faturar', $notaEmitida) }}" method="POST"
+                      onsubmit="return confirm('Faturar nota? Isto baixará o estoque.');">
+                    @csrf
+                    <button class="inline-flex items-center px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                        Faturar Nota
+                    </button>
+                </form>
+
+                <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
+                      onsubmit="return confirm('Emitir NOVA nota com os dados atuais do pedido? A nota emitida será cancelada.');">
+                    @csrf
+                    <input type="hidden" name="substituir" value="1">
+                    <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                        Emitir Nova Nota
+                    </button>
+                </form>
+            @endif
+        </div>
+
         {{-- Informações principais --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
             <h3 class="text-lg font-semibold mb-4 text-gray-700">Informações Gerais</h3>
-
-            @php
-                $status = $pedido->status;
-                $statusMap = [
-                    'em_andamento' => ['Em andamento', 'bg-yellow-100 text-yellow-800 border-yellow-200'],
-                    'finalizado'   => ['Finalizado',   'bg-green-100  text-green-800  border-green-200'],
-                    'cancelado'    => ['Cancelado',    'bg-red-100    text-red-800    border-red-200'],
-                ];
-                [$statusLabel, $statusClasses] = $statusMap[$status] ?? [ucfirst(str_replace('_',' ',$status)), 'bg-gray-100 text-gray-800 border-gray-200'];
-            @endphp
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
                 <div>
@@ -45,6 +109,34 @@
                         {{ $statusLabel }}
                     </span>
                 </div>
+
+                {{-- Nota Fiscal (mostra a mais recente se existir) --}}
+                @if(!empty($notaAtual))
+                    <div class="md:col-span-2">
+                        <strong>Nota Fiscal:</strong>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $notaClasses }}">
+                            {{ $notaLabel }}
+                        </span>
+                        <span class="ml-2 text-gray-700">
+                            Número: <span class="font-medium">{{ $notaAtual->numero ?? '-' }}</span>
+                            @if($notaAtual->serie)
+                                • Série: <span class="font-medium">{{ $notaAtual->serie }}</span>
+                            @endif
+                            • Emitida em: <span class="font-medium">{{ optional($notaAtual->emitida_em)->format('d/m/Y H:i') ?? '-' }}</span>
+                            @if($notaAtual->faturada_em)
+                                • Faturada em: <span class="font-medium">{{ optional($notaAtual->faturada_em)->format('d/m/Y H:i') }}</span>
+                            @endif
+                        </span>
+                        <a href="{{ route('admin.notas.show', $notaAtual) }}"
+                           class="inline-flex items-center ml-3 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 border border-gray-300 text-sm">
+                            Ver Nota
+                        </a>
+                        <a href="{{ route('admin.notas.pdf', $notaAtual) }}" target="_blank"
+                           class="inline-flex items-center ml-2 px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-sm">
+                            Exportar PDF
+                        </a>
+                    </div>
+                @endif
 
                 <div class="md:col-span-2">
                     <strong>Cidades:</strong>
@@ -148,7 +240,6 @@
                             return max(0, $bruto - $sub);
                         });
 
-                        // Percentual total ponderado pelo valor bruto dos itens
                         $percTotal = $valorBruto > 0 ? ($totalDescontos / $valorBruto) * 100 : 0;
                     @endphp
 
@@ -218,10 +309,6 @@
                             </li>
                         @endforeach
                     </ul>
-                    <p class="px-1 pt-2 text-xs text-gray-500">
-                        Obs.: o percentual de desconto do pedido é ponderado pelo valor bruto de cada item:
-                        Σ(Brutoᵢ × %Descᵢ) ÷ Σ(Brutoᵢ).
-                    </p>
                 </div>
             @endif
         </div>
@@ -237,7 +324,6 @@
                         <div class="font-medium">{{ $log->acao }}</div>
 
                         @php
-                            // $log->detalhes pode ser string ou array/JSON dependendo da sua implementação
                             $linhas = [];
                             if (is_string($log->detalhes) && strlen($log->detalhes)) {
                                 $linhas = explode(' | ', $log->detalhes);
@@ -262,28 +348,7 @@
             </ul>
         </div>
 
-        {{-- Ações --}}
-        <div class="flex flex-wrap gap-3">
-            <a href="{{ route('admin.pedidos.index') }}"
-               class="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-black hover:text-white">
-                ← Voltar
-            </a>
-
-            <a href="{{ route('admin.pedidos.edit', $pedido) }}"
-               class="inline-flex items-center px-4 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600">
-                Editar
-            </a>
-
-            <a href="{{ route('admin.pedidos.exportar', ['pedido' => $pedido->id, 'tipo' => 'relatorio']) }}"
-               class="inline-flex items-center px-4 py-2 rounded-md bg-gray-700 text-white hover:bg-gray-800">
-                Exportar Relatório
-            </a>
-
-            <a href="{{ route('admin.pedidos.exportar', ['pedido' => $pedido->id, 'tipo' => 'orcamento']) }}"
-               class="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
-                Exportar Orçamento
-            </a>
-        </div>
+        
 
     </div>
 </x-app-layout>

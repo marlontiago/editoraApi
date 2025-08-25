@@ -20,7 +20,6 @@
         @endif
 
         @php
-            // Mapas de status (somente lógica de apresentação)
             $statusMap = [
                 'em_andamento' => ['Em andamento', 'bg-yellow-100 text-yellow-800 border-yellow-200'],
                 'finalizado'   => ['Finalizado',   'bg-green-100 text-green-800 border-green-200'],
@@ -65,15 +64,14 @@
             </a>
 
             {{-- Botões de Nota Fiscal --}}
-            @if(empty($notaEmitida))
-                <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
-                      onsubmit="return confirm('Emitir nota interna para este pedido?');">
-                    @csrf
-                    <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                        Emitir Nota
-                    </button>
-                </form>
-            @else
+            @if(!empty($temNotaFaturada) && $temNotaFaturada)
+                {{-- Já faturada: não mostrar mais "Emitir" --}}
+                <span class="inline-flex items-center px-3 py-2 rounded-md bg-green-100 text-green-800 border border-green-200">
+                    Nota faturada
+                </span>
+
+            @elseif(!empty($notaEmitida))
+                {{-- Existe nota emitida (ainda não faturada) --}}
                 <form action="{{ route('admin.notas.faturar', $notaEmitida) }}" method="POST"
                       onsubmit="return confirm('Faturar nota? Isto baixará o estoque.');">
                     @csrf
@@ -90,8 +88,18 @@
                         Emitir Nova Nota
                     </button>
                 </form>
+
+            @else
+                {{-- Ainda não existe nota --}}
+                <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
+                      onsubmit="return confirm('Emitir nota interna para este pedido?');">
+                    @csrf
+                    <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                        Emitir Nota
+                    </button>
+                </form>
             @endif
-        </div>
+        </div> {{-- <<< FECHA o bloco de ações corretamente --}}
 
         {{-- Informações principais --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
@@ -179,7 +187,7 @@
                     @else
                         -
                     @endif
-                </div>
+                </div>                
             </div>
         </div>
 
@@ -277,41 +285,18 @@
                     </tfoot>
                 </table>
             </div>
-
-            {{-- RESUMO: Produtos com desconto --}}
-            @php
-                $produtosComDesc = $pedido->produtos->filter(function ($p) {
-                    $q  = (int) ($p->pivot->quantidade ?? 0);
-                    $pu = (float) ($p->pivot->preco_unitario ?? 0);
-                    $bruto = $pu * $q;
-                    $sub   = (float) ($p->pivot->subtotal ?? 0);
-                    return ($bruto - $sub) > 0.00001;
-                });
-            @endphp
-
-            @if($produtosComDesc->count())
-                <div class="mt-4 rounded-md border border-green-200 bg-green-50 p-4">
-                    <h4 class="text-sm font-semibold text-green-800 mb-2">Produtos com desconto</h4>
-                    <ul class="list-disc pl-5 space-y-1 text-sm text-green-900">
-                        @foreach($produtosComDesc as $p)
-                            @php
-                                $q  = (int) ($p->pivot->quantidade ?? 0);
-                                $pu = (float) ($p->pivot->preco_unitario ?? 0);
-                                $bruto = $pu * $q;
-                                $sub   = (float) ($p->pivot->subtotal ?? 0);
-                                $val   = max(0, $bruto - $sub);
-                                $pct   = $bruto > 0 ? ($val / $bruto) * 100 : 0;
-                            @endphp
-                            <li>
-                                <span class="font-medium">{{ $p->nome }}</span> — desconto de
-                                <strong>R$ {{ number_format($val, 2, ',', '.') }}</strong>
-                                ({{ number_format($pct, 2, ',', '.') }}%)
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
         </div>
+
+        {{-- Observações (aparece se houver) --}}
+                @php $obs = trim((string) $pedido->observacoes); @endphp
+                @if($obs !== '')
+                    <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
+                        <strong>Observações</strong>
+                        <div class="mt-1 text-gray-800 whitespace-pre-line">
+                            # {{ $obs }}
+                        </div>
+                    </div>
+                @endif
 
         {{-- Linha do tempo --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
@@ -347,8 +332,6 @@
                 @endforelse
             </ul>
         </div>
-
-        
 
     </div>
 </x-app-layout>

@@ -43,7 +43,7 @@
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">-- Sem gestor --</option>
                     @foreach($gestores as $gestor)
-                        <option value="{{ $gestor->id }}" @selected(old('gestor_id') == $gestor->id)>{{ $gestor->razao_social }}</option>
+                        <option value="{{ $gestor->id }}" data-uf="{{ $gestor->estado_uf }}" @selected(old('gestor_id') == $gestor->id)>{{ $gestor->razao_social }}</option>
                     @endforeach
                 </select>
             </div>
@@ -61,9 +61,10 @@
             </div>
 
             {{-- UF --}}
-            <div>
+            <div class="col-span-12 md:col-span-6">
                 <label for="state" class="block text-sm font-medium text-gray-800">UF</label>
-                <select name="state" id="state" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <select name="state" id="state"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">-- Selecione --</option>
                     @foreach($cidadesUF as $uf)
                         <option value="{{ $uf }}" @selected(old('state') == $uf)>{{ $uf }}</option>
@@ -79,7 +80,7 @@
                 @endphp
                 <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
                         class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor ou distribuidor --' }}</option>
+                    <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor, distribuidor ou UF --' }}</option>
                 </select>
             </div>
 
@@ -99,6 +100,17 @@
                         class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
                     + Adicionar Produto
                 </button>
+            </div>
+
+            {{-- Observações --}}
+            <div class="col-span-12">
+                <label class="block text-sm font-medium text-gray-700">Observações</label>
+                <textarea
+                    name="observacoes"
+                    rows="3"
+                    class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Anotações internas sobre o pedido (opcional)"
+                >{{ old('observacoes') }}</textarea>
             </div>
 
             {{-- Botões --}}
@@ -223,8 +235,9 @@
         });
     </script>
 
-    {{-- =================== GESTOR / DISTRIBUIDOR / CIDADE =================== --}}
-    <script>
+    {{-- =================== GESTOR / DISTRIBUIDOR / UF / CIDADE =================== --}}
+    {{-- =================== GESTOR / DISTRIBUIDOR / UF / CIDADE =================== --}}
+<script>
     const distribuidorSelect = document.getElementById('distribuidor_id');
     const gestorSelect       = document.getElementById('gestor_id');
     const cidadeSelect       = document.getElementById('cidade_id');
@@ -235,6 +248,63 @@
         cidadeSelect.add(new Option(placeholder, ''));
         cidadeSelect.disabled = true;
         cidadeSelect.classList.add('bg-gray-50');
+    }
+
+    // Seleciona a UF no <select> de modo robusto
+    function setUfValue(ufRaw) {
+        const target = (ufRaw ?? '').toString().trim().toUpperCase();
+        if (!target) {
+            stateSelect.value = '';
+            return;
+        }
+
+        // tenta selecionar por comparação case-insensitive
+        let found = false;
+        for (const opt of stateSelect.options) {
+            if (String(opt.value).trim().toUpperCase() === target) {
+                opt.selected = true;
+                found = true;
+                break;
+            }
+        }
+
+        // se não tiver na lista, cria uma opção temporária e seleciona
+        if (!found) {
+            const temp = new Option(target, target);
+            temp.dataset.temp = '1';
+            try { stateSelect.add(temp, 1); } catch { stateSelect.add(temp); }
+            temp.selected = true;
+        }
+    }
+
+    // Habilita/Desabilita o UF conforme regra
+    function toggleUfSelect() {
+        const mustDisable = Boolean(distribuidorSelect.value || gestorSelect.value);
+        if (mustDisable) {
+            stateSelect.disabled = true;
+            stateSelect.classList.add('bg-gray-50');
+        } else {
+            stateSelect.disabled = false;
+            stateSelect.classList.remove('bg-gray-50');
+        }
+    }
+
+    function aplicarUfDoGestor() {
+        // limpar qualquer opção temporária anterior
+        Array.from(stateSelect.options)
+            .filter(o => o.dataset.temp === '1')
+            .forEach(o => o.remove());
+
+        if (gestorSelect.value) {
+            const option = gestorSelect.options[gestorSelect.selectedIndex];
+            const uf = option?.getAttribute('data-uf') || '';
+            setUfValue(uf);
+            stateSelect.disabled = true;
+            stateSelect.classList.add('bg-gray-50');
+        } else if (!distribuidorSelect.value) {
+            stateSelect.disabled = false;
+            stateSelect.classList.remove('bg-gray-50');
+        }
     }
 
     async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
@@ -282,34 +352,34 @@
     }
 
     async function carregarCidadesPorUF(uf, selectedCidadeId = null) {
-    resetCidadeSelect('-- Carregando... --');
-    try {
-        const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}`);
-        if (!resp.ok) {
-            const text = await resp.text();
-            console.error('Falha ao carregar cidades:', resp.status, text);
-            throw new Error(`HTTP ${resp.status}`);
+        resetCidadeSelect('-- Carregando... --');
+        try {
+            const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}`);
+            if (!resp.ok) {
+                const text = await resp.text();
+                console.error('Falha ao carregar cidades:', resp.status, text);
+                throw new Error(`HTTP ${resp.status}`);
+            }
+            const cidades = await resp.json();
+            cidadeSelect.innerHTML = '';
+            cidadeSelect.add(new Option('-- Selecione --', ''));
+            cidades.forEach(c => {
+                const opt = new Option(c.name, c.id);
+                if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+                cidadeSelect.add(opt);
+            });
+            cidadeSelect.disabled = false;
+            cidadeSelect.classList.remove('bg-gray-50');
+            if (!cidades.length) resetCidadeSelect('UF sem cidades cadastradas');
+        } catch (e) {
+            console.error(e);
+            resetCidadeSelect('Falha ao carregar cidades');
         }
-        const cidades = await resp.json();
-        cidadeSelect.innerHTML = '';
-        cidadeSelect.add(new Option('-- Selecione --', ''));
-        cidades.forEach(c => {
-            const opt = new Option(c.name, c.id);
-            if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-            cidadeSelect.add(opt);
-        });
-        cidadeSelect.disabled = false;
-        cidadeSelect.classList.remove('bg-gray-50');
-        if (!cidades.length) resetCidadeSelect('UF sem cidades cadastradas');
-    } catch (e) {
-        console.error(e);
-        resetCidadeSelect('Falha ao carregar cidades');
     }
-}
 
-
-    // Prioridade: 1) distribuidor  2) gestor  3) UF
+    // ==== EVENTOS ====
     distribuidorSelect.addEventListener('change', async function () {
+        toggleUfSelect();
         const distribuidorId = this.value || null;
         if (distribuidorId) {
             await carregarCidadesPorDistribuidor(distribuidorId, null);
@@ -323,6 +393,8 @@
     });
 
     gestorSelect.addEventListener('change', async function () {
+        aplicarUfDoGestor();
+        toggleUfSelect();
         if (distribuidorSelect.value) return; // prioridade do distribuidor
         const gestorId = this.value || null;
         if (gestorId) {
@@ -335,7 +407,6 @@
     });
 
     stateSelect.addEventListener('change', async function () {
-        // Só carrega por UF se não houver distribuidor nem gestor selecionados
         if (distribuidorSelect.value || gestorSelect.value) return;
         const uf = this.value || null;
         if (uf) {
@@ -347,10 +418,13 @@
 
     // Estado inicial (old)
     document.addEventListener('DOMContentLoaded', async () => {
-        const OLD_CIDADE = @json(old('cidade_id'));
+        toggleUfSelect();
+        aplicarUfDoGestor(); // aplica a regra já no carregamento
+
+        const OLD_CIDADE       = @json(old('cidade_id'));
         const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
-        const OLD_GESTOR = @json(old('gestor_id'));
-        const OLD_STATE = @json(old('state'));
+        const OLD_GESTOR       = @json(old('gestor_id'));
+        const OLD_STATE        = @json(old('state'));
 
         if (OLD_DISTRIBUIDOR) {
             await carregarCidadesPorDistribuidor(OLD_DISTRIBUIDOR, OLD_CIDADE);
@@ -363,5 +437,6 @@
         }
     });
 </script>
+
 
 </x-app-layout>

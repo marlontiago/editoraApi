@@ -57,9 +57,6 @@
                 <div><strong>Emitida em:</strong> {{ optional($nota->emitida_em)->format('d/m/Y H:i') }}</div>
                 <div><strong>Faturada em:</strong> {{ optional($nota->faturada_em)->format('d/m/Y H:i') ?? '-' }}</div>
 
-                <div><strong>Chave de Acesso:</strong> {{ $nota->chave_acesso ?? '—' }}</div>
-                <div><strong>Protocolo:</strong> {{ $nota->protocolo ?? '—' }}</div>
-
                 <div><strong>Pedido:</strong>
                     <a class="underline text-blue-600" href="{{ route('admin.pedidos.show', $nota->pedido_id) }}">
                         #{{ $nota->pedido_id }}

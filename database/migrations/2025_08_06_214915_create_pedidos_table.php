@@ -23,6 +23,7 @@ return new class extends Migration
             $table->decimal('valor_bruto', 10, 2)->default(0);
             $table->decimal('valor_total', 10, 2)->default(0);
             $table->enum('status', ['em_andamento', 'finalizado', 'cancelado'])->default('em_andamento');
+            $table->text('observacoes')->nullable()->after('status');
             $table->timestamps();
         });
     }

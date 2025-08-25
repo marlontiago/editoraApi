@@ -108,20 +108,37 @@
                     </select>
                 </div>
 
-                {{-- Cidade da venda (via gestor/UF ou distribuidor) --}}
-                <div class="col-span-12 md:col-span-6">
-                    <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
-                    @php
-                        $temDistOuGestor = old('distribuidor_id', $pedido->distribuidor_id) || old('gestor_id', $pedido->gestor_id);
-                    @endphp
-                    <select
-                        name="cidade_id"
-                        id="cidade_id"
-                        {{ $temDistOuGestor ? '' : 'disabled' }}
-                        class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor ou distribuidor --' }}</option>
-                    </select>
+                <div>
+                <label for="state" class="block text-sm font-medium text-gray-800">UF</label>
+                <select name="state" id="state" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Selecione --</option>
+                    @foreach($cidadesUF as $uf)
+                        <option value="{{ $uf }}" @selected(old('state') == $uf)>{{ $uf }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Cidade da Venda (via gestor/UF ou distribuidor) --}}
+            <div class="col-span-12 md:col-span-6">
+                <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
+                @php
+                    $temDistOuGestor = old('distribuidor_id') || old('gestor_id') || old('state');
+                @endphp
+                <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
+                        class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor ou distribuidor --' }}</option>
+                </select>
+            </div>
+
+                {{-- Observações --}}
+                <div class="col-span-12">
+                    <label class="block text-sm font-medium text-gray-700">Observações</label>
+                    <textarea
+                        name="observacoes"
+                        rows="3"
+                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Anotações internas sobre o pedido (opcional)"
+                    >{{ old('observacoes', $pedido->observacoes) }}</textarea>
                 </div>
             </div>
 
@@ -309,6 +326,32 @@
                 resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
             }
         });
+
+        async function carregarCidadesPorUF(uf, selectedCidadeId = null) {
+        resetCidadeSelect('-- Carregando... --');
+        try {
+            const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}`);
+            if (!resp.ok) {
+                const text = await resp.text();
+                console.error('Falha ao carregar cidades:', resp.status, text);
+                throw new Error(`HTTP ${resp.status}`);
+            }
+            const cidades = await resp.json();
+            cidadeSelect.innerHTML = '';
+            cidadeSelect.add(new Option('-- Selecione --', ''));
+            cidades.forEach(c => {
+                const opt = new Option(c.name, c.id);
+                if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+                cidadeSelect.add(opt);
+            });
+            cidadeSelect.disabled = false;
+            cidadeSelect.classList.remove('bg-gray-50');
+            if (!cidades.length) resetCidadeSelect('UF sem cidades cadastradas');
+        } catch (e) {
+            console.error(e);
+            resetCidadeSelect('Falha ao carregar cidades');
+        }
+    }
 
         gestorSelect.addEventListener('change', async function () {
             if (distribuidorSelect.value) return; // prioridade do distribuidor

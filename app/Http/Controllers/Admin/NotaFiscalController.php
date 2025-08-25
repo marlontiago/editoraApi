@@ -19,6 +19,14 @@ class NotaFiscalController extends Controller
 public function emitir(Request $request, Pedido $pedido)
 {
 
+    $jaFaturada = NotaFiscal::where('pedido_id', $pedido->id)
+        ->where('status', 'faturada')
+        ->exists();
+
+    if ($jaFaturada) {
+        return back()->with('error', 'Este pedido já possui uma nota faturada. Não é possível emitir outra.');
+    }
+
     $substituir = $request->boolean('substituir');
 
     // Carrega o pedido com tudo que a nota usa

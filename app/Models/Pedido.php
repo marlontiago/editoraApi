@@ -21,6 +21,7 @@
             'valor_bruto',
             'valor_total',
             'status',
+            'observacoes',
         ];
 
         protected $casts = [

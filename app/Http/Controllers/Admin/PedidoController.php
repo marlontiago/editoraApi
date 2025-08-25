@@ -80,6 +80,7 @@ class PedidoController extends Controller
             'produtos.*.id'          => ['required', 'exists:produtos,id', 'distinct'],
             'produtos.*.quantidade'  => ['required', 'integer', 'min:1'],
             'produtos.*.desconto'    => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'observacoes'            => ['nullable','string','max:2000'],
         ];
 
         //Define as mensagens de erro personalizadas para as regras de validação.
@@ -146,6 +147,7 @@ class PedidoController extends Controller
                 'distribuidor_id' => $request->distribuidor_id,
                 'data'            => $request->data,
                 'status'          => 'em_andamento',
+                'observacoes'     => $request->observacoes ?? null,
             ]);
 
             // Se a cidade foi selecionada, associa ao pedido
@@ -251,7 +253,7 @@ class PedidoController extends Controller
             },
             'cliente',
             'gestor',
-            'distribuidor',
+            'distribuidor.user',
             'cidades',
             'logs.user',
         ]);
@@ -266,7 +268,12 @@ class PedidoController extends Controller
             ->latest('id')
             ->first();
 
-        return view('admin.pedidos.show', compact('pedido', 'notaAtual', 'notaEmitida'));
+        $temNotaFaturada = NotaFiscal::where('pedido_id', $pedido->id)
+            ->where('status', 'faturada')
+            ->exists();
+
+
+        return view('admin.pedidos.show', compact('pedido', 'notaAtual', 'notaEmitida','temNotaFaturada'));
     }
 
     public function exportar(Pedido $pedido, string $tipo)
@@ -312,6 +319,8 @@ class PedidoController extends Controller
         $produtos       = Produto::orderBy('nome')->get();
         $cidades        = City::orderBy('name')->get();
         $clientes       = Cliente::orderBy('razao_social')->get();
+        $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
+
 
         // Prepara os itens atuais do pedido para edição
         // Mapeia os produtos do pedido para um array com as informações necessárias
@@ -325,7 +334,7 @@ class PedidoController extends Controller
         ])->toArray();
 
         return view('admin.pedidos.edit', compact(
-            'pedido','gestores','distribuidores','produtos','cidades','clientes','itensAtuais'
+            'pedido','gestores','distribuidores','produtos','cidades','clientes','itensAtuais','cidadesUF',
         ));
     }
 
@@ -382,6 +391,7 @@ class PedidoController extends Controller
         'produtos.*.id'          => ['required', 'exists:produtos,id', 'distinct'],
         'produtos.*.quantidade'  => ['required', 'integer', 'min:1'],
         'produtos.*.desconto'    => ['nullable', 'numeric', 'min:0', 'max:100'],
+        'observacoes'            => ['nullable','string','max:2000'],
     ];
 
     $messages = [
@@ -460,6 +470,7 @@ class PedidoController extends Controller
                 'gestor_id'       => $request->gestor_id,
                 'distribuidor_id' => $request->distribuidor_id,
                 'status'          => 'cancelado',
+                'observacoes'     => $request->observacoes ?? null,
             ]);
 
             $request->filled('cidade_id')
@@ -486,6 +497,7 @@ class PedidoController extends Controller
             'gestor_id'       => $request->gestor_id,
             'distribuidor_id' => $request->distribuidor_id,
             'status'          => $novoStatus,
+            'observacoes'     => $request->observacoes ?? null,
         ]);
 
         $request->filled('cidade_id')

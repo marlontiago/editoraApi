@@ -29,6 +29,23 @@
                 📄 Exportar PDF
             </a>
 
+            @if ($nota->status === 'faturada')
+                <a href="{{ route('admin.notas.pagamentos.create', $nota) }}"
+                class="inline-flex items-center px-3 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                    Registrar Pagamento
+                </a>
+            @endif
+
+            {{-- Botão para ver detalhes do pagamento (se existir) --}}
+            @if(!empty($pagamentoAtual))
+                <a href="{{ route('admin.notas.pagamentos.show', [$nota, $pagamentoAtual]) }}"
+                class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                    Detalhes do Pagamento
+                </a>
+            @endif
+
+            {{-- Faturar --}}
+
             @if($nota->status === 'emitida')
                 <form action="{{ route('admin.notas.faturar', $nota) }}" method="POST"
                       onsubmit="return confirm('Faturar nota? Isto baixará o estoque.');">
@@ -121,6 +138,41 @@
                 {{ $obs ?: '—' }}
             </div>
         </div>
+
+        @if($nota->pagamentos->count())
+            <div class="mt-6">
+                <h4 class="font-semibold text-gray-800 mb-2">Pagamentos</h4>
+                <div class="overflow-x-auto rounded border">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Data</th>
+                                <th class="px-3 py-2 text-right">Valor Pago</th>
+                                <th class="px-3 py-2 text-right">Retenções</th>
+                                <th class="px-3 py-2 text-right">Líquido</th>
+                                <th class="px-3 py-2 text-right">Com. Adv.</th>
+                                <th class="px-3 py-2 text-right">Com. Dir.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($nota->pagamentos as $pg)
+                            <tr class="border-t">
+                                <td class="px-3 py-2">{{ optional($pg->data_pagamento)->format('d/m/Y') ?: '-' }}</td>
+                                <td class="px-3 py-2 text-right">R$ {{ number_format($pg->valor_pago, 2, ',', '.') }}</td>
+                                <td class="px-3 py-2 text-right">
+                                    R$ {{ number_format($pg->total_retencoes, 2, ',', '.') }}
+                                </td>
+                                <td class="px-3 py-2 text-right">R$ {{ number_format($pg->valor_liquido, 2, ',', '.') }}</td>
+                                <td class="px-3 py-2 text-right">R$ {{ number_format($pg->comissao_advogado, 2, ',', '.') }}</td>
+                                <td class="px-3 py-2 text-right">R$ {{ number_format($pg->comissao_diretor, 2, ',', '.') }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+
 
         
     </div>

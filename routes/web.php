@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\CommissionController;
 use App\Http\Controllers\Admin\CidadeController;
 use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\NotaFiscalController;
+use App\Http\Controllers\Admin\NotaPagamentoController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -63,6 +64,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/notas/{nota}', [NotaFiscalController::class, 'show'])->name('notas.show');
     Route::post('/notas/{nota}/faturar', [NotaFiscalController::class, 'faturar'])->name('notas.faturar');
     Route::get('/notas/{nota}/pdf', [NotaFiscalController::class, 'pdf'])->name('notas.pdf');    
+
+    Route::get  ('/notas/{nota}/pagamentos/create', [NotaPagamentoController::class, 'create'])->name('notas.pagamentos.create');
+    Route::post ('/notas/{nota}/pagamentos',        [NotaPagamentoController::class, 'store'])->name('notas.pagamentos.store');
+    Route::get('notas/{nota}/pagamentos/{pagamento}', [NotaPagamentoController::class, 'show'])->name('notas.pagamentos.show');
 });
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {

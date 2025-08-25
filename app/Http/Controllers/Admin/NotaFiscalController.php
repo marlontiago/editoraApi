@@ -229,8 +229,16 @@ public function emitir(Request $request, Pedido $pedido)
     // GET /admin/notas/{nota}
     public function show(NotaFiscal $nota)
     {
-        $nota->load('itens.produto', 'pedido.cliente');
-        return view('admin.notas.show', compact('nota'));
+        $nota->load([
+            'itens.produto',
+            'pedido.cliente',
+            'pagamentos',           // <-- carrega os pagamentos
+        ]);
+
+        // pega o pagamento mais recente (ou null)
+        $pagamentoAtual = $nota->pagamentos->sortByDesc('id')->first();
+
+        return view('admin.notas.show', compact('nota', 'pagamentoAtual'));
     }
 
     // GET /admin/notas/{nota}/pdf

@@ -39,6 +39,11 @@ class NotaFiscal extends Model
         return $this->hasMany(NotaItem::class);
     }
 
+    public function pagamentos()
+    {
+        return $this->hasMany(NotaPagamento::class, 'nota_fiscal_id');
+    }
+
     public function scopeEmitidas($q)  { return $q->where('status','emitida'); }
     public function scopeFaturadas($q) { return $q->where('status','faturada'); }
 }

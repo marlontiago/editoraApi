@@ -104,10 +104,9 @@
                         <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-100/70">
                             {{-- Imagem --}}
                             <td class="px-3 py-2">
-                                @if ($produto->imagem && Storage::disk('public')->exists($produto->imagem))
-                                    <img src="{{ asset('storage/' . $produto->imagem) }}"
-                                         alt="{{ $produto->nome }}"
-                                         class="h-12 w-12 rounded object-cover ring-1 ring-gray-200">
+                                @if ($produto->imagem_url)
+                                    <img src="{{ $produto->imagem_url }}" alt="{{ $produto->nome }}"
+                                        class="h-12 w-12 rounded object-cover ring-1 ring-gray-200">
                                 @else
                                     <div class="h-12 w-12 rounded bg-gray-100 grid place-items-center text-[10px] text-gray-500 ring-1 ring-gray-200">
                                         sem<br>imagem

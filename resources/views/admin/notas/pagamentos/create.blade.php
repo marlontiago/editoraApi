@@ -23,125 +23,86 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Data do Pagamento</label>
-                    <input
-                        type="date"
-                        name="data_pagamento"
-                        value="{{ old('data_pagamento') }}"
-                        class="mt-1 w-full border rounded px-3 py-2"
-                    >
+                    <input type="date" name="data_pagamento" value="{{ old('data_pagamento') }}" class="mt-1 w-full border rounded px-3 py-2">
                 </div>
 
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700">Valor Pago (base p/ retenções)</label>
-                    <input
-                        type="number" step="0.01" min="0"
-                        name="valor_pago"
-                        value="{{ old('valor_pago') }}"
-                        class="mt-1 w-full border rounded px-3 py-2"
-                        required
-                    >
+                    <input type="number" step="0.01" min="0" name="valor_pago" value="{{ old('valor_pago') }}" class="mt-1 w-full border rounded px-3 py-2" required>
                 </div>
             </div>
 
             {{-- Retenções (em %) --}}
             <h3 class="text-md font-semibold mt-2">Retenções</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">IRRF (%)</label>
-                    <input type="number" step="0.01" min="0" max="100" name="ret_irrf" value="{{ old('ret_irrf') }}" class="mt-1 w-full border rounded px-3 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">ISS (%)</label>
-                    <input type="number" step="0.01" min="0" max="100" name="ret_iss" value="{{ old('ret_iss') }}" class="mt-1 w-full border rounded px-3 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">INSS (%)</label>
-                    <input type="number" step="0.01" min="0" max="100" name="ret_inss" value="{{ old('ret_inss') }}" class="mt-1 w-full border rounded px-3 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">PIS (%)</label>
-                    <input type="number" step="0.01" min="0" max="100" name="ret_pis" value="{{ old('ret_pis') }}" class="mt-1 w-full border rounded px-3 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">COFINS (%)</label>
-                    <input type="number" step="0.01" min="0" max="100" name="ret_cofins" value="{{ old('ret_cofins') }}" class="mt-1 w-full border rounded px-3 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">CSLL (%)</label>
-                    <input type="number" step="0.01" min="0" max="100" name="ret_csll" value="{{ old('ret_csll') }}" class="mt-1 w-full border rounded px-3 py-2">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Outros (%)</label>
-                    <input type="number" step="0.01" min="0" max="100" name="ret_outros" value="{{ old('ret_outros') }}" class="mt-1 w-full border rounded px-3 py-2">
-                </div>
+                @foreach (['irrf','iss','inss','pis','cofins','csll','outros'] as $k)
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">{{ strtoupper($k) }} (%)</label>
+                        <input type="number" step="0.01" min="0" max="100" name="ret_{{ $k }}" value="{{ old('ret_'.$k) }}" class="mt-1 w-full border rounded px-3 py-2">
+                    </div>
+                @endforeach
             </div>
 
-            {{-- Adesão à ata --}}
+            {{-- Adesão à ata / Advogado (da tabela advogados) --}}
             <div class="border-t pt-4">
                 <label class="inline-flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        name="adesao_ata"
-                        value="1"
-                        id="chkAdesao"
-                        @checked(old('adesao_ata'))
-                    >
+                    <input type="checkbox" name="adesao_ata" value="1" id="chkAdesao" @checked(old('adesao_ata'))>
                     <span class="text-sm font-medium text-gray-700">Adesão à ata</span>
                 </label>
 
                 <div id="boxAdesao" class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 {{ old('adesao_ata') ? '' : 'hidden' }}">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Advogado</label>
-                        <select name="advogado_id" class="mt-1 w-full border rounded px-3 py-2">
+                        <select name="advogado_id" id="advogado_id" class="mt-1 w-full border rounded px-3 py-2">
                             <option value="">— Selecione —</option>
-                            @foreach($advogados as $u)
-                                <option value="{{ $u->id }}" @selected(old('advogado_id')==$u->id)>{{ $u->name }}</option>
+                            @foreach($advogados as $a)
+                                <option value="{{ $a->id }}"
+                                        data-perc="{{ (float)($a->percentual_vendas ?? 0) }}"
+                                        @selected(old('advogado_id')==$a->id)>
+                                    {{ $a->nome }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700">% Comissão Advogado</label>
-                        <input
-                            type="number" step="0.01" min="0" max="100"
-                            name="perc_comissao_advogado"
-                            value="{{ old('perc_comissao_advogado') }}"
-                            class="mt-1 w-full border rounded px-3 py-2"
-                        >
+                        <input type="number" step="0.01" min="0" max="100"
+                               name="perc_comissao_advogado" id="perc_comissao_advogado"
+                               value="{{ old('perc_comissao_advogado') }}"
+                               class="mt-1 w-full border rounded px-3 py-2">
                     </div>
                     <div></div>
                 </div>
             </div>
 
-            {{-- Diretor Comercial --}}
+            {{-- Diretor Comercial (da tabela diretor_comercials) --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Diretor Comercial</label>
-                    <select name="diretor_id" class="mt-1 w-full border rounded px-3 py-2">
+                    <select name="diretor_id" id="diretor_id" class="mt-1 w-full border rounded px-3 py-2">
                         <option value="">— Selecione —</option>
-                        @foreach($diretores as $u)
-                            <option value="{{ $u->id }}" @selected(old('diretor_id')==$u->id)>{{ $u->name }}</option>
+                        @foreach($diretores as $d)
+                            <option value="{{ $d->id }}"
+                                    data-perc="{{ (float)($d->percentual_vendas ?? 0) }}"
+                                    @selected(old('diretor_id')==$d->id)>
+                                {{ $d->nome }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">% Comissão Diretor</label>
-                    <input
-                        type="number" step="0.01" min="0" max="100"
-                        name="perc_comissao_diretor"
-                        value="{{ old('perc_comissao_diretor') }}"
-                        class="mt-1 w-full border rounded px-3 py-2"
-                    >
+                    <input type="number" step="0.01" min="0" max="100"
+                           name="perc_comissao_diretor" id="perc_comissao_diretor"
+                           value="{{ old('perc_comissao_diretor') }}"
+                           class="mt-1 w-full border rounded px-3 py-2">
                 </div>
             </div>
 
             {{-- Observações --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700">Observações</label>
-                <textarea
-                    name="observacoes"
-                    rows="3"
-                    class="mt-1 w-full border rounded px-3 py-2"
-                >{{ old('observacoes') }}</textarea>
+                <textarea name="observacoes" rows="3" class="mt-1 w-full border rounded px-3 py-2">{{ old('observacoes') }}</textarea>
             </div>
 
             {{-- Preview (JS) --}}
@@ -177,7 +138,7 @@
 
     {{-- Scripts da página --}}
     <script>
-        // Percentuais automáticos vindos do controller
+        // Percentuais automáticos do pedido
         const PERC_GESTOR       = Number(@json($percGestor ?? 0));
         const PERC_DISTRIBUIDOR = Number(@json($percDistribuidor ?? 0));
 
@@ -186,6 +147,11 @@
         const boxAdesao  = document.getElementById('boxAdesao');
         const lblPercAdv = document.getElementById('lblPercAdv');
         const lblPercDir = document.getElementById('lblPercDir');
+
+        const selAdv = document.getElementById('advogado_id');
+        const inpAdv = document.getElementById('perc_comissao_advogado');
+        const selDir = document.getElementById('diretor_id');
+        const inpDir = document.getElementById('perc_comissao_diretor');
 
         const money = (n) => {
             const v = isFinite(n) ? Number(n) : 0;
@@ -197,6 +163,17 @@
             if (!el) return 0;
             const raw = (el.value || '').toString().replace(',', '.').trim();
             return parseFloat(raw) || 0;
+        }
+
+        function autoPercFromSelect(selectEl, inputEl) {
+            if (!selectEl || !inputEl) return;
+            const opt = selectEl.options[selectEl.selectedIndex];
+            if (!opt) return;
+            const perc = parseFloat(opt.getAttribute('data-perc') || '0') || 0;
+            // só preenche se o campo está vazio
+            if (!inputEl.value) {
+                inputEl.value = perc.toFixed(2);
+            }
         }
 
         function recalc() {
@@ -214,11 +191,11 @@
             const totalRet = vIRRF + vISS + vINSS + vPIS + vCOFINS + vCSLL + vOUTROS;
             const liquido  = Math.max(0, valorPago - totalRet);
 
-            // Comissões automáticas do pedido (gestor/distribuidor)
+            // Comissões automáticas (gestor/distribuidor)
             const gest = liquido * (PERC_GESTOR / 100);
             const dist = liquido * (PERC_DISTRIBUIDOR / 100);
 
-            // Comissões variáveis (formulário)
+            // Comissões variáveis (advogado/diretor) — sobre o LÍQUIDO
             let adv = 0;
             if (chkAdesao && chkAdesao.checked) {
                 adv = liquido * (val('perc_comissao_advogado') / 100);
@@ -239,11 +216,18 @@
             document.getElementById('prevDir').textContent  = money(dir);
         }
 
+        // Eventos
         chkAdesao?.addEventListener('change', () => {
             boxAdesao.classList.toggle('hidden', !chkAdesao.checked);
             recalc();
         });
+        selAdv?.addEventListener('change', () => { autoPercFromSelect(selAdv, inpAdv); recalc(); });
+        selDir?.addEventListener('change', () => { autoPercFromSelect(selDir, inpDir); recalc(); });
         form.addEventListener('input', recalc);
-        document.addEventListener('DOMContentLoaded', recalc);
+        document.addEventListener('DOMContentLoaded', () => {
+            autoPercFromSelect(selAdv, inpAdv);
+            autoPercFromSelect(selDir, inpDir);
+            recalc();
+        });
     </script>
 </x-app-layout>

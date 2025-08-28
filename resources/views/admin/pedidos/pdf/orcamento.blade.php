@@ -39,16 +39,29 @@
 
     // Função p/ carregar imagem de produto
     function img_src_or_placeholder($pathRelative) {
-        $full = $pathRelative
-            ? ((strpos($pathRelative, 'storage/') === 0)
-                ? public_path($pathRelative)
-                : public_path('storage/' . ltrim($pathRelative, '/')))
-            : public_path('images/placeholder.png');
+        $full = null;
+        $rel  = $pathRelative ? ltrim($pathRelative, '/') : '';
 
-        if (!file_exists($full)) $full = public_path('images/placeholder.png');
-        $ext  = pathinfo($full, PATHINFO_EXTENSION) ?: 'png';
+        // Locais candidatos
+        $candidatos = [];
+        if ($rel !== '') {
+            $candidatos[] = storage_path('app/public/' . $rel);   // storage/app/public/images/...
+            $candidatos[] = public_path($rel);                    // public/images/...
+            $candidatos[] = public_path('storage/' . $rel);       // public/storage/images/...
+        }
+        $candidatos[] = public_path('images/placeholder.png');    // fallback
+
+        // Pega o primeiro que existir
+        foreach ($candidatos as $p) {
+            if (file_exists($p)) { $full = $p; break; }
+        }
+
+        // Gera base64
+        $ext  = strtolower(pathinfo($full, PATHINFO_EXTENSION) ?: 'png');
+        $mime = $ext === 'jpg' ? 'jpeg' : $ext;
         $data = @file_get_contents($full);
-        return $data ? ('data:image/'.$ext.';base64,'.base64_encode($data)) : '';
+
+        return $data ? ('data:image/'.$mime.';base64,'.base64_encode($data)) : '';
     }
 @endphp
 

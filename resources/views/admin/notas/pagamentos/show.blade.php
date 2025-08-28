@@ -225,13 +225,13 @@
                             <td class="px-4 py-2">Advogado</td>
                             <td class="px-4 py-2 text-right">{{ number_format($percAdv, 2, ',', '.') }}%</td>
                             <td class="px-4 py-2 text-right">R$ {{ number_format($comissaoAdv, 2, ',', '.') }}</td>
-                            <td class="px-4 py-2">{{ optional($pagamento->advogado)->name ?? '-' }}</td>
+                            <td class="px-4 py-2">{{ optional($pagamento->advogado)->nome ?? '-' }}</td>
                         </tr>
                         <tr class="border-t">
                             <td class="px-4 py-2">Diretor Comercial</td>
                             <td class="px-4 py-2 text-right">{{ number_format($percDir, 2, ',', '.') }}%</td>
                             <td class="px-4 py-2 text-right">R$ {{ number_format($comissaoDir, 2, ',', '.') }}</td>
-                            <td class="px-4 py-2">{{ optional($pagamento->diretor)->name ?? '-' }}</td>
+                            <td class="px-4 py-2">{{ optional($pagamento->diretor)->nome ?? '-' }}</td>
                         </tr>
                     </tbody>
                     <tfoot class="bg-gray-50 font-medium">

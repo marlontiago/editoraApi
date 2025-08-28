@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\NotaFiscal;
 use App\Models\NotaPagamento;
-use App\Models\User;
+use App\Models\Advogado;
+use App\Models\DiretorComercial;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -16,12 +17,12 @@ class NotaPagamentoController extends Controller
         // Carrega gestor/distribuidor para obter percentual_vendas
         $nota->load(['pedido.gestor', 'pedido.distribuidor']);
 
-        $percGestor        = (float) optional($nota->pedido->gestor)->percentual_vendas ?: 0.0;
-        $percDistribuidor  = (float) optional($nota->pedido->distribuidor)->percentual_vendas ?: 0.0;
+        $percGestor       = (float) optional($nota->pedido->gestor)->percentual_vendas ?: 0.0;
+        $percDistribuidor = (float) optional($nota->pedido->distribuidor)->percentual_vendas ?: 0.0;
 
-        // Ajuste aqui se você filtra por role (advogado/diretor)
-        $advogados = User::orderBy('name')->get();
-        $diretores = User::orderBy('name')->get();
+        // Agora buscamos nas tabelas dos CRUDs
+        $advogados = Advogado::orderBy('nome')->get(['id','nome','percentual_vendas']);
+        $diretores = DiretorComercial::orderBy('nome')->get(['id','nome','percentual_vendas']);
 
         // Regra: só permite registrar pagamento se a nota estiver faturada
         if ($nota->status !== 'faturada') {
@@ -45,7 +46,7 @@ class NotaPagamentoController extends Controller
             'data_pagamento'           => ['nullable','date'],
             'valor_pago'               => ['required','numeric','min:0.01'],
 
-            // Retenções informadas como % (0 a 100)
+            // Retenções em % (0 a 100)
             'ret_irrf'                 => ['nullable','numeric','min:0','max:100'],
             'ret_iss'                  => ['nullable','numeric','min:0','max:100'],
             'ret_inss'                 => ['nullable','numeric','min:0','max:100'],
@@ -55,10 +56,12 @@ class NotaPagamentoController extends Controller
             'ret_outros'               => ['nullable','numeric','min:0','max:100'],
 
             'adesao_ata'               => ['nullable','boolean'],
-            'advogado_id'              => ['nullable','exists:users,id'],
+
+            // Agora validamos contra as tabelas dos CRUDs
+            'advogado_id'              => ['nullable','exists:advogados,id'],
             'perc_comissao_advogado'   => ['nullable','numeric','min:0','max:100'],
 
-            'diretor_id'               => ['nullable','exists:users,id'],
+            'diretor_id'               => ['nullable','exists:diretor_comercials,id'],
             'perc_comissao_diretor'    => ['nullable','numeric','min:0','max:100'],
 
             'observacoes'              => ['nullable','string','max:2000'],
@@ -70,10 +73,27 @@ class NotaPagamentoController extends Controller
         $adesaoAta = (bool) ($data['adesao_ata'] ?? false);
 
         // Se marcar adesão, exige advogado e %
-        if ($adesaoAta && (empty($data['advogado_id']) || $data['perc_comissao_advogado'] === null)) {
+        if ($adesaoAta && (empty($data['advogado_id']))) {
             return back()->withInput()->withErrors([
-                'advogado_id' => 'Informe advogado e percentual para adesão à ata.'
+                'advogado_id' => 'Informe o advogado para adesão à ata.'
             ]);
+        }
+
+        // Se marcou adesão e não informou o % do advogado, pega do cadastro
+        if ($adesaoAta && ($data['advogado_id'] ?? null) && ($data['perc_comissao_advogado'] === null)) {
+            $auto = Advogado::whereKey($data['advogado_id'])->value('percentual_vendas');
+            dump($auto);
+            if ($auto !== null) {
+                $data['perc_comissao_advogado'] = (float) $auto;
+            }
+        }
+
+        // Se escolheu diretor e não informou %, pega do cadastro
+        if (($data['diretor_id'] ?? null) && ($data['perc_comissao_diretor'] === null)) {
+            $auto = DiretorComercial::whereKey($data['diretor_id'])->value('percentual_vendas');
+            if ($auto !== null) {
+                $data['perc_comissao_diretor'] = (float) $auto;
+            }
         }
 
         // Base para cálculo
@@ -89,10 +109,10 @@ class NotaPagamentoController extends Controller
         $vCSLL   = $valorPago * ($p('ret_csll')   / 100);
         $vOUTROS = $valorPago * ($p('ret_outros') / 100);
 
-        $totalRet = $vIRRF + $vISS + $vINSS + $vPIS + $vCOFINS + $vCSLL + $vOUTROS;
+        $totalRet     = $vIRRF + $vISS + $vINSS + $vPIS + $vCOFINS + $vCSLL + $vOUTROS;
         $valorLiquido = max(0, $valorPago - $totalRet);
 
-        // Comissões de advogado/diretor calculadas sobre o líquido
+        // Comissões (SEMPRE sobre o líquido)
         $comissaoAdv = 0.0;
         $comissaoDir = 0.0;
 
@@ -104,7 +124,6 @@ class NotaPagamentoController extends Controller
         }
 
         DB::transaction(function () use ($nota, $data, $valorLiquido, $comissaoAdv, $comissaoDir) {
-            // Salvo as retenções como % (exatamente o que veio do formulário)
             NotaPagamento::create([
                 'nota_fiscal_id'          => $nota->id,
                 'data_pagamento'          => $data['data_pagamento'] ?? null,
@@ -119,8 +138,11 @@ class NotaPagamentoController extends Controller
                 'ret_outros'              => $data['ret_outros'] ?? null,
 
                 'adesao_ata'              => (bool) ($data['adesao_ata'] ?? false),
+
+                // IDs agora são das tabelas dos CRUDs
                 'advogado_id'             => $data['advogado_id'] ?? null,
                 'perc_comissao_advogado'  => $data['perc_comissao_advogado'] ?? null,
+
                 'diretor_id'              => $data['diretor_id'] ?? null,
                 'perc_comissao_diretor'   => $data['perc_comissao_diretor'] ?? null,
 
@@ -130,9 +152,6 @@ class NotaPagamentoController extends Controller
 
                 'observacoes'             => $data['observacoes'] ?? null,
             ]);
-
-            // (Opcional) registrar log:
-            // $nota->pedido?->registrarLog('Pagamento registrado', 'Pagamento da nota registrado.');
         });
 
         return redirect()
@@ -142,22 +161,13 @@ class NotaPagamentoController extends Controller
 
     public function show(NotaFiscal $nota, NotaPagamento $pagamento)
     {
-        // Garanta que o pagamento pertence à nota informada
         if ($pagamento->nota_fiscal_id !== $nota->id) {
             abort(404);
         }
 
-        // Carrega pedido com o que precisamos para cálculos/visão
         $nota->load([
             'pedido.produtos' => function ($q) {
-                $q->withPivot([
-                    'quantidade',
-                    'preco_unitario',
-                    'desconto_aplicado',
-                    'subtotal',
-                    'peso_total_produto',
-                    'caixas',
-                ]);
+                $q->withPivot(['quantidade','preco_unitario','desconto_aplicado','subtotal','peso_total_produto','caixas']);
             },
             'pedido.cliente',
             'pedido.gestor',
@@ -167,7 +177,6 @@ class NotaPagamentoController extends Controller
 
         $pedido = $nota->pedido;
 
-        // Totais do pedido (com base no pivot)
         $valorBrutoPedido = 0.0;
         $totalDescontosPedido = 0.0;
         $valorComDescontoPedido = 0.0;
@@ -183,11 +192,9 @@ class NotaPagamentoController extends Controller
             $valorComDescontoPedido+= $subtotal;
         }
 
-        // Percentuais de comissões automáticas (gestor/distribuidor) a partir do pedido
         $percGestor       = (float) optional($pedido->gestor)->percentual_vendas ?: 0.0;
         $percDistribuidor = (float) optional($pedido->distribuidor)->percentual_vendas ?: 0.0;
 
-        // Retenções foram salvas como %; convertemos para valores para exibir
         $valorPago = (float) $pagamento->valor_pago;
         $ret = [
             'irrf'   => (float) ($pagamento->ret_irrf   ?? 0),
@@ -209,14 +216,11 @@ class NotaPagamentoController extends Controller
         ];
         $totalRetencoes = array_sum($retValores);
 
-        // Valor líquido já está salvo no pagamento; mantemos como é a verdade do registro
         $valorLiquido = (float) ($pagamento->valor_liquido ?? max(0, $valorPago - $totalRetencoes));
 
-        // Comissões automáticas (sobre o líquido)
         $comissaoGestor       = round($valorLiquido * ($percGestor / 100), 2);
         $comissaoDistribuidor = round($valorLiquido * ($percDistribuidor / 100), 2);
 
-        // Comissões variáveis (advogado/diretor) já salvas no pagamento
         $percAdv = (float) ($pagamento->perc_comissao_advogado ?? 0);
         $percDir = (float) ($pagamento->perc_comissao_diretor  ?? 0);
 
@@ -245,5 +249,4 @@ class NotaPagamentoController extends Controller
             'valorPago'
         ));
     }
-
 }

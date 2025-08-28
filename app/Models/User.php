@@ -63,9 +63,14 @@ class User extends Authenticatable
         return $this->hasOne(\App\Models\Distribuidor::class);
     }
 
-    public function comissoes()
+    public function advogado()
     {
-        return $this->hasMany(\App\Models\Commission::class);
+        return $this->hasOne(Advogado::class);
+    }
+
+    public function diretorComercial()
+    {
+        return $this->hasOne(DiretorComercial::class);
     }
 
 }

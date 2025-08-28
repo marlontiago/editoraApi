@@ -10,11 +10,12 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProdutoController;
 use App\Http\Controllers\Admin\DistribuidorController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\CommissionController;
 use App\Http\Controllers\Admin\CidadeController;
 use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\NotaFiscalController;
 use App\Http\Controllers\Admin\NotaPagamentoController;
+use App\Http\Controllers\Admin\AdvogadoController;
+use App\Http\Controllers\Admin\DiretorComercialController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -37,6 +38,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('produtos',ProdutoController::class)->except("show");
     Route::resource('usuarios', UserController::class);
     Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente'])->except('show');
+    Route::resource('advogados', AdvogadoController::class);
+    Route::resource('diretor-comercials', DiretorComercialController::class)->parameters(['diretor-comercials' => 'diretor_comercial']);
+
 
     Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor'])->except('show');
     Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('distribuidores.por-gestor');

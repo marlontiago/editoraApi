@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Support\Formatters;
+use Illuminate\Support\Facades\Storage;
 
 class Produto extends Model
 {
@@ -54,6 +55,21 @@ class Produto extends Model
     public function getIsbnFormatadoAttribute(): string
     {        
         return Formatters::formatIsbn($this->isbn);
+    }
+
+    public function getImagemUrlAttribute(): ?string
+    {
+        $path = $this->imagem;
+
+        if ($path && Storage::disk('public')->exists($path)) {
+            return asset('storage/' . $path);
+        }
+
+        if ($path && file_exists(public_path($path))) {
+            return asset($path);
+        }
+
+        return null;
     }
 
 }

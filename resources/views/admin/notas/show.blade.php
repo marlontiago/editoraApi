@@ -63,7 +63,7 @@
 
         {{-- Cabeçalho --}}
         <div class="bg-white p-6 rounded-lg shadow border">
-            <h3 class="text-lg font-semibold mb-4">Cabeçalho</h3>
+            <h3 class="text-lg font-semibold mb-4">Informações Gerais</h3>
             <div class="grid grid-cols-2 gap-4 text-sm">
                 <div><strong>Número:</strong> {{ $nota->numero ?? '-' }}</div>
                 <div><strong>Série:</strong> {{ $nota->serie ?? '-' }}</div>

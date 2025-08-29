@@ -16,21 +16,9 @@ class DiretorComercialController extends Controller
 
     public function index(Request $request)
     {
-        $q = trim((string)$request->get('q', ''));
-        $diretores = DiretorComercial::query()
-            ->when($q, function ($query) use ($q) {
-                $query->where(function ($qq) use ($q) {
-                    $qq->where('nome', 'like', "%{$q}%")
-                       ->orWhere('email', 'like', "%{$q}%")
-                       ->orWhere('cidade', 'like', "%{$q}%")
-                       ->orWhere('estado', 'like', "%{$q}%");
-                });
-            })
-            ->orderBy('nome')
-            ->paginate(15)
-            ->withQueryString();
+        $diretores = DiretorComercial::paginate(10);
 
-        return view('admin.diretores.index', compact('diretores', 'q'));
+        return view('admin.diretores.index', compact('diretores'));
     }
 
     public function create()

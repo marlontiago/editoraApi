@@ -12,27 +12,13 @@ class AdvogadoController extends Controller
     public function __construct()
     {
         $this->middleware(['auth']);
-        // opcional: $this->middleware(['role:admin']);
     }
 
     public function index(Request $request)
     {
-        $q = trim((string)$request->get('q', ''));
-        $advogados = Advogado::query()
-            ->when($q, function ($query) use ($q) {
-                $query->where(function ($qq) use ($q) {
-                    $qq->where('nome', 'like', "%{$q}%")
-                       ->orWhere('email', 'like', "%{$q}%")
-                       ->orWhere('oab', 'like', "%{$q}%")
-                       ->orWhere('cidade', 'like', "%{$q}%")
-                       ->orWhere('estado', 'like', "%{$q}%");
-                });
-            })
-            ->orderBy('nome')
-            ->paginate(15)
-            ->withQueryString();
+        $advogados = Advogado::paginate(10);
 
-        return view('admin.advogados.index', compact('advogados', 'q'));
+        return view('admin.advogados.index', compact('advogados'));
     }
 
     public function create()

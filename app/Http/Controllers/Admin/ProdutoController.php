@@ -8,7 +8,6 @@ use App\Http\Requests\UpdateProdutoRequest;
 use App\Http\Resources\ProdutoResource;
 use App\Models\Produto;
 use App\Models\Colecao;
-use App\Models\Pedido;
 use App\Services\ProdutoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

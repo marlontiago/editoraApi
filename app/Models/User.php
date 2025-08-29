@@ -65,12 +65,12 @@ class User extends Authenticatable
 
     public function advogado()
     {
-        return $this->hasOne(Advogado::class);
+        return $this->hasOne(Advogado::class, 'user_id');
     }
 
     public function diretorComercial()
     {
-        return $this->hasOne(DiretorComercial::class);
+        return $this->hasOne(DiretorComercial::class, 'user_id');
     }
 
 }

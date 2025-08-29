@@ -9,6 +9,7 @@ class Advogado extends Model
     protected $table = 'advogados';
 
     protected $fillable = [
+        'user_id',
         'nome',
         'email',
         'telefone',
@@ -23,9 +24,9 @@ class Advogado extends Model
         'cep',
     ];
 
-    public function user()
+     public function user()
     {
-        return $this->hasOne(User::class, 'advogado_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function pedidos()

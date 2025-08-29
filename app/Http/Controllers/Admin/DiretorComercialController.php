@@ -4,20 +4,21 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DiretorComercial;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class DiretorComercialController extends Controller
 {
     public function __construct()
     {
         $this->middleware(['auth']);
-        // opcional: $this->middleware(['role:admin']);
     }
 
     public function index(Request $request)
     {
         $diretores = DiretorComercial::paginate(10);
-
         return view('admin.diretores.index', compact('diretores'));
     }
 
@@ -42,14 +43,27 @@ class DiretorComercialController extends Controller
             'cep'               => ['nullable','string','max:20'],
         ]);
 
-        $diretor = DiretorComercial::create($dados);
+        $diretor = null;
+
+        DB::transaction(function () use (&$diretor, $dados) {
+            $user = User::create([
+                'name'     => $dados['nome'],
+                'email'    => $dados['email'],
+                'password' => bcrypt(Str::random(12)),
+            ]);
+            // $user->assignRole('diretor'); // ou 'diretor_comercial' conforme seu seeder
+
+            $dados['user_id'] = $user->id;
+
+            $diretor = DiretorComercial::create($dados);
+        });
 
         return redirect()
             ->route('admin.diretor-comercials.show', $diretor)
             ->with('success', 'Diretor Comercial criado com sucesso.');
     }
 
-    public function show(DiretorComercial $diretor_comercial) // nome do parâmetro segue o inferido pelo Laravel
+    public function show(DiretorComercial $diretor_comercial)
     {
         return view('admin.diretores.show', ['diretor' => $diretor_comercial]);
     }
@@ -75,7 +89,17 @@ class DiretorComercialController extends Controller
             'cep'               => ['nullable','string','max:20'],
         ]);
 
-        $diretor_comercial->update($dados);
+        DB::transaction(function () use ($diretor_comercial, $dados) {
+            // opcional: sincronizar nome/email no User
+            if ($diretor_comercial->user) {
+                $diretor_comercial->user->update([
+                    'name'  => $dados['nome'],
+                    'email' => $dados['email'],
+                ]);
+            }
+
+            $diretor_comercial->update($dados);
+        });
 
         return redirect()
             ->route('admin.diretor-comercials.show', $diretor_comercial)

@@ -9,6 +9,7 @@ class DiretorComercial extends Model
     protected $table = 'diretor_comercials';
 
     protected $fillable = [
+        'user_id',
         'nome',
         'email',
         'telefone',
@@ -24,7 +25,7 @@ class DiretorComercial extends Model
 
     public function user()
     {
-        return $this->hasOne(User::class, 'diretor_comercial_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function pedidos()

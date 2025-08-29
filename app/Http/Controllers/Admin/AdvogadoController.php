@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Advogado;
+use App\Models\User;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AdvogadoController extends Controller
 {
@@ -17,7 +19,6 @@ class AdvogadoController extends Controller
     public function index(Request $request)
     {
         $advogados = Advogado::paginate(10);
-
         return view('admin.advogados.index', compact('advogados'));
     }
 
@@ -41,10 +42,23 @@ class AdvogadoController extends Controller
             'cidade'            => ['nullable','string','max:255'],
             'estado'            => ['nullable','string','max:2'],
             'cep'               => ['nullable','string','max:20'],
-            'uf'                => ['nullable','string','max:2'],
         ]);
 
-        $advogado = Advogado::create($dados);
+        $advogado = null;
+
+        DB::transaction(function () use (&$advogado, $dados) {
+            // cria o usuário atrelado
+            $user = User::create([
+                'name'     => $dados['nome'],
+                'email'    => $dados['email'],
+                'password' => bcrypt(Str::random(12)),
+            ]);
+            // $user->assignRole('advogado'); // se estiver usando Spatie
+
+            $dados['user_id'] = $user->id;
+
+            $advogado = Advogado::create($dados);
+        });
 
         return redirect()
             ->route('admin.advogados.show', $advogado)
@@ -76,10 +90,19 @@ class AdvogadoController extends Controller
             'cidade'            => ['nullable','string','max:255'],
             'estado'            => ['nullable','string','max:2'],
             'cep'               => ['nullable','string','max:20'],
-            'uf'               => ['nullable','string','max:2'],
         ]);
 
-        $advogado->update($dados);
+        DB::transaction(function () use ($advogado, $dados) {
+            // opcional: sincronizar nome/email no User
+            if ($advogado->user) {
+                $advogado->user->update([
+                    'name'  => $dados['nome'],
+                    'email' => $dados['email'],
+                ]);
+            }
+
+            $advogado->update($dados);
+        });
 
         return redirect()
             ->route('admin.advogados.show', $advogado)

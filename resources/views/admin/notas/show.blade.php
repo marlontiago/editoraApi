@@ -31,7 +31,7 @@
 
             @if ($nota->status === 'faturada')
                 <a href="{{ route('admin.notas.pagamentos.create', $nota) }}"
-                class="inline-flex items-center px-3 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                   class="inline-flex items-center px-3 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
                     Registrar Pagamento
                 </a>
             @endif
@@ -39,13 +39,12 @@
             {{-- Botão para ver detalhes do pagamento (se existir) --}}
             @if(!empty($pagamentoAtual))
                 <a href="{{ route('admin.notas.pagamentos.show', [$nota, $pagamentoAtual]) }}"
-                class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                   class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
                     Detalhes do Pagamento
                 </a>
             @endif
 
             {{-- Faturar --}}
-
             @if($nota->status === 'emitida')
                 <form action="{{ route('admin.notas.faturar', $nota) }}" method="POST"
                       onsubmit="return confirm('Faturar nota? Isto baixará o estoque.');">
@@ -68,13 +67,55 @@
                 <div><strong>Número:</strong> {{ $nota->numero ?? '-' }}</div>
                 <div><strong>Série:</strong> {{ $nota->serie ?? '-' }}</div>
 
-                <div><strong>Status:</strong> {{ ucfirst($nota->status) }}</div>
+                {{-- Status da nota + Status financeiro (badges lado a lado) --}}
+                <div class="flex items-center gap-2">
+                    <strong>Status:</strong>
+                    @php
+                        // classes do status da nota
+                        $notaStatusMap = [
+                            'emitida'   => 'bg-blue-100 text-blue-800 border-blue-200',
+                            'faturada'  => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                            'cancelada' => 'bg-red-100 text-red-800 border-red-200',
+                        ];
+                        $notaStatusClasses = $notaStatusMap[$nota->status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
+
+                        // preparar variáveis do financeiro
+                        $finKey          = $nota->status_financeiro;
+                        $notaFinLabel    = null;
+                        $notaFinClasses  = null;
+
+                        if ($finKey) {
+                            $notaFinMap = [
+                                'aguardando_pagamento' => ['Aguardando pagamento', 'bg-amber-100 text-amber-800 border-amber-200'],
+                                'pago'                  => ['Pago',                 'bg-green-100 text-green-800 border-green-200'],
+                            ];
+                            [$notaFinLabel, $notaFinClasses] = $notaFinMap[$finKey]
+                                ?? [ucfirst(str_replace('_',' ',$finKey)), 'bg-gray-100 text-gray-800 border-gray-200'];
+                        }
+                    @endphp
+
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $notaStatusClasses }}">
+                        {{ ucfirst($nota->status) }}
+                    </span>
+
+                    @if($notaFinLabel)
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $notaFinClasses }}">
+                            {{ $notaFinLabel }}
+                        </span>
+                    @endif
+                </div>
+
                 <div><strong>Ambiente:</strong> {{ strtoupper($nota->ambiente ?? 'INTERNO') }}</div>
 
                 <div><strong>Emitida em:</strong> {{ optional($nota->emitida_em)->format('d/m/Y H:i') }}</div>
                 <div><strong>Faturada em:</strong> {{ optional($nota->faturada_em)->format('d/m/Y H:i') ?? '-' }}</div>
 
-                <div><strong>Pedido:</strong>
+                @if($nota->status_financeiro === 'pago' && $nota->pago_em)
+                    <div><strong>Pago em:</strong> {{ $nota->pago_em->format('d/m/Y H:i') }}</div>
+                @endif
+
+                <div>
+                    <strong>Pedido:</strong>
                     <a class="underline text-blue-600" href="{{ route('admin.pedidos.show', $nota->pedido_id) }}">
                         #{{ $nota->pedido_id }}
                     </a>
@@ -126,6 +167,48 @@
             </div>
         </div>
 
+        {{-- Resumo Financeiro (opcional – mantém além dos badges) --}}
+        <div class="bg-white p-6 rounded-lg shadow border">
+            <h3 class="text-lg font-semibold mb-4">Resumo Financeiro</h3>
+            <div class="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                    <strong>Status financeiro:</strong>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 border">
+                        {{ $nota->status_financeiro ? str_replace('_',' ', ucfirst($nota->status_financeiro)) : '—' }}
+                    </span>
+                </div>
+                <div>
+                    <strong>Recebido (bruto):</strong>
+                    <span class="font-medium">R$ {{ number_format($nota->total_pago_bruto, 2, ',', '.') }}</span>
+                </div>
+                <div>
+                    <strong>Recebido (líquido):</strong>
+                    <span>R$ {{ number_format($nota->total_pago_liquido, 2, ',', '.') }}</span>
+                </div>
+                <div>
+                    <strong>Saldo a receber:</strong>
+                    <span class="font-semibold {{ $nota->saldo_pendente > 0 ? 'text-amber-700' : 'text-emerald-700' }}">
+                        R$ {{ number_format($nota->saldo_pendente, 2, ',', '.') }}
+                    </span>
+                </div>
+
+                @if($nota->status_financeiro === 'pago' && $nota->pago_em)
+                    <div class="col-span-3">
+                        <strong>Quitado em:</strong> {{ $nota->pago_em->format('d/m/Y H:i') }}
+                    </div>
+                @endif
+            </div>
+
+            @if($nota->status === 'faturada')
+                <div class="mt-4">
+                    <a href="{{ route('admin.notas.pagamentos.create', $nota) }}"
+                       class="inline-flex items-center px-3 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                        Registrar pagamento
+                    </a>
+                </div>
+            @endif
+        </div>
+
         {{-- Observações --}}
         <div class="bg-white p-6 rounded-lg shadow border">
             <h3 class="text-lg font-semibold mb-2">Observações</h3>
@@ -172,8 +255,5 @@
                 </div>
             </div>
         @endif
-
-
-        
     </div>
 </x-app-layout>

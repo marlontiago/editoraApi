@@ -171,8 +171,6 @@ public function emitir(Request $request, Pedido $pedido)
     );
 }
 
-
-    // POST /admin/notas/{nota}/faturar
     public function faturar(NotaFiscal $nota)
     {
         if ($nota->status !== 'emitida') {
@@ -205,6 +203,7 @@ public function emitir(Request $request, Pedido $pedido)
                 $nota->update([
                     'status'      => 'faturada',
                     'faturada_em' => now(),
+                    'status_financeiro' => 'aguardando_pagamento',
                 ]);
 
                 if ($nota->pedido && in_array($nota->pedido->status, ['em_andamento','emitido','aprovado'])) {
@@ -226,13 +225,12 @@ public function emitir(Request $request, Pedido $pedido)
         return back()->with('success', 'Nota faturada e estoque atualizado com sucesso.');
     }
 
-    // GET /admin/notas/{nota}
     public function show(NotaFiscal $nota)
     {
         $nota->load([
             'itens.produto',
             'pedido.cliente',
-            'pagamentos',           // <-- carrega os pagamentos
+            'pagamentos',
         ]);
 
         // pega o pagamento mais recente (ou null)
@@ -241,12 +239,11 @@ public function emitir(Request $request, Pedido $pedido)
         return view('admin.notas.show', compact('nota', 'pagamentoAtual'));
     }
 
-    // GET /admin/notas/{nota}/pdf
     public function pdf(NotaFiscal $nota)
     {
         $nota->load(['itens.produto', 'pedido.cliente']);
 
-        // Endereço do cliente formatado (fallback)
+        // Endereço do cliente formatado
         $cli = $nota->pedido?->cliente;
         $cliEndereco = trim(($cli->endereco ?? '')
             . ($cli->numero ? ', '.$cli->numero : '')

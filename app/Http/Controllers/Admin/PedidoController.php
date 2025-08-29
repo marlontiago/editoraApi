@@ -67,7 +67,6 @@ class PedidoController extends Controller
                 $cidadeRules[] = 'exists:cities,id';
             }
         }
-
         //Define as regras de validação, em $cidadeRules utiliza a função acima.
 
         $rules = [

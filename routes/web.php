@@ -69,8 +69,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/notas/{nota}/faturar', [NotaFiscalController::class, 'faturar'])->name('notas.faturar');
     Route::get('/notas/{nota}/pdf', [NotaFiscalController::class, 'pdf'])->name('notas.pdf');    
 
-    Route::get  ('/notas/{nota}/pagamentos/create', [NotaPagamentoController::class, 'create'])->name('notas.pagamentos.create');
-    Route::post ('/notas/{nota}/pagamentos',        [NotaPagamentoController::class, 'store'])->name('notas.pagamentos.store');
+    Route::get('/notas/{nota}/pagamentos/create', [NotaPagamentoController::class, 'create'])->name('notas.pagamentos.create');
+    Route::post('/notas/{nota}/pagamentos',        [NotaPagamentoController::class, 'store'])->name('notas.pagamentos.store');
     Route::get('notas/{nota}/pagamentos/{pagamento}', [NotaPagamentoController::class, 'show'])->name('notas.pagamentos.show');
 });
 

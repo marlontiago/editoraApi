@@ -12,17 +12,18 @@ return new class extends Migration
         Schema::create('notas_fiscais', function (Blueprint $table) {
             $table->id();
 
-            
+            // Pedido associado
             $table->foreignId('pedido_id')->constrained('pedidos')->cascadeOnDelete();
 
-            
+            // Numeração
             $table->string('numero')->nullable(); 
-            $table->string('serie')->nullable();
+            $table->string('serie')->default('1');
 
-            // Status da nota
-            // emitida = gerada a partir do pedido (sem baixar estoque)
-            // faturada = estoque baixado
-            // cancelada = cancelada/substituída
+            // Status financeiro: aguardando_pagamento | pago
+            $table->string('status_financeiro')->nullable()->index();
+            $table->timestamp('pago_em')->nullable();
+
+            // Status da nota: emitida | faturada | cancelada
             $table->enum('status', ['emitida', 'faturada', 'cancelada'])->default('emitida');
 
             // Totais (espelhados do pedido no momento da emissão)
@@ -33,9 +34,9 @@ return new class extends Migration
             $table->integer('total_caixas')->default(0);
 
             // Snapshots (auditoria)
-            $table->json('emitente_snapshot')->nullable();     // dados da empresa emitente
-            $table->json('destinatario_snapshot')->nullable(); // dados do cliente
-            $table->json('pedido_snapshot')->nullable();       // cabeçalho do pedido
+            $table->json('emitente_snapshot')->nullable();
+            $table->json('destinatario_snapshot')->nullable();
+            $table->json('pedido_snapshot')->nullable();
 
             // Integração futura NF-e
             $table->string('chave_acesso')->nullable();
@@ -46,7 +47,7 @@ return new class extends Migration
             $table->timestamp('emitida_em')->nullable();
             $table->timestamp('faturada_em')->nullable();
 
-            // Campos de cancelamento/substituição
+            // Cancelamento/substituição
             $table->timestamp('cancelada_em')->nullable();
             $table->text('motivo_cancelamento')->nullable();
 
@@ -64,7 +65,19 @@ return new class extends Migration
                 ON notas_fiscais (pedido_id)
                 WHERE status = 'emitida'
             ");
-        } else {
+
+            // Índice para acelerar cálculo de próximo número
+            DB::statement("
+                CREATE INDEX IF NOT EXISTS notas_numero_int_idx
+                ON notas_fiscais ((NULLIF(numero,'')::int))
+            ");
+
+            // Unicidade de número quando informado
+            DB::statement("
+                CREATE UNIQUE INDEX IF NOT EXISTS notas_numero_unico_quando_preenchido
+                ON notas_fiscais (numero)
+                WHERE numero IS NOT NULL AND numero <> ''
+            ");
         }
     }
 
@@ -72,6 +85,8 @@ return new class extends Migration
     {
         if (Schema::getConnection()->getDriverName() === 'pgsql') {
             DB::statement("DROP INDEX IF EXISTS notas_uma_emitida_por_pedido");
+            DB::statement("DROP INDEX IF EXISTS notas_numero_int_idx");
+            DB::statement("DROP INDEX IF EXISTS notas_numero_unico_quando_preenchido");
         }
         Schema::dropIfExists('notas_fiscais');
     }

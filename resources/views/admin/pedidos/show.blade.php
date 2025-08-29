@@ -30,16 +30,31 @@
                 'faturada'  => ['Faturada',  'bg-emerald-100 text-emerald-800 border-emerald-200'],
                 'cancelada' => ['Cancelada', 'bg-red-100 text-red-800 border-red-200'],
             ];
+            $notaFinMap = [
+                'aguardando_pagamento' => ['Aguardando pagamento', 'bg-amber-100 text-amber-800 border-amber-200'],
+                'pago'                  => ['Pago',                 'bg-green-100 text-green-800 border-green-200'],
+            ];
 
             $status = $pedido->status;
             [$statusLabel, $statusClasses] = $statusMap[$status]
                 ?? [ucfirst(str_replace('_',' ',$status)), 'bg-gray-100 text-gray-800 border-gray-200'];
 
+            // Defaults para evitar "Undefined variable"
+            $notaLabel = null; $notaClasses = null;
+            $notaFinLabel = null; $notaFinClasses = null;
+
             if (!empty($notaAtual)) {
                 [$notaLabel, $notaClasses] = $notaStatusMap[$notaAtual->status]
                     ?? [ucfirst($notaAtual->status), 'bg-gray-100 text-gray-800 border-gray-200'];
+
+                $finKey = $notaAtual->status_financeiro;
+                if ($finKey) {
+                    [$notaFinLabel, $notaFinClasses] = $notaFinMap[$finKey]
+                        ?? [ucfirst(str_replace('_',' ',$finKey)), 'bg-gray-100 text-gray-800 border-gray-200'];
+                }
             }
         @endphp
+
 
         {{-- Ações --}}
         <div class="flex flex-wrap gap-3">
@@ -116,6 +131,13 @@
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $statusClasses }}">
                         {{ $statusLabel }}
                     </span>
+
+                    {{-- novo: badge financeiro ao lado do status, quando houver nota e status_financeiro --}}
+                    @if(!empty($notaAtual) && !empty($notaAtual->status_financeiro))
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $notaFinClasses }}">
+                            {{ $notaFinLabel }}
+                        </span>
+                    @endif
                 </div>
 
                 {{-- Nota Fiscal (mostra a mais recente se existir) --}}

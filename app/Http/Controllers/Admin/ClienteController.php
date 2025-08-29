@@ -25,13 +25,10 @@ class ClienteController extends Controller
         $validated = $request->validate([
             'razao_social'   => ['required','string','max:255'],
             'email'          => ['required','email','max:255','unique:clientes,email'],
-            // Pelo menos um dos dois:
             'cnpj'           => ['nullable','string','max:18','required_without:cpf'],
             'cpf'            => ['nullable','string','max:14','required_without:cnpj'],
             'inscr_estadual' => ['nullable','string','max:30'],
-
             'telefone'       => ['nullable','string','max:20'],
-
             'endereco'       => ['nullable','string','max:255'],
             'numero'         => ['nullable','string','max:20'],
             'complemento'    => ['nullable','string','max:100'],

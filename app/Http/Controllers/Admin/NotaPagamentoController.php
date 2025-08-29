@@ -152,6 +152,9 @@ class NotaPagamentoController extends Controller
 
                 'observacoes'             => $data['observacoes'] ?? null,
             ]);
+
+            $nota->refresh();
+            $nota->atualizarStatusFinanceiro();
         });
 
         return redirect()

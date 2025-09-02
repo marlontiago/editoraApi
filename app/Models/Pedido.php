@@ -68,6 +68,16 @@
             return $this->hasMany(PedidoLog::class)->latest();
         }
 
+        public function pedido()
+        {
+            return $this->belongsTo(Pedido::class, 'pedido_id');
+        }
+
+        public function notaFiscal()
+        {
+            return $this->hasOne(NotaFiscal::class, 'pedido_id');
+        }
+
         public function registrarLog(string $acao, ?string $detalhes = null, array $meta = []): void
         {
             $this->logs()->create([

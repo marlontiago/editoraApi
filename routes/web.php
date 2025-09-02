@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\NotaFiscalController;
 use App\Http\Controllers\Admin\NotaPagamentoController;
 use App\Http\Controllers\Admin\AdvogadoController;
 use App\Http\Controllers\Admin\DiretorComercialController;
+use App\Http\Controllers\RelatoriosController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -72,6 +73,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/notas/{nota}/pagamentos/create', [NotaPagamentoController::class, 'create'])->name('notas.pagamentos.create');
     Route::post('/notas/{nota}/pagamentos',        [NotaPagamentoController::class, 'store'])->name('notas.pagamentos.store');
     Route::get('notas/{nota}/pagamentos/{pagamento}', [NotaPagamentoController::class, 'show'])->name('notas.pagamentos.show');
+
+    Route::get('/relatorios', [RelatoriosController::class, 'index'])->name('relatorios.index');
 });
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {

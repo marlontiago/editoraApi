@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class NotaFiscal extends Model
 {
@@ -44,7 +45,7 @@ class NotaFiscal extends Model
     */
     public function pedido()
     {
-        return $this->belongsTo(Pedido::class);
+        return $this->belongsTo(Pedido::class, 'pedido_id');
     }
 
     public function itens()
@@ -55,6 +56,16 @@ class NotaFiscal extends Model
     public function pagamentos()
     {
         return $this->hasMany(NotaPagamento::class, 'nota_fiscal_id');
+    }
+
+    public function cliente()
+    {
+        return $this->hasOne(Cliente::class, 'id', 'pedido.cliente_id');
+    }
+
+    public function distribuidor()
+    {
+        return $this->HasOne(Distribuidor::class, 'id', 'pedido.distribuidor_id');
     }
 
     /*

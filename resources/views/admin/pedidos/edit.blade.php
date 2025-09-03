@@ -74,61 +74,57 @@
                     </select>
                 </div>
 
-                {{-- Gestor (opcional) --}}
+                {{-- Gestor (somente leitura) --}}
+                @php $gestorAtual = $pedido->gestor; @endphp
                 <div class="col-span-12 md:col-span-6">
-                    <label class="block text-sm font-medium text-gray-700">Gestor (opcional)</label>
-                    <select
-                        name="gestor_id"
-                        id="gestor_id"
-                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    <label class="block text-sm font-medium text-gray-700">Gestor</label>
+                    <input
+                        type="text"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 bg-gray-100"
+                        value="{{ $gestorAtual?->razao_social ?: '—' }}"
+                        readonly
                     >
-                        <option value="">— Sem gestor —</option>
-                        @foreach ($gestores as $g)
-                            <option value="{{ $g->id }}" @selected(old('gestor_id', $pedido->gestor_id) == $g->id)>
-                                {{ $g->razao_social }} @if($g->user) ({{ $g->user->name }}) @endif
-                            </option>
-                        @endforeach
-                    </select>
+                    <input type="hidden" name="gestor_id" value="{{ $gestorAtual?->id }}">
                 </div>
 
-                {{-- Distribuidor (opcional) --}}
+                {{-- Distribuidor (somente leitura) --}}
+                @php $distAtual = $pedido->distribuidor; @endphp
                 <div class="col-span-12 md:col-span-6">
-                    <label class="block text-sm font-medium text-gray-700">Distribuidor (opcional)</label>
-                    <select
-                        name="distribuidor_id"
-                        id="distribuidor_id"
-                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    <label class="block text-sm font-medium text-gray-700">Distribuidor</label>
+                    <input
+                        type="text"
+                        class="mt-1 w-full rounded-lg border px-3 py-2 bg-gray-100"
+                        value="{{ $distAtual?->razao_social ?: '—' }}"
+                        readonly
                     >
-                        <option value="">— Sem distribuidor —</option>
-                        @foreach ($distribuidores as $d)
-                            <option value="{{ $d->id }}" @selected(old('distribuidor_id', $pedido->distribuidor_id) == $d->id)>
-                                {{ $d->razao_social }} @if($d->user) ({{ $d->user->name }}) @endif
-                            </option>
-                        @endforeach
-                    </select>
+                    <input type="hidden" name="distribuidor_id" value="{{ $distAtual?->id }}">
                 </div>
 
-                <div>
-                <label for="state" class="block text-sm font-medium text-gray-800">UF</label>
-                <select name="state" id="state" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">-- Selecione --</option>
-                    @foreach($cidadesUF as $uf)
-                        <option value="{{ $uf }}" @selected(old('state') == $uf)>{{ $uf }}</option>
-                    @endforeach
-                </select>
-            </div>
+                {{-- UF (fixa do gestor) --}}
+                @php $ufGestor = optional($pedido->gestor)->estado_uf; @endphp
+                <div class="col-span-12 md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-800">UF (do gestor)</label>
+                    <input
+                        type="text"
+                        id="ufDisplay"
+                        value="{{ $ufGestor ?: '—' }}"
+                        class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm"
+                        readonly
+                    >
+                    <input type="hidden" id="ufHidden" name="state" value="{{ $ufGestor }}">
+                </div>
 
-            {{-- Cidade da Venda (via gestor/UF ou distribuidor) --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
-                @php
-                    $temDistOuGestor = old('distribuidor_id') || old('gestor_id') || old('state');
-                @endphp
-                <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
-                        class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor ou distribuidor --' }}</option>
-                </select>
-            </div>
+                {{-- Cidade da Venda --}}
+                <div class="col-span-12 md:col-span-6">
+                    <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
+                    @php
+                        $temDistOuGestor = old('distribuidor_id', $pedido->distribuidor_id) || old('gestor_id', $pedido->gestor_id);
+                    @endphp
+                    <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
+                            class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor ou o distribuidor --' }}</option>
+                    </select>
+                </div>
 
                 {{-- Observações --}}
                 <div class="col-span-12">
@@ -166,15 +162,13 @@
                             @foreach ($pedido->produtos as $p)
                                 <tr class="border-t" data-index="{{ $loop->index }}">
                                     <td class="px-4 py-3 align-top">
-                                        {{-- linha existente vem SEM select, com hidden id --}}
                                         <input type="hidden" name="produtos[{{ $loop->index }}][id]" value="{{ $p->id }}" class="inputId">
                                         <div class="font-medium">{{ $p->nome }}</div>
                                         <div class="text-xs text-gray-500">Preço atual: R$ {{ number_format($p->preco, 2, ',', '.') }}</div>
                                     </td>
                                     <td class="px-4 py-3 align-top">
                                         <input
-                                            type="number"
-                                            min="1"
+                                            type="number" min="1"
                                             class="w-28 border rounded-lg px-2 py-1 inputQtd focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             name="produtos[{{ $loop->index }}][quantidade]"
                                             value="{{ old('produtos.'.$loop->index.'.quantidade', $p->pivot->quantidade) }}"
@@ -183,8 +177,7 @@
                                     </td>
                                     <td class="px-4 py-3 align-top">
                                         <input
-                                            type="number"
-                                            min="0" max="100" step="0.01"
+                                            type="number" min="0" max="100" step="0.01"
                                             class="w-36 border rounded-lg px-2 py-1 inputDesc focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             name="produtos[{{ $loop->index }}][desconto]"
                                             value="{{ old('produtos.'.$loop->index.'.desconto', $p->pivot->desconto_item ?? 0) }}"
@@ -249,233 +242,190 @@
         </tr>
     </template>
 
-    {{-- Estado inicial para JS --}}
     <script>
+        /* =================== ESTADO INICIAL (único) =================== */
         window.PEDIDO_ATUAL = {
-            distribuidor_id: @json(old('distribuidor_id', $pedido->distribuidor_id)),
-            gestor_id: @json(old('gestor_id', $pedido->gestor_id)),
-            cidade_id: @json(old('cidade_id', $pedido->cidades->pluck('id')->first()))
+        distribuidor_id: @json(old('distribuidor_id', $pedido->distribuidor_id)),
+        gestor_id: @json(old('gestor_id', $pedido->gestor_id)),
+        cidade_id: @json(old('cidade_id', $pedido->cidades->pluck('id')->first())),
+        uf_gestor: @json(optional($pedido->gestor)->estado_uf),
         };
-    </script>
 
-    {{-- =================== JS: GESTOR / DISTRIBUIDOR / CIDADE =================== --}}
-    <script>
-        const distribuidorSelect = document.getElementById('distribuidor_id');
-        const gestorSelect       = document.getElementById('gestor_id');
-        const cidadeSelect       = document.getElementById('cidade_id');
+        /* =================== CIDADE: carregar por distribuidor/gestor =================== */
+        const cidadeSelect = document.getElementById('cidade_id');
+        const ufDisplay    = document.getElementById('ufDisplay');
+        const ufHidden     = document.getElementById('ufHidden');
 
         function resetCidadeSelect(placeholder = '-- Selecione --') {
-            cidadeSelect.innerHTML = '';
-            cidadeSelect.add(new Option(placeholder, ''));
-            cidadeSelect.disabled = true;
-            cidadeSelect.classList.add('bg-gray-50');
+        if (!cidadeSelect) return;
+        cidadeSelect.innerHTML = '';
+        cidadeSelect.add(new Option(placeholder, ''));
+        cidadeSelect.disabled = true;
+        cidadeSelect.classList.add('bg-gray-50');
         }
 
         async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
-            resetCidadeSelect('-- Carregando... --');
-            try {
-                const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const cidades = await resp.json();
-                cidadeSelect.innerHTML = '';
-                cidadeSelect.add(new Option('-- Selecione --', ''));
-                cidades.forEach(c => {
-                    const opt = new Option(c.name, c.id);
-                    if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                    cidadeSelect.add(opt);
-                });
-                cidadeSelect.disabled = false;
-                cidadeSelect.classList.remove('bg-gray-50');
-                if (!cidades.length) resetCidadeSelect('Distribuidor sem cidades vinculadas');
-            } catch (e) {
-                console.error(e);
-                resetCidadeSelect('Falha ao carregar cidades');
-            }
-        }
-
-        async function carregarCidadesPorGestor(gestorId, selectedCidadeId = null) {
-            resetCidadeSelect('-- Carregando... --');
-            try {
-                const resp = await fetch(`/admin/cidades/por-gestor/${gestorId}`);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const cidades = await resp.json();
-                cidadeSelect.innerHTML = '';
-                cidadeSelect.add(new Option('-- Selecione --', ''));
-                cidades.forEach(c => {
-                    const opt = new Option(c.name, c.id);
-                    if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                    cidadeSelect.add(opt);
-                });
-                cidadeSelect.disabled = false;
-                cidadeSelect.classList.remove('bg-gray-50');
-                if (!cidades.length) resetCidadeSelect('Nenhuma cidade para a UF do gestor');
-            } catch (e) {
-                console.error(e);
-                resetCidadeSelect('Falha ao carregar cidades');
-            }
-        }
-
-        // Prioridade: distribuidor > gestor
-        distribuidorSelect.addEventListener('change', async function () {
-            const distribuidorId = this.value || null;
-            if (distribuidorId) {
-                await carregarCidadesPorDistribuidor(distribuidorId, null);
-            } else if (gestorSelect.value) {
-                await carregarCidadesPorGestor(gestorSelect.value, null);
-            } else {
-                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
-            }
-        });
-
-        async function carregarCidadesPorUF(uf, selectedCidadeId = null) {
         resetCidadeSelect('-- Carregando... --');
         try {
-            const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}`);
-            if (!resp.ok) {
-                const text = await resp.text();
-                console.error('Falha ao carregar cidades:', resp.status, text);
-                throw new Error(`HTTP ${resp.status}`);
-            }
+            const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const cidades = await resp.json();
             cidadeSelect.innerHTML = '';
             cidadeSelect.add(new Option('-- Selecione --', ''));
             cidades.forEach(c => {
-                const opt = new Option(c.name, c.id);
-                if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                cidadeSelect.add(opt);
+            const opt = new Option(c.name, c.id);
+            if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+            cidadeSelect.add(opt);
             });
             cidadeSelect.disabled = false;
             cidadeSelect.classList.remove('bg-gray-50');
-            if (!cidades.length) resetCidadeSelect('UF sem cidades cadastradas');
+            if (!cidades.length) resetCidadeSelect('Distribuidor sem cidades vinculadas');
         } catch (e) {
             console.error(e);
             resetCidadeSelect('Falha ao carregar cidades');
         }
-    }
+        }
 
-        gestorSelect.addEventListener('change', async function () {
-            if (distribuidorSelect.value) return; // prioridade do distribuidor
-            const gestorId = this.value || null;
-            if (gestorId) {
-                await carregarCidadesPorGestor(gestorId, null);
-            } else {
-                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
-            }
-        });
+        async function carregarCidadesPorGestor(gestorId, selectedCidadeId = null) {
+        resetCidadeSelect('-- Carregando... --');
+        try {
+            const resp = await fetch(`/admin/cidades/por-gestor/${gestorId}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const cidades = await resp.json();
+            cidadeSelect.innerHTML = '';
+            cidadeSelect.add(new Option('-- Selecione --', ''));
+            cidades.forEach(c => {
+            const opt = new Option(c.name, c.id);
+            if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
+            cidadeSelect.add(opt);
+            });
+            cidadeSelect.disabled = false;
+            cidadeSelect.classList.remove('bg-gray-50');
+            if (!cidades.length) resetCidadeSelect('Nenhuma cidade para a UF do gestor');
+        } catch (e) {
+            console.error(e);
+            resetCidadeSelect('Falha ao carregar cidades');
+        }
+        }
 
-        // Estado inicial do EDIT
-        document.addEventListener('DOMContentLoaded', async () => {
-            const dId = window.PEDIDO_ATUAL?.distribuidor_id ?? null;
-            const gId = window.PEDIDO_ATUAL?.gestor_id ?? null;
-            const cId = window.PEDIDO_ATUAL?.cidade_id ?? null;
-
-            if (dId) {
-                await carregarCidadesPorDistribuidor(dId, cId);
-            } else if (gId) {
-                await carregarCidadesPorGestor(gId, cId);
-            } else {
-                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
-            }
-        });
-    </script>
-
-    {{-- =================== JS: PRODUTOS (sem duplicados) =================== --}}
-    <script>
+        /* =================== PRODUTOS: sem duplicados =================== */
         const tabelaProdutosBody = document.getElementById('tabelaProdutos');
         const btnAddRow          = document.getElementById('btnAddRow');
         const rowTemplate        = document.getElementById('rowTemplate');
-        let nextIndex = tabelaProdutosBody.querySelectorAll('tr[data-index]').length;
+        let nextIndex = tabelaProdutosBody ? tabelaProdutosBody.querySelectorAll('tr[data-index]').length : 0;
 
-        // pega IDs já selecionados (linhas antigas com hidden e novas com select)
         function getSelectedProductIds() {
-            const ids = [];
-            // corrigido: selector do hidden termina com [id]
-            tabelaProdutosBody.querySelectorAll('input.inputId[name^="produtos["][name$="[id]"]').forEach(h => {
-                const v = String(h.value || '').trim();
-                if (v) ids.push(v);
-            });
-            tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
-                const v = String(sel.value || '').trim();
-                if (v) ids.push(v);
-            });
-            return Array.from(new Set(ids));
+        if (!tabelaProdutosBody) return [];
+        const ids = [];
+        tabelaProdutosBody.querySelectorAll('input.inputId[name^="produtos["][name$="[id]"]').forEach(h => {
+            const v = String(h.value || '').trim();
+            if (v) ids.push(v);
+        });
+        tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
+            const v = String(sel.value || '').trim();
+            if (v) ids.push(v);
+        });
+        return Array.from(new Set(ids));
         }
 
         function refreshAllProductSelectOptions() {
-            const chosen = getSelectedProductIds();
-            tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
-                const current = String(sel.value || '');
-                // preserva todas as opções originais (do template) lendo do DOM atual
-                const allOpts = Array.from(sel.querySelectorAll('option')).map(o => ({value: o.value, text: o.textContent}));
-                sel.innerHTML = '';
-                const placeholder = document.createElement('option');
-                placeholder.value = '';
-                placeholder.textContent = '— Selecionar produto —';
-                sel.appendChild(placeholder);
-                allOpts.forEach(({value, text}) => {
-                    if (value === '') return;
-                    const isExcluded = chosen.includes(value) && value !== current;
-                    if (isExcluded) return;
-                    const opt = document.createElement('option');
-                    opt.value = value;
-                    opt.textContent = text;
-                    if (value === current) opt.selected = true;
-                    sel.appendChild(opt);
-                });
+        if (!tabelaProdutosBody) return;
+        const chosen = getSelectedProductIds();
+        tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
+            const current = String(sel.value || '');
+            const allOpts = Array.from(sel.querySelectorAll('option')).map(o => ({value: o.value, text: o.textContent}));
+            sel.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '— Selecionar produto —';
+            sel.appendChild(placeholder);
+            allOpts.forEach(({value, text}) => {
+            if (value === '') return;
+            const isExcluded = chosen.includes(value) && value !== current;
+            if (isExcluded) return;
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = text;
+            if (value === current) opt.selected = true;
+            sel.appendChild(opt);
             });
+        });
         }
 
         function addProductRow() {
-            const clone = rowTemplate.content.cloneNode(true);
-            const html  = clone.firstElementChild.outerHTML.replaceAll('__INDEX__', String(nextIndex));
-            const container = document.createElement('tbody');
-            container.innerHTML = html;
-            const tr = container.firstElementChild;
+        if (!rowTemplate || !tabelaProdutosBody) return;
+        const clone = rowTemplate.content.cloneNode(true);
+        const html  = clone.firstElementChild.outerHTML.replaceAll('__INDEX__', String(nextIndex));
+        const container = document.createElement('tbody');
+        container.innerHTML = html;
+        const tr = container.firstElementChild;
 
-            // aplica os names reais
-            tr.querySelectorAll('[data-name]').forEach(el => {
-                el.setAttribute('name', el.getAttribute('data-name'));
-                el.removeAttribute('data-name');
-            });
+        tr.querySelectorAll('[data-name]').forEach(el => {
+            el.setAttribute('name', el.getAttribute('data-name'));
+            el.removeAttribute('data-name');
+        });
 
-            const select = tr.querySelector('select.produtoSelect');
-            const hidden = tr.querySelector('input.inputId');
+        const select = tr.querySelector('select.produtoSelect');
+        const hidden = tr.querySelector('input.inputId');
 
-            select.addEventListener('change', () => {
-                hidden.value = select.value || '';
-                refreshAllProductSelectOptions();
-            });
-
-            tr.querySelector('.btnRemoveRow').addEventListener('click', () => {
-                tr.remove();
-                refreshAllProductSelectOptions();
-            });
-
-            tabelaProdutosBody.appendChild(tr);
+        select.addEventListener('change', () => {
+            hidden.value = select.value || '';
             refreshAllProductSelectOptions();
-            nextIndex++;
+        });
+
+        tr.querySelector('.btnRemoveRow').addEventListener('click', () => {
+            tr.remove();
+            refreshAllProductSelectOptions();
+        });
+
+        tabelaProdutosBody.appendChild(tr);
+        refreshAllProductSelectOptions();
+        nextIndex++;
         }
 
-        // remover linhas existentes
-        tabelaProdutosBody.addEventListener('click', (e) => {
+        /* =================== BOOT =================== */
+        document.addEventListener('DOMContentLoaded', async () => {
+        // Preenche UF (fixa)
+        const uf = window.PEDIDO_ATUAL?.uf_gestor || '';
+        if (ufDisplay) ufDisplay.value = uf || '—';
+        if (ufHidden)  ufHidden.value  = uf || '';
+
+        // Carrega cidades com base no contexto congelado
+        const dId = window.PEDIDO_ATUAL?.distribuidor_id ?? null;
+        const gId = window.PEDIDO_ATUAL?.gestor_id ?? null;
+        const cId = window.PEDIDO_ATUAL?.cidade_id ?? null;
+
+        if (dId) {
+            await carregarCidadesPorDistribuidor(dId, cId);
+        } else if (gId) {
+            await carregarCidadesPorGestor(gId, cId);
+        } else {
+            resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
+        }
+
+        // Produtos
+        refreshAllProductSelectOptions();
+
+        // Botão adicionar linha
+        if (btnAddRow) btnAddRow.addEventListener('click', addProductRow);
+
+        // Remover linhas existentes (delegation)
+        if (tabelaProdutosBody) {
+            tabelaProdutosBody.addEventListener('click', (e) => {
             const btn = e.target.closest('.btnRemoveRow');
             if (!btn) return;
             const tr = btn.closest('tr[data-index]');
             if (!tr) return;
             tr.remove();
             refreshAllProductSelectOptions();
-        });
+            });
+        }
 
-        // adicionar novas linhas
-        btnAddRow?.addEventListener('click', addProductRow);
-
-        // garantir que selects novos respeitem itens já existentes ao abrir a página
-        document.addEventListener('DOMContentLoaded', () => {
-            refreshAllProductSelectOptions();
-        });
-
-        // limpeza final antes de enviar (evita linhas sem id/quantidade)
-        document.getElementById('formPedidoEdit')?.addEventListener('submit', () => {
+        // Limpeza final antes de enviar
+        const form = document.getElementById('formPedidoEdit');
+        if (form) {
+            form.addEventListener('submit', () => {
+            if (!tabelaProdutosBody) return;
             tabelaProdutosBody.querySelectorAll('tr[data-index]').forEach(tr => {
                 const hidden = tr.querySelector('input.inputId');
                 const qtd    = tr.querySelector('input.inputQtd');
@@ -483,6 +433,9 @@
                 const qVal   = parseInt(qtd?.value || '0', 10);
                 if (!(idVal > 0 && qVal > 0)) tr.remove();
             });
+            });
+        }
         });
     </script>
+
 </x-app-layout>

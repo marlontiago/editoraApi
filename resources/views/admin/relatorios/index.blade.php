@@ -5,8 +5,7 @@
         </h2>
 
         @php
-            $paramsBase = request()->except('status'); // preserva data_inicio, data_fim, tipo, id, etc.
-
+            $paramsBase = request()->except('status'); 
             function moeda_br($v) { return 'R$ ' . number_format((float)$v, 2, ',', '.'); }
             function status_badge($s) {
                 $map = [
@@ -20,7 +19,7 @@
             }
         @endphp
 
-        {{-- Cards topo (preservam as datas e demais filtros) --}}
+        {{-- CARDS DO TOPO --}}
         <div class="flex flex-wrap">
             <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'pago'])) }}"
                class="bg-emerald-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
@@ -41,7 +40,7 @@
             </a>
         </div>
 
-        {{-- Filtros unificados: usuário + período + status --}}
+        {{-- FILTROS --}}
         <div class="mt-6 px-4">
             <form id="filtros" method="GET" action="{{ route('admin.relatorios.index') }}" class="flex flex-wrap items-end gap-4 mb-4 bg-white p-4 rounded-xl border shadow-sm">
                 <input type="hidden" name="status" id="status" value="{{ $statusFiltro ?? '' }}">
@@ -110,7 +109,7 @@
             </form>
         </div>
 
-        {{-- Chips de filtros ativos --}}
+        {{-- Chips dos filtros ativos --}}
         <div class="px-4">
             <div class="flex flex-wrap gap-2">
                 @if($statusFiltro)
@@ -131,14 +130,9 @@
             </div>
         </div>
 
-        {{-- =======================
-             BLOCOS DE RESULTADO
-           ======================= --}}
-
-        {{-- Por USUÁRIO --}}
+        {{-- CARDS-RESUMO DOS RESULTADOS --}}
         <div class="mt-6 px-4">
             @if(isset($pedidos) && $pedidos->count())
-                {{-- Resumo do resultado --}}
                 <div class="grid md:grid-cols-3 gap-4 mb-3">
                     <div class="bg-white border rounded-xl p-4 shadow-sm">
                         <div class="text-xs text-gray-500">Total líquido do período</div>
@@ -153,14 +147,35 @@
                         <div class="text-2xl font-semibold mt-1">{{ $resumoUsuario['qtd'] }}</div>
                     </div>
                 </div>
+            @elseif( ($statusFiltro && isset($pedidoStatus)) || ($dataInicio && $dataFim && isset($pedidoStatus)) )
+                <div class="grid md:grid-cols-3 gap-4 mb-3">
+                    <div class="bg-white border rounded-xl p-4 shadow-sm">
+                        <div class="text-xs text-gray-500">Pedidos no resultado</div>
+                        <div class="text-2xl font-semibold mt-1">{{ $resumoStatus['qtd'] }}</div>
+                    </div>
+                    <div class="bg-white border rounded-xl p-4 shadow-sm">
+                        <div class="text-xs text-gray-500">Soma do valor da nota</div>
+                        <div class="text-2xl font-semibold mt-1">{{ moeda_br($resumoStatus['valor_total']) }}</div>
+                    </div>
+                    <div class="bg-white border rounded-xl p-4 shadow-sm">
+                        <div class="text-xs text-gray-500">Status</div>
+                        <div class="text-base mt-1">
+                            @if($statusFiltro){!! status_badge($statusFiltro) !!}@else<span class="text-gray-600">—</span>@endif
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
 
+        {{-- TABELA (usuário primeiro; se não, status/período) --}}
+        <div class="mt-2 px-4">
+            @if(isset($pedidos) && $pedidos->count())
                 <div class="flex justify-end mb-2">
                     <a href="{{ route('admin.relatorios.index', array_merge(request()->all(), ['export' => 'pdf'])) }}"
                        class="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800">
                         Exportar PDF
                     </a>
                 </div>
-
                 <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
                     <table class="min-w-full text-sm">
                         <thead class="bg-gray-50 text-gray-700 sticky top-0 z-10">
@@ -177,14 +192,14 @@
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @foreach($pedidos as $p)
+                                @php
+                                    $pgto = optional($p->notaFiscal)->pagamentos ? $p->notaFiscal->pagamentos->sortByDesc('data_pagamento')->first() : null;
+                                @endphp
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-2">#{{ $p->id }}</td>
                                     <td class="px-4 py-2">{{ $p->cliente->razao_social ?? '—' }}</td>
                                     <td class="px-4 py-2">{{ $p->gestor->razao_social ?? '—' }}</td>
                                     <td class="px-4 py-2">{{ $p->distribuidor->razao_social ?? '—' }}</td>
-                                    @php
-                                    $pgto = optional($p->notaFiscal)->pagamentos ? $p->notaFiscal->pagamentos->sortByDesc('data_pagamento')->first() : null;
-                                    @endphp
                                     <td class="px-4 py-2">{{ $pgto && $pgto->data_pagamento ? \Carbon\Carbon::parse($pgto->data_pagamento)->format('d/m/Y') : '-'}}</td>
                                     <td class="px-4 py-2 text-right">{{ moeda_br($p->valor_liquido_pago_total ?? 0) }}</td>
                                     <td class="px-4 py-2">{!! $p->notaFiscal? status_badge($p->notaFiscal->status_financeiro ?? '-') : '—' !!}</td>
@@ -194,7 +209,7 @@
                         </tbody>
                         <tfoot class="bg-gray-50">
                             <tr>
-                                <td colspan="4" class="px-4 py-3 text-right font-semibold">Totais:</td>
+                                <td colspan="5" class="px-4 py-3 text-right font-semibold">Totais:</td>
                                 <td class="px-4 py-3 text-right font-semibold">{{ moeda_br($resumoUsuario['valor_liquido']) }}</td>
                                 <td class="px-4 py-3"></td>
                                 <td class="px-4 py-3 text-right font-bold">{{ moeda_br($resumoUsuario['total_comissoes']) }}</td>
@@ -202,37 +217,8 @@
                         </tfoot>
                     </table>
                 </div>
-            @elseif(isset($filtroTipo, $filtroId) && $filtroTipo && $filtroId)
-                <div class="mt-4 text-gray-600">Nenhum pedido encontrado para o filtro.</div>
-            @endif
-        </div>
-
-        {{-- Por STATUS / ou somente PERÍODO --}}
-        @if( ($statusFiltro && isset($pedidoStatus)) || ($dataInicio && $dataFim && isset($pedidoStatus)) )
-            <div class="mt-10 px-4">
+            @elseif( ($statusFiltro && isset($pedidoStatus)) || ($dataInicio && $dataFim && isset($pedidoStatus)) )
                 @if($pedidoStatus->count())
-                    {{-- Resumo do resultado --}}
-                    <div class="grid md:grid-cols-3 gap-4 mb-3">
-                        <div class="bg-white border rounded-xl p-4 shadow-sm">
-                            <div class="text-xs text-gray-500">Pedidos no resultado</div>
-                            <div class="text-2xl font-semibold mt-1">{{ $resumoStatus['qtd'] }}</div>
-                        </div>
-                        <div class="bg-white border rounded-xl p-4 shadow-sm">
-                            <div class="text-xs text-gray-500">Soma do valor da nota</div>
-                            <div class="text-2xl font-semibold mt-1">{{ moeda_br($resumoStatus['valor_total']) }}</div>
-                        </div>
-                        <div class="bg-white border rounded-xl p-4 shadow-sm">
-                            <div class="text-xs text-gray-500">Status</div>
-                            <div class="text-base mt-1">
-                                @if($statusFiltro)
-                                    {!! status_badge($statusFiltro) !!}
-                                @else
-                                    <span class="text-gray-600">—</span>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="flex items-center gap-3 mb-3">
                         @if($statusFiltro)
                             <a class="text-blue-700 hover:underline text-sm"
@@ -247,7 +233,6 @@
                             </a>
                         </div>
                     </div>
-
                     <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
                         <table class="min-w-full text-sm">
                             <thead class="bg-gray-50 text-gray-700 sticky top-0 z-10">
@@ -263,14 +248,14 @@
                             </thead>
                             <tbody class="divide-y divide-gray-100">
                                 @foreach($pedidoStatus as $p)
+                                    @php
+                                        $pgto = optional($p->notaFiscal)->pagamentos ? $p->notaFiscal->pagamentos->sortByDesc('data_pagamento')->first() : null;
+                                    @endphp
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-4 py-2">#{{ $p->id }}</td>
                                         <td class="px-4 py-2">{{ $p->cliente->razao_social ?? '—' }}</td>
                                         <td class="px-4 py-2">{{ $p->gestor->razao_social ?? '—' }}</td>
                                         <td class="px-4 py-2">{{ $p->distribuidor->razao_social ?? '—' }}</td>
-                                        @php
-                                        $pgto = optional($p->notaFiscal)->pagamentos ? $p->notaFiscal->pagamentos->sortByDesc('data_pagamento')->first() : null;
-                                        @endphp
                                         <td class="px-4 py-2">{{ $pgto && $pgto->data_pagamento ? \Carbon\Carbon::parse($pgto->data_pagamento)->format('d/m/Y') : '-'}}</td>
                                         <td class="px-4 py-2 text-right">{{ moeda_br(optional($p->notaFiscal)->valor_total ?? 0) }}</td>
                                         <td class="px-4 py-2">{!! $p->notaFiscal? status_badge($p->notaFiscal->status_financeiro ?? '-') : '—' !!}</td>
@@ -279,7 +264,7 @@
                             </tbody>
                             <tfoot class="bg-gray-50">
                                 <tr>
-                                    <td colspan="4" class="px-4 py-3 text-right font-semibold">Total:</td>
+                                    <td colspan="5" class="px-4 py-3 text-right font-semibold">Total:</td>
                                     <td class="px-4 py-3 text-right font-bold">{{ moeda_br($resumoStatus['valor_total']) }}</td>
                                     <td class="px-4 py-3"></td>
                                 </tr>
@@ -289,11 +274,92 @@
                 @else
                     <div class="text-gray-600">Nenhum registro encontrado para os filtros aplicados.</div>
                 @endif
-            </div>
+            @endif
+        </div>
+
+        {{-- COMISSÕES POR USUÁRIO --}}
+        @if( ($statusFiltro && isset($pedidoStatus)) || ($dataInicio && $dataFim && isset($pedidoStatus)) )
+            @if($pedidoStatus->count())
+                @php
+                    $comissoesPorUsuario = [];
+                    $temPeriodo = !empty($dataInicio) && !empty($dataFim);
+
+                    foreach ($pedidoStatus as $p) {
+                        $nota = $p->notaFiscal;
+                        if (!$nota) continue;
+
+                        // Somente os pagamentos dentro do período (quando houver)
+                        if ($temPeriodo) {
+                            $valorLiquido = (float) $nota->pagamentos
+                                ->filter(function($pg) use ($dataInicio, $dataFim) {
+                                    $d = \Carbon\Carbon::parse($pg->data_pagamento)->toDateString();
+                                    return $d >= $dataInicio && $d <= $dataFim;
+                                })
+                                ->sum('valor_liquido');
+                        } else {
+                            $valorLiquido = (float) $nota->pagamentos->sum('valor_liquido');
+                        }
+
+                        // Gestor
+                        if ($p->gestor) {
+                            $perc = (float) ($p->gestor->percentual_vendas ?? 0);
+                            $com  = round($valorLiquido * ($perc / 100), 2);
+                            $key  = 'gestor_'.$p->gestor->id;
+                            if (!isset($comissoesPorUsuario[$key])) {
+                                $comissoesPorUsuario[$key] = [
+                                    'tipo'  => 'Gestor',
+                                    'id'    => $p->gestor->id,
+                                    'nome'  => $p->gestor->razao_social,
+                                    'perc'  => $perc,
+                                    'total' => 0.0,
+                                ];
+                            }
+                            $comissoesPorUsuario[$key]['total'] += $com;
+                        }
+
+                        // Distribuidor
+                        if ($p->distribuidor) {
+                            $perc = (float) ($p->distribuidor->percentual_vendas ?? 0);
+                            $com  = round($valorLiquido * ($perc / 100), 2);
+                            $key  = 'distribuidor_'.$p->distribuidor->id;
+                            if (!isset($comissoesPorUsuario[$key])) {
+                                $comissoesPorUsuario[$key] = [
+                                    'tipo'  => 'Distribuidor',
+                                    'id'    => $p->distribuidor->id,
+                                    'nome'  => $p->distribuidor->razao_social,
+                                    'perc'  => $perc,
+                                    'total' => 0.0,
+                                ];
+                            }
+                            $comissoesPorUsuario[$key]['total'] += $com;
+                        }
+                    }
+
+                    uasort($comissoesPorUsuario, fn($a,$b) => $b['total'] <=> $a['total']);
+                @endphp
+
+                <div class="mt-10 px-4">
+                    <h3 class="font-semibold text-lg mb-3">Comissões por usuário (resultado atual)</h3>
+                    @if(empty($comissoesPorUsuario))
+                        <div class="text-gray-600">Sem valores de comissão no período/filters atuais.</div>
+                    @else
+                        <div class="grid md:grid-cols-3 gap-4">
+                            @foreach($comissoesPorUsuario as $u)
+                                <div class="bg-white border rounded-xl p-4 shadow-sm">
+                                    <div class="text-xs text-gray-500">{{ $u['tipo'] }}</div>
+                                    <div class="text-base font-semibold">{{ $u['nome'] }}</div>
+                                    <div class="mt-2 text-sm text-gray-600">Percentual: {{ number_format($u['perc'],2,',','.') }}%</div>
+                                    <div class="mt-1 text-2xl font-bold">{{ moeda_br($u['total']) }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
         @endif
     </div>
 
-    {{-- Auto-submit dos selects (usa o mesmo <form> "filtros") --}}
+    {{-- Auto-submit dos selects usando o mesmo form --}}
     <script>
     (function() {
         const form = document.getElementById('filtros');
@@ -322,7 +388,6 @@
                     }
                     return;
                 }
-
                 clearOthers(sel);
                 tipoInput.value = tipo;
                 idInput.value   = val;

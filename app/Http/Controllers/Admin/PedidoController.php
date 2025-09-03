@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use App\Models\NotaFiscal;
 
+
 class PedidoController extends Controller
 {
     public function index()
@@ -343,10 +344,7 @@ class PedidoController extends Controller
         return back()->with('error', 'Não é mais possível editar: este pedido já foi finalizado.');
     }
 
-    // Limpa e valida os produtos do pedido
-    // Filtra os produtos para garantir que apenas aqueles com ID e quantidade válidos sejam processados
-    // Mapeia os produtos para um formato consistente, garantindo que cada produto tenha ID, quantidade e desconto
-
+    // Limpa itens recebidos
     $produtosLimpos = collect($request->input('produtos', []))
         ->filter(function ($row) {
             $id = $row['id'] ?? null;
@@ -359,32 +357,22 @@ class PedidoController extends Controller
             'desconto'  => isset($r['desconto']) ? (float) $r['desconto'] : 0.0,
         ])
         ->values()
-        ->all();        
-    
-    // Atualiza a requisição com os produtos limpos
-    // Isso garante que apenas os produtos válidos sejam processados na validação e atualização do pedido
-    $request->merge(['produtos' => $produtosLimpos]);
+        ->all();
 
-    // Regras dinâmicas para cidade
-    // Define as regras de validação para a cidade com base no distribuidor selecionado
+    // Congela gestor/distribuidor para os valores originais do pedido
+    $request->merge([
+        'gestor_id'       => $pedido->gestor_id,
+        'distribuidor_id' => $pedido->distribuidor_id,
+        'produtos'        => $produtosLimpos,
+    ]);
 
-    $cidadeRules = ['nullable', 'integer'];
-    if ($request->filled('distribuidor_id')) {
-        $cidadeRules[] = 'required';
-        $cidadeRules[] = Rule::exists('city_distribuidor', 'city_id')
-            ->where(fn ($q) => $q->where('distribuidor_id', $request->distribuidor_id));
-    } else {
-        if ($request->filled('cidade_id')) {
-            $cidadeRules[] = 'exists:cities,id';
-        }
-    }
-
+    // Regras de validação
     $rules = [
-        'data'                   => ['required', 'date', 'after_or_equal:' . Carbon::now('America/Sao_Paulo')->toDateString()],
+        'data'                   => ['required', 'date', 'after_or_equal:' . \Carbon\Carbon::now('America/Sao_Paulo')->toDateString()],
         'cliente_id'             => ['required', 'exists:clientes,id'],
-        'gestor_id'              => ['nullable', 'exists:gestores,id'],
-        'distribuidor_id'        => ['nullable', 'exists:distribuidores,id'],
-        'cidade_id'              => $cidadeRules,
+        'gestor_id'              => ['nullable','exists:gestores,id'],
+        'distribuidor_id'        => ['nullable','exists:distribuidores,id'],
+        'cidade_id'              => ['nullable','integer'],
         'status'                 => ['required', 'in:em_andamento,finalizado,cancelado'],
         'produtos'               => ['required', 'array', 'min:1'],
         'produtos.*.id'          => ['required', 'exists:produtos,id', 'distinct'],
@@ -394,52 +382,39 @@ class PedidoController extends Controller
     ];
 
     $messages = [
-        'cidade_id.required' => 'Selecione a cidade da venda (ao escolher um distribuidor).',
-        'cidade_id.exists'   => 'A cidade selecionada não pertence ao distribuidor escolhido.',
+        'cidade_id.required' => 'Selecione a cidade da venda.',
     ];
 
     $validated = $request->validate($rules, $messages);
 
-    // Regras condicionais para cidade
-    if (filled($request->gestor_id) || filled($request->distribuidor_id)) {
+    // Regras de cidade conforme cenário "congelado"
+    if (filled($pedido->distribuidor_id)) {
         if (blank($request->cidade_id)) {
             return back()->withErrors(['cidade_id' => 'Selecione a cidade da venda.'])->withInput();
         }
-    }
-
-    // Filtro para verificar se a cidade pertence ao distribuidor ou gestor selecionado
-
-    if (filled($request->cidade_id)) {
-        if (filled($request->distribuidor_id)) {
-            $pertence = DB::table('city_distribuidor')
-                ->where('city_id', $request->cidade_id)
-                ->where('distribuidor_id', $request->distribuidor_id)
-                ->exists();
-
-            if (!$pertence) {
-                return back()->withErrors([
-                    'cidade_id' => 'A cidade selecionada não pertence ao distribuidor escolhido.',
-                ])->withInput();
-            }
-        } elseif (filled($request->gestor_id)) {
-            $gestor = Gestor::find($request->gestor_id);
-            if ($gestor) {
-                $okUF = City::whereKey($request->cidade_id)
-                    ->whereRaw('UPPER(state) = ?', [strtoupper($gestor->estado_uf)])
-                    ->exists();
-
-                if (!$okUF) {
-                    return back()->withErrors([
-                        'cidade_id' => 'A cidade selecionada não pertence à UF do gestor.',
-                    ])->withInput();
-                }
-            }
+        $pertence = DB::table('city_distribuidor')
+            ->where('city_id', $request->cidade_id)
+            ->where('distribuidor_id', $pedido->distribuidor_id)
+            ->exists();
+        if (!$pertence) {
+            return back()->withErrors([
+                'cidade_id' => 'A cidade selecionada não pertence ao distribuidor deste pedido.',
+            ])->withInput();
+        }
+    } elseif (filled($pedido->gestor_id) && filled($request->cidade_id)) {
+        $okUF = \App\Models\City::whereKey($request->cidade_id)
+            ->whereRaw('UPPER(state) = ?', [strtoupper(optional($pedido->gestor)->estado_uf)])
+            ->exists();
+        if (!$okUF) {
+            return back()->withErrors([
+                'cidade_id' => 'A cidade selecionada não pertence à UF do gestor deste pedido.',
+            ])->withInput();
         }
     }
 
     DB::beginTransaction();
     try {
-        // Snapshot antes da atualização para log
+        // ===== Snapshot ANTES =====
         $pedido->load(['produtos', 'cidades']);
         $antes = [
             'campos' => [
@@ -457,17 +432,13 @@ class PedidoController extends Controller
 
         $novoStatus = $validated['status'];
 
-        // Se o status for cancelado, verifica se o pedido não está finalizado
-        // Se não estiver, atualiza o status e registra o log de cancelamento
-        // Se o status for diferente de cancelado, atualiza normalmente
-
+        // ===== Cancelamento (log e return) =====
         if ($antes['campos']['status'] !== 'cancelado' && $novoStatus === 'cancelado') {
-
             $pedido->update([
                 'data'            => $validated['data'],
                 'cliente_id'      => $request->cliente_id,
-                'gestor_id'       => $request->gestor_id,
-                'distribuidor_id' => $request->distribuidor_id,
+                'gestor_id'       => $pedido->gestor_id,
+                'distribuidor_id' => $pedido->distribuidor_id,
                 'status'          => 'cancelado',
                 'observacoes'     => $request->observacoes ?? null,
             ]);
@@ -488,13 +459,12 @@ class PedidoController extends Controller
                 ->with('success', 'Pedido cancelado.');
         }
 
-        // Atualiza os dados principais do pedido
-        // Sincroniza a cidade se fornecida
+        // ===== Atualização principal =====
         $pedido->update([
             'data'            => $validated['data'],
             'cliente_id'      => $request->cliente_id,
-            'gestor_id'       => $request->gestor_id,
-            'distribuidor_id' => $request->distribuidor_id,
+            'gestor_id'       => $pedido->gestor_id,
+            'distribuidor_id' => $pedido->distribuidor_id,
             'status'          => $novoStatus,
             'observacoes'     => $request->observacoes ?? null,
         ]);
@@ -503,9 +473,7 @@ class PedidoController extends Controller
             ? $pedido->cidades()->sync([$request->cidade_id])
             : $pedido->cidades()->sync([]);
 
-        // Processa os itens do pedido
-        // Agrupa os itens por ID para somar quantidades e aplicar descontos
-
+        // ===== Itens (valida estoque para aumentos) =====
         $depoisItens = collect($validated['produtos'])
             ->groupBy(fn ($it) => (int)$it['id'])
             ->map(fn ($group) => [
@@ -513,18 +481,13 @@ class PedidoController extends Controller
                 'd_item' => (float) ($group->first()['desconto'] ?? 0.0),
             ])
             ->toArray();
-        
+
         $antesQtd   = array_map(fn($arr) => (int)$arr['q'], $antes['itens']);
         $antesIds   = array_keys($antesQtd);
         $depoisIds  = array_keys($depoisItens);
 
-        $envolvidos  = array_values(array_unique(array_merge($antesIds, $depoisIds)));
-        $produtosLock = Produto::whereIn('id', $envolvidos)->lockForUpdate()->get()->keyBy('id');
-
-        // Valida estoque para aumentos de quantidade
-        // Para cada produto envolvido, verifica se a quantidade foi aumentada
-        // Se foi aumentada, verifica se há estoque suficiente
-        // Se não houver estoque suficiente, lança uma exceção
+        $envolvidos   = array_values(array_unique(array_merge($antesIds, $depoisIds)));
+        $produtosLock = \App\Models\Produto::whereIn('id', $envolvidos)->lockForUpdate()->get()->keyBy('id');
 
         foreach ($envolvidos as $pid) {
             $qAntes  = (int)($antesQtd[$pid]           ?? 0);
@@ -540,16 +503,13 @@ class PedidoController extends Controller
             }
         }
 
-        // recalcula totais
         $pesoTotal = 0; $totalCaixas = 0; $valorBruto = 0; $valorFinal = 0;
         $sync = [];
-
-        // Para cada item depois da atualização, calcula os totais e prepara os dados para sincronização
 
         foreach ($depoisItens as $pid => $info) {
             $qtd      = (int) $info['qtd'];
             $descItem = (float) $info['d_item'];
-            $produto  = $produtosLock[$pid] ?? Produto::findOrFail($pid);
+            $produto  = $produtosLock[$pid] ?? \App\Models\Produto::findOrFail($pid);
 
             $precoUnit = (float) $produto->preco;
             $subBruto  = $precoUnit * $qtd;
@@ -575,10 +535,8 @@ class PedidoController extends Controller
             $valorFinal  += $subDesc;
         }
 
-        // Sincroniza os produtos do pedido com os novos dados
         $pedido->produtos()->sync($sync);
 
-        // Atualiza os totais do pedido
         $pedido->update([
             'peso_total'   => $pesoTotal,
             'total_caixas' => $totalCaixas,
@@ -586,7 +544,7 @@ class PedidoController extends Controller
             'valor_total'  => $valorFinal,
         ]);
 
-        // Snapshot depois da atualização para log
+        // ===== Snapshot DEPOIS =====
         $pedido->load(['produtos','cidades']);
         $depois = [
             'campos' => [
@@ -605,9 +563,7 @@ class PedidoController extends Controller
             ])->toArray(),
         ];
 
-        // ===== DIFERENÇAS (campos, cidade, itens) =====
-
-        // 1) Campos simples
+        // ===== Monta DIFF legível (linha do tempo) =====
         $labelCampo = [
             'data'            => 'Data',
             'cliente_id'      => 'Cliente',
@@ -618,17 +574,29 @@ class PedidoController extends Controller
 
         $mensagens = [];
 
-        // Data (formata dd/mm/yyyy)
-        if (($antes['campos']['data'] ?? null) !== ($depois['campos']['data'] ?? null)) {
-            $mensagens[] = sprintf(
-                '%s alterada: %s → %s',
-                $labelCampo['data'],
-                \Carbon\Carbon::parse($antes['campos']['data'])->format('d/m/Y'),
-                \Carbon\Carbon::parse($depois['campos']['data'])->format('d/m/Y')
-            );
-        }
+        // Data (comparação normalizada YYYY-MM-DD)
+            $rawAntes  = $antes['campos']['data']  ?? null;
+            $rawDepois = $depois['campos']['data'] ?? null;
 
-        // Demais campos (resolve nomes em vez de IDs)
+            $norm = function ($v) {
+                if (!$v) return null;
+                // aceita Carbon, string date/datetime etc.
+                return \Carbon\Carbon::parse($v)->toDateString(); // "YYYY-MM-DD"
+            };
+
+            $antesNorm  = $norm($rawAntes);
+            $depoisNorm = $norm($rawDepois);
+
+            if ($antesNorm !== $depoisNorm) {
+                $mensagens[] = sprintf(
+                    '%s alterada: %s → %s',
+                    $labelCampo['data'],
+                    $rawAntes  ? \Carbon\Carbon::parse($rawAntes)->format('d/m/Y')  : '-',
+                    $rawDepois ? \Carbon\Carbon::parse($rawDepois)->format('d/m/Y') : '-'
+                );
+            }
+
+        // Demais campos com nomes bonitos
         foreach (['cliente_id','gestor_id','distribuidor_id','status'] as $k) {
             $vAntes  = $antes['campos'][$k]  ?? null;
             $vDepois = $depois['campos'][$k] ?? null;
@@ -638,19 +606,18 @@ class PedidoController extends Controller
 
                 switch ($k) {
                     case 'cliente_id':
-                        $nomeAntes  = $vAntes  ? \App\Models\Cliente::find($vAntes)?->razao_social : '-';
-                        $nomeDepois = $vDepois ? \App\Models\Cliente::find($vDepois)?->razao_social : '-';
+                        $nomeAntes  = $vAntes  ? Cliente::find($vAntes)?->razao_social : '-';
+                        $nomeDepois = $vDepois ? Cliente::find($vDepois)?->razao_social : '-';
                         break;
                     case 'gestor_id':
-                        $nomeAntes  = $vAntes  ? \App\Models\Gestor::find($vAntes)?->razao_social : '-';
-                        $nomeDepois = $vDepois ? \App\Models\Gestor::find($vDepois)?->razao_social : '-';
+                        $nomeAntes  = $vAntes  ? Gestor::find($vAntes)?->razao_social : '-';
+                        $nomeDepois = $vDepois ? Gestor::find($vDepois)?->razao_social : '-';
                         break;
                     case 'distribuidor_id':
-                        $nomeAntes  = $vAntes  ? \App\Models\Distribuidor::find($vAntes)?->razao_social : '-';
-                        $nomeDepois = $vDepois ? \App\Models\Distribuidor::find($vDepois)?->razao_social : '-';
+                        $nomeAntes  = $vAntes  ? Distribuidor::find($vAntes)?->razao_social : '-';
+                        $nomeDepois = $vDepois ? Distribuidor::find($vDepois)?->razao_social : '-';
                         break;
                     case 'status':
-                        // traduz status para label bonitinho
                         $labels = [
                             'em_andamento' => 'Em andamento',
                             'finalizado'   => 'Finalizado',
@@ -665,30 +632,24 @@ class PedidoController extends Controller
             }
         }
 
-
-        // 2) Cidade (você sincroniza no máximo 1 cidade)
+        // Cidade (no máx 1)
         $antesCidadeIds  = $antes['cidades'] ?? [];
         $depoisCidadeIds = $depois['cidades'] ?? [];
-
         $antesCidade  = count($antesCidadeIds)  ? $antesCidadeIds[0]  : null;
         $depoisCidade = count($depoisCidadeIds) ? $depoisCidadeIds[0] : null;
 
         if ((string)$antesCidade !== (string)$depoisCidade) {
-            // Opcional: resolver nomes para melhorar a leitura
             $nomeAntes  = $antesCidade  ? \App\Models\City::find($antesCidade)?->name   : '-';
             $nomeDepois = $depoisCidade ? \App\Models\City::find($depoisCidade)?->name : '-';
             $mensagens[] = "Cidade alterada: {$nomeAntes} → {$nomeDepois}";
         }
 
-        // 3) Itens (adicionados, removidos, atualizados qtd/desc)
-        // $antes['itens'] = [id => ['q'=>int,'d_item'=>float]]
-        // $depois['itens'] = [id => ['q'=>int,'d_item'=>float]]
-
+        // Itens
         $antesItens  = $antes['itens']  ?? [];
-        $depoisItens = $depois['itens'] ?? [];
+        $depoisItensSnap = $depois['itens'] ?? [];
 
         $idsAntes  = array_map('intval', array_keys($antesItens));
-        $idsDepois = array_map('intval', array_keys($depoisItens));
+        $idsDepois = array_map('intval', array_keys($depoisItensSnap));
 
         $adicionados = array_values(array_diff($idsDepois, $idsAntes));
         $removidos   = array_values(array_diff($idsAntes,  $idsDepois));
@@ -698,26 +659,21 @@ class PedidoController extends Controller
             return \App\Models\Produto::find($id)?->nome ?? "Produto #{$id}";
         };
 
-        // Adicionados
         foreach ($adicionados as $pid) {
-            $q  = (int)($depoisItens[$pid]['q']    ?? 0);
-            $dp = (float)($depoisItens[$pid]['d_item'] ?? 0);
+            $q  = (int)($depoisItensSnap[$pid]['q']    ?? 0);
+            $dp = (float)($depoisItensSnap[$pid]['d_item'] ?? 0);
             $mensagens[] = sprintf('Item adicionado: %s (qtd %d, desc %.2f%%)', $nomeProduto($pid), $q, $dp);
         }
-
-        // Removidos
         foreach ($removidos as $pid) {
             $q  = (int)($antesItens[$pid]['q']    ?? 0);
             $da = (float)($antesItens[$pid]['d_item'] ?? 0);
             $mensagens[] = sprintf('Item removido: %s (qtd %d, desc %.2f%%)', $nomeProduto($pid), $q, $da);
         }
-
-        // Atualizados (quantidade e/ou desconto)
         foreach ($comuns as $pid) {
             $qA = (int)($antesItens[$pid]['q']    ?? 0);
-            $qD = (int)($depoisItens[$pid]['q']   ?? 0);
+            $qD = (int)($depoisItensSnap[$pid]['q']   ?? 0);
             $dA = (float)($antesItens[$pid]['d_item']  ?? 0);
-            $dD = (float)($depoisItens[$pid]['d_item'] ?? 0);
+            $dD = (float)($depoisItensSnap[$pid]['d_item'] ?? 0);
 
             $mudouQtd = ($qA !== $qD);
             $mudouDes = (abs($dA - $dD) > 0.00001);
@@ -730,14 +686,14 @@ class PedidoController extends Controller
             }
         }
 
-        // ===== Ação do log com base no status final =====
+        // Ação do log conforme status final
         $acaoLog = match ($pedido->status) {
             'finalizado' => 'Pedido finalizado',
             'cancelado'  => 'Pedido cancelado',
             default      => 'Pedido atualizado',
         };
 
-        // ===== Meta estruturado para auditoria (JSON) =====
+        // Meta estruturado
         $meta = [
             'antes'  => $antes,
             'depois' => $depois,
@@ -753,18 +709,18 @@ class PedidoController extends Controller
                 'itens'  => [
                     'adicionados' => array_values($adicionados),
                     'removidos'   => array_values($removidos),
-                    'atualizados' => array_values(array_filter($comuns, function ($pid) use ($antesItens, $depoisItens) {
+                    'atualizados' => array_values(array_filter($comuns, function ($pid) use ($antesItens, $depoisItensSnap) {
                         $qA = (int)($antesItens[$pid]['q']    ?? 0);
-                        $qD = (int)($depoisItens[$pid]['q']   ?? 0);
+                        $qD = (int)($depoisItensSnap[$pid]['q']   ?? 0);
                         $dA = (float)($antesItens[$pid]['d_item']  ?? 0);
-                        $dD = (float)($depoisItens[$pid]['d_item'] ?? 0);
+                        $dD = (float)($depoisItensSnap[$pid]['d_item'] ?? 0);
                         return $qA !== $qD || abs($dA - $dD) > 0.00001;
                     })),
                 ],
             ],
         ];
 
-        // ===== Registrar log (linhas legíveis em $mensagens e JSON em $meta) =====
+        // Registrar log
         $pedido->registrarLog(
             $acaoLog,
             $mensagens ? implode(' | ', $mensagens) : 'Atualização sem mudanças relevantes',
@@ -778,5 +734,7 @@ class PedidoController extends Controller
         return back()->withErrors(['error' => 'Erro ao atualizar: ' . $e->getMessage()])->withInput();
     }
 }
+
+
 
 }

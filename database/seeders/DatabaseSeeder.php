@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
         CityVinculosSeeder::class,
         GestorSeeder::class,
         DistribuidorSeeder::class,
-        PedidoSeeder::class,
+        //PedidoSeeder::class,
     ]);
 }
 }

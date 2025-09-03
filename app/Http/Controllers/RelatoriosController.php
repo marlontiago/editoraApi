@@ -28,6 +28,7 @@ class RelatoriosController extends Controller
         $notasPagas    = NotaFiscal::where('status_financeiro', 'pago')->get();
         $notasAPagar   = NotaFiscal::where('status_financeiro', 'aguardando_pagamento')->get();
         $notasEmitidas = NotaFiscal::all();
+        $notasQuery = NotaFiscal::query();
 
         // --- Selects para os filtros ---
         $clientes       = Cliente::orderBy('razao_social')->get();
@@ -41,20 +42,34 @@ class RelatoriosController extends Controller
         $totalComissoesDoFiltro  = 0.0;
         $pedidoStatus            = collect(); // lista quando clica no card de status OU só datas
 
+// Aplicar período na NotaFiscal (emitida/faturada OU pagamentos no range)
+        if ($periodo) {
+            $notasQuery->where(function ($qq) use ($dataInicio, $dataFim) {
+                $qq->whereBetween('emitida_em', [$dataInicio, $dataFim])
+                ->orWhereBetween('faturada_em', [$dataInicio, $dataFim])
+                ->orWhereHas('pagamentos', function ($p) use ($dataInicio, $dataFim) {
+                    $p->whereBetween('data_pagamento', [$dataInicio, $dataFim]);
+                });
+            });
+
+            $notasPagas    = (clone $notasQuery)->where('status_financeiro', 'pago')->get();
+            $notasAPagar   = (clone $notasQuery)->where('status_financeiro', 'aguardando_pagamento')->get();
+            $notasEmitidas = (clone $notasQuery)->get(); // total de notas no recorte
+        }
+
         // =====================================================================
         // 1) LISTA PELOS CARDS (STATUS)  -> $pedidoStatus
         // =====================================================================
         if ($statusFiltro) {
             $pedidoStatus = Pedido::with([
                 'cliente:id,razao_social',
-                'gestor:id,razao_social',
-                'distribuidor:id,razao_social',
-                'notaFiscal:id,pedido_id,status_financeiro,valor_total,emitida_em',
+                'gestor:id,razao_social,percentual_vendas',
+                'distribuidor:id,razao_social,percentual_vendas',
+                'notaFiscal:id,pedido_id,status_financeiro,valor_total,emitida_em,faturada_em',
                 'notaFiscal.pagamentos' => function ($q) use ($periodo, $dataInicio, $dataFim) {
                     if ($periodo) {
-                        // compara só a DATA, ignorando hora
                         $q->whereDate('data_pagamento', '>=', $dataInicio)
-                          ->whereDate('data_pagamento', '<=', $dataFim);
+                        ->whereDate('data_pagamento', '<=', $dataFim);
                     }
                     $q->select(['id','nota_fiscal_id','valor_liquido','data_pagamento']);
                 },
@@ -63,15 +78,22 @@ class RelatoriosController extends Controller
                 if ($statusFiltro === 'emitida') {
                     $q->whereNotNull('emitida_em');
                     if ($periodo) {
-                        $q->whereDate('emitida_em', '>=', $dataInicio)
-                          ->whereDate('emitida_em', '<=', $dataFim);
+                        $q->whereBetween('emitida_em', [$dataInicio, $dataFim]);
+                    }
+                } elseif ($statusFiltro === 'aguardando_pagamento') {
+                    $q->where('status_financeiro', 'aguardando_pagamento');
+                    if ($periodo) {
+                        $q->where(function ($qq) use ($dataInicio, $dataFim) {
+                            $qq->whereBetween('faturada_em', [$dataInicio, $dataFim])
+                            ->orWhereBetween('emitida_em', [$dataInicio, $dataFim]);
+                        });
                     }
                 } else {
                     $q->where('status_financeiro', $statusFiltro);
                     if ($periodo) {
                         $q->whereHas('pagamentos', function ($p) use ($dataInicio, $dataFim) {
                             $p->whereDate('data_pagamento', '>=', $dataInicio)
-                              ->whereDate('data_pagamento', '<=', $dataFim);
+                            ->whereDate('data_pagamento', '<=', $dataFim);
                         });
                     }
                 }
@@ -80,31 +102,37 @@ class RelatoriosController extends Controller
             ->get();
         }
 
+
         // =====================================================================
         // 1.1) FALLBACK: SÓ PERÍODO (sem status/usuário) -> $pedidoStatus
         // =====================================================================
         if ($periodo && !$statusFiltro && !$filtroTipo) {
             $pedidoStatus = Pedido::with([
                 'cliente:id,razao_social',
-                'gestor:id,razao_social',
-                'distribuidor:id,razao_social',
-                'notaFiscal:id,pedido_id,status_financeiro,valor_total,emitida_em',
+                'gestor:id,razao_social,percentual_vendas',
+                'distribuidor:id,razao_social,percentual_vendas',
+                'notaFiscal:id,pedido_id,status_financeiro,valor_total,emitida_em,faturada_em',
                 'notaFiscal.pagamentos' => function ($q) use ($dataInicio, $dataFim) {
                     $q->whereDate('data_pagamento', '>=', $dataInicio)
-                      ->whereDate('data_pagamento', '<=', $dataFim)
-                      ->select(['id','nota_fiscal_id','valor_liquido','data_pagamento']);
+                    ->whereDate('data_pagamento', '<=', $dataFim)
+                    ->select(['id','nota_fiscal_id','valor_liquido','data_pagamento']);
                 },
             ])
-            ->whereHas('notaFiscal.pagamentos', function ($p) use ($dataInicio, $dataFim) {
-                $p->whereDate('data_pagamento', '>=', $dataInicio)
-                  ->whereDate('data_pagamento', '<=', $dataFim);
+            ->whereHas('notaFiscal', function ($q) use ($periodo, $dataInicio, $dataFim) {
+                $q->where(function ($qq) use ($dataInicio, $dataFim) {
+                    $qq->whereBetween('emitida_em', [$dataInicio, $dataFim])
+                    ->orWhereBetween('faturada_em', [$dataInicio, $dataFim])
+                    ->orWhereHas('pagamentos', function ($p) use ($dataInicio, $dataFim) {
+                        $p->whereBetween('data_pagamento', [$dataInicio, $dataFim]);
+                    });
+                });
             })
             ->orderByDesc('id')
             ->get();
         }
 
         // =====================================================================
-        // 2) LISTA POR CLIENTE / GESTOR / DISTRIBUIDOR  -> $pedidos
+        // 2) LISTA POR CLIENTE / GESTOR / DISTRIBUIDOR 
         //    (comissão sobre SOMA do valor_liquido dos pagamentos no período)
         // =====================================================================
         if (in_array($filtroTipo, ['cliente','gestor','distribuidor']) && $filtroId > 0) {
@@ -120,23 +148,21 @@ class RelatoriosController extends Controller
                     'notaFiscal.pagamentos' => function ($q) use ($periodo, $dataInicio, $dataFim) {
                         if ($periodo) {
                             $q->whereDate('data_pagamento', '>=', $dataInicio)
-                            ->whereDate('data_pagamento', '<=', $dataFim);
+                              ->whereDate('data_pagamento', '<=', $dataFim);
                         }
                         $q->select(['id','nota_fiscal_id','valor_liquido','data_pagamento']);
                     },
                 ]);
 
-            // >>> AQUI: restringe a lista aos pedidos com pagamento no período
             if ($periodo) {
                 $query->whereHas('notaFiscal.pagamentos', function ($p) use ($dataInicio, $dataFim) {
                     $p->whereDate('data_pagamento', '>=', $dataInicio)
-                    ->whereDate('data_pagamento', '<=', $dataFim);
+                      ->whereDate('data_pagamento', '<=', $dataFim);
                 });
             }
 
             $pedidos = $query->orderByDesc('id')->get();
 
-            // Percentual do selecionado (cliente não tem comissão)
             $percentual = 0.0;
             if ($filtroTipo === 'gestor') {
                 $percentual = (float) optional(Gestor::find($filtroId))->percentual_vendas ?: 0.0;
@@ -150,11 +176,9 @@ class RelatoriosController extends Controller
                 $valorLiquidoPago = 0.0;
 
                 if ($p->notaFiscal && $p->notaFiscal->pagamentos) {
-                    // pagamentos já vêm filtrados por data quando aplicável
                     $valorLiquidoPago = (float) $p->notaFiscal->pagamentos->sum('valor_liquido');
                 }
 
-                // campos "calculados" para a view
                 $p->valor_liquido_pago_total = round($valorLiquidoPago, 2);
                 $p->comissao_do_filtro       = round($valorLiquidoPago * ($percentual / 100), 2);
 
@@ -163,6 +187,7 @@ class RelatoriosController extends Controller
 
             $totalComissoesDoFiltro = round($totalComissoesDoFiltro, 2);
         }
+
         // ==========================
         // RESUMOS (para UI e PDF)
         // ==========================
@@ -188,6 +213,67 @@ class RelatoriosController extends Controller
             $resumoStatus['valor_total'] = (float) $pedidoStatus->sum(fn($p) => (float) optional($p->notaFiscal)->valor_total);
         }
 
+        // ==========================
+        // COMISSÕES POR USUÁRIO (gestor e distribuidor)
+        // ==========================
+        $comissoesPorGestor = [];
+        $comissoesPorDistribuidor = [];
+
+        $colecaoBase = ($pedidos && $pedidos->count() > 0) ? $pedidos : $pedidoStatus;
+
+        foreach ($colecaoBase as $p) {
+            $liquidoPeriodo = 0.0;
+            if ($p->notaFiscal && $p->notaFiscal->pagamentos) {
+                $pagts = $p->notaFiscal->pagamentos;
+                if ($periodo) {
+                    $pagts = $pagts->filter(function ($pg) use ($dataInicio, $dataFim) {
+                        $d = \Carbon\Carbon::parse($pg->data_pagamento)->toDateString();
+                        return $d >= $dataInicio && $d <= $dataFim;
+                    });
+                }
+                $liquidoPeriodo = (float) $pagts->sum('valor_liquido');
+            }
+
+            // acumula por gestor
+            if ($p->gestor) {
+                $id   = (int) $p->gestor->id;
+                $nome = (string) ($p->gestor->razao_social ?? 'Gestor '.$id);
+                $perc = (float) ($p->gestor->percentual_vendas ?? 0);
+
+                $valorComissao = round($liquidoPeriodo * ($perc / 100), 2);
+
+                if (!isset($comissoesPorGestor[$id])) {
+                    $comissoesPorGestor[$id] = [
+                        'nome' => $nome,
+                        'percentual' => $perc,
+                        'valor' => 0.0,
+                    ];
+                }
+                $comissoesPorGestor[$id]['valor'] += $valorComissao;
+            }
+
+            // acumula por distribuidor
+            if ($p->distribuidor) {
+                $id   = (int) $p->distribuidor->id;
+                $nome = (string) ($p->distribuidor->razao_social ?? 'Distribuidor '.$id);
+                $perc = (float) ($p->distribuidor->percentual_vendas ?? 0);
+
+                $valorComissao = round($liquidoPeriodo * ($perc / 100), 2);
+
+                if (!isset($comissoesPorDistribuidor[$id])) {
+                    $comissoesPorDistribuidor[$id] = [
+                        'nome' => $nome,
+                        'percentual' => $perc,
+                        'valor' => 0.0,
+                    ];
+                }
+                $comissoesPorDistribuidor[$id]['valor'] += $valorComissao;
+            }
+        }
+
+        usort($comissoesPorGestor, fn($a,$b) => $b['valor'] <=> $a['valor']);
+        usort($comissoesPorDistribuidor, fn($a,$b) => $b['valor'] <=> $a['valor']);
+
         // ================================================================
         // EXPORTAÇÃO PDF
         // ================================================================
@@ -202,20 +288,24 @@ class RelatoriosController extends Controller
             $filename = 'relatorio_' . now()->format('Ymd_His') . '.pdf';
 
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.relatorios.pdf', [
-                'pedidos'        => $pedidos,
-                'pedidoStatus'   => $pedidoStatus,
-                'exportUsuario'  => $exportPedidosUsuario,
-                'exportStatus'   => $exportPedidosStatus,
-                'filtroTipo'     => $filtroTipo,
-                'filtroId'       => $filtroId,
-                'statusFiltro'   => $statusFiltro,
-                'dataInicio'     => $dataInicio,
-                'dataFim'        => $dataFim,
+                'pedidos'                 => $pedidos,
+                'pedidoStatus'            => $pedidoStatus,
+                'exportUsuario'           => $exportPedidosUsuario,
+                'exportStatus'            => $exportPedidosStatus,
+                'filtroTipo'              => $filtroTipo,
+                'filtroId'                => $filtroId,
+                'statusFiltro'            => $statusFiltro,
+                'dataInicio'              => $dataInicio,
+                'dataFim'                 => $dataFim,
+                'comissoesPorGestor'      => $comissoesPorGestor,
+                'comissoesPorDistribuidor'=> $comissoesPorDistribuidor,
+                'resumoUsuario'           => $resumoUsuario,
+                'resumoStatus'            => $resumoStatus,
             ])->setPaper('a4', 'landscape');
 
             return $pdf->download($filename);
         }
-        // --- Render ---
+        
         return view('admin.relatorios.index', compact(
             'notasPagas',
             'notasAPagar',
@@ -235,6 +325,8 @@ class RelatoriosController extends Controller
             'dataFim',
             'resumoUsuario',
             'resumoStatus',
+            'comissoesPorGestor',
+            'comissoesPorDistribuidor',
         ));
     }
 }

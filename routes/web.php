@@ -36,6 +36,12 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/charts/notas-pagas', [DashboardController::class, 'chartNotasPagas'])->name('dashboard.charts.notas_pagas');
+    Route::get('/dashboard/charts/vendas-por-gestor', [DashboardController::class, 'chartVendasPorGestor'])->name('dashboard.charts.vendas_por_gestor');
+    Route::get('/dashboard/charts/vendas-por-distribuidor', [DashboardController::class, 'chartVendasPorDistribuidor'])->name('dashboard.charts.vendas_por_distribuidor');
+    Route::get('/dashboard/charts/vendas-por-cliente', [DashboardController::class, 'chartVendasPorCliente'])->name('dashboard.charts.vendas_por_cliente');
+    Route::get('/dashboard/charts/vendas-por-cidade',  [DashboardController::class, 'chartVendasPorCidade'])->name('dashboard.charts.vendas_por_cidade');
+
     Route::resource('produtos',ProdutoController::class)->except("show");
     Route::resource('usuarios', UserController::class);
     Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente'])->except('show');

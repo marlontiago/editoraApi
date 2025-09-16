@@ -3,15 +3,13 @@
         <div class="flex items-center justify-between">
             <h2 class="text-xl sm:text-2xl font-semibold text-gray-800">Dashboard</h2>
             <div class="hidden sm:flex gap-2">
-                <a href="{{ route('admin.admin.dashboard.export.excel') }}" class="px-3 py-1.5 text-sm rounded border">Exportar Excel</a>
-                <a href="{{ route('admin.admin.dashboard.export.pdf') }}" class="px-3 py-1.5 text-sm rounded border">Exportar PDF</a>
+                <a href="{{ route('admin.dashboard.export.excel') }}" class="px-3 py-1.5 text-sm rounded border">Exportar Excel</a>
+                <a href="{{ route('admin.dashboard.export.pdf') }}" class="px-3 py-1.5 text-sm rounded border">Exportar PDF</a>
             </div>
         </div>
     </x-slot>
 
     <div class="max-w-7xl mx-auto p-6 space-y-6">
-
-        
 
         {{-- Chips de filtros ativos --}}
         <div class="flex flex-wrap gap-2 text-xs">
@@ -94,8 +92,8 @@
                         <button class="px-3 py-1.5 rounded bg-blue-600 text-white text-sm">Aplicar</button>
                         <a href="{{ route('admin.dashboard') }}" class="px-3 py-1.5 rounded border text-sm">Limpar</a>
                         <span class="sm:hidden inline-flex gap-2">
-                            <a href="{{ route('admin.admin.dashboard.export.excel') }}" class="px-3 py-1.5 rounded border text-sm">Excel</a>
-                            <a href="{{ route('admin.admin.dashboard.export.pdf') }}" class="px-3 py-1.5 rounded border text-sm">PDF</a>
+                            <a href="{{ route('admin.dashboard.export.excel') }}" class="px-3 py-1.5 rounded border text-sm">Excel</a>
+                            <a href="{{ route('admin.dashboard.export.pdf') }}" class="px-3 py-1.5 rounded border text-sm">PDF</a>
                         </span>
                     </div>
                 </form>
@@ -103,52 +101,51 @@
         </details>
 
         {{-- GRÁFICOS --}}
-        {{-- GRÁFICOS --}}
-<div class="space-y-4">
-    {{-- Linha (100% largura) --}}
-    <div class="rounded-xl border p-3 h-[360px]">
-        <div class="flex items-center justify-between mb-2">
-            <h3 class="font-semibold text-sm">Notas pagas por mês</h3>
-            <span class="text-[11px] text-gray-500">quantidade e valor</span>
-        </div>
-        <div class="h-[300px]">
-            <canvas id="chartNotasPagas"></canvas>
-        </div>
-    </div>
+        <div class="space-y-4">
+            {{-- Linha (100% largura) --}}
+            <div class="rounded-xl border p-3 h-[360px]">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-sm">Notas pagas por mês</h3>
+                    <span class="text-[11px] text-gray-500">quantidade e valor</span>
+                </div>
+                <div class="h-[300px]">
+                    <canvas id="chartNotasPagas"></canvas>
+                </div>
+            </div>
 
-    {{-- Top 3 doughnuts: Gestor, Distribuidor, Cliente --}}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="rounded-xl border p-3 h-[280px]">
-            <h3 class="font-semibold text-sm mb-2">Vendas por Gestor</h3>
-            <div class="h-[220px]">
-                <canvas id="chartVendasPorGestor"></canvas>
+            {{-- Top 3 doughnuts: Gestor, Distribuidor, Cliente --}}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="rounded-xl border p-3 h-[280px]">
+                    <h3 class="font-semibold text-sm mb-2">Vendas por Gestor</h3>
+                    <div class="h-[220px]">
+                        <canvas id="chartVendasPorGestor"></canvas>
+                    </div>
+                </div>
+                <div class="rounded-xl border p-3 h-[280px]">
+                    <h3 class="font-semibold text-sm mb-2">Vendas por Distribuidor</h3>
+                    <div class="h-[220px]">
+                        <canvas id="chartVendasPorDistribuidor"></canvas>
+                    </div>
+                </div>
+                <div class="rounded-xl border p-3 h-[280px]">
+                    <h3 class="font-semibold text-sm mb-2">Vendas por Cliente</h3>
+                    <div class="h-[220px]">
+                        <canvas id="chartVendasPorCliente"></canvas>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="rounded-xl border p-3 h-[280px]">
-            <h3 class="font-semibold text-sm mb-2">Vendas por Distribuidor</h3>
-            <div class="h-[220px]">
-                <canvas id="chartVendasPorDistribuidor"></canvas>
-            </div>
-        </div>
-        <div class="rounded-xl border p-3 h-[280px]">
-            <h3 class="font-semibold text-sm mb-2">Vendas por Cliente</h3>
-            <div class="h-[220px]">
-                <canvas id="chartVendasPorCliente"></canvas>
-            </div>
-        </div>
-    </div>
 
-    {{-- Cidades: 100% largura (barra horizontal) --}}
-    <div class="rounded-xl border p-3 h-[460px]">
-        <div class="flex items-center justify-between mb-2">
-            <h3 class="font-semibold text-sm">Vendas por Cidade</h3>
-            <span class="text-[11px] text-gray-500">Top 15 + “Outras”</span>
+            {{-- Cidades: 100% largura (barra horizontal) --}}
+            <div class="rounded-xl border p-3 h-[460px]">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-semibold text-sm">Vendas por Cidade</h3>
+                    <span class="text-[11px] text-gray-500">Top 15 + “Outras”</span>
+                </div>
+                <div class="h-[400px]">
+                    <canvas id="chartVendasPorCidade"></canvas>
+                </div>
+            </div>
         </div>
-        <div class="h-[400px]">
-            <canvas id="chartVendasPorCidade"></canvas>
-        </div>
-    </div>
-</div>
 
 
         {{-- LISTA de pedidos (compacta) --}}
@@ -195,170 +192,167 @@
 
     {{-- Chart.js CDN --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  function qs(form) {
-    const params = new URLSearchParams(new FormData(form));
-    return '?' + params.toString();
-  }
-
-  const form = document.getElementById('filtros');
-  let gNotas, gGestor, gDistribuidor, gCliente, gCidade;
-
-  // Helpers
-  const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-  function groupTopN(labels, series, n = 15, outrasLabel = 'Outras') {
-    const arr = labels.map((l, i) => ({ l, v: Number(series[i] || 0) }))
-                      .sort((a,b) => b.v - a.v);
-    const top = arr.slice(0, n);
-    const resto = arr.slice(n);
-    const outras = resto.reduce((s, r) => s + r.v, 0);
-    if (outras > 0) top.push({ l: outrasLabel, v: outras });
-    return { labels: top.map(x=>x.l), series: top.map(x=>x.v) };
-  }
-
-  async function loadCharts() {
-    const q = qs(form);
-    const base = "{{ url('/admin/dashboard/charts') }}";
-
-    let notas, gestor, distr, porCliente, porCidade;
-    try {
-      [notas, gestor, distr, porCliente, porCidade] = await Promise.all([
-        fetch(`${base}/notas-pagas${q}`).then(r => r.json()),
-        fetch(`${base}/vendas-por-gestor${q}`).then(r => r.json()),
-        fetch(`${base}/vendas-por-distribuidor${q}`).then(r => r.json()),
-        fetch(`${base}/vendas-por-cliente${q}`).then(r => r.json()),
-        fetch(`${base}/vendas-por-cidade${q}`).then(r => r.json()),
-      ]);
-    } catch (e) {
-      console.error('Falha ao carregar dados dos gráficos', e);
-      return;
+    <script>
+    function qs(form) {
+        const params = new URLSearchParams(new FormData(form));
+        return '?' + params.toString();
     }
 
-    // ---- Linha: Notas pagas
-    const ctxNotas = document.getElementById('chartNotasPagas').getContext('2d');
-    if (gNotas) gNotas.destroy();
-    gNotas = new Chart(ctxNotas, {
-      type: 'line',
-      data: {
-        labels: notas.labels,
-        datasets: [
-          {
-            label: 'Quantidade',
-            data: notas.series.quantidade,
-            yAxisID: 'y1',
-            borderWidth: 2,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37,99,235,0.15)',
-            fill: false,
-            tension: 0.25,
-            spanGaps: true,
-            pointRadius: 2
-          },
-          {
-            label: 'Valor (R$)',
-            data: notas.series.valor,
-            yAxisID: 'y2',
-            borderWidth: 2,
-            borderColor: '#16a34a',
-            backgroundColor: 'rgba(22,163,74,0.15)',
-            fill: false,
-            tension: 0.25,
-            spanGaps: true,
-            pointRadius: 2
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: true },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => {
-                const dsLabel = ctx.dataset.label || '';
-                const v = ctx.raw ?? 0;
-                return dsLabel.includes('Valor') ? `${dsLabel}: ${BRL.format(v)}` : `${dsLabel}: ${v}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: { ticks: { autoSkip: true, maxTicksLimit: 13 } },
-          y1: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Qtd' } },
-          y2: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: 'R$' }, grid: { drawOnChartArea: false } }
-        },
-        elements: { line: { borderJoinStyle: 'round' } }
-      }
-    });
+    const form = document.getElementById('filtros');
+    let gNotas, gGestor, gDistribuidor, gCliente, gCidade;
 
-    // ---- Opções padrão doughnut/pie
-    const pieOpts = {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'bottom' },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${BRL.format(ctx.raw ?? 0)}` } },
-      }
-    };
+    // Helpers
+    const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    function groupTopN(labels, series, n = 15, outrasLabel = 'Outras') {
+        const arr = labels.map((l, i) => ({ l, v: Number(series[i] || 0) }))
+                        .sort((a,b) => b.v - a.v);
+        const top = arr.slice(0, n);
+        const resto = arr.slice(n);
+        const outras = resto.reduce((s, r) => s + r.v, 0);
+        if (outras > 0) top.push({ l: outrasLabel, v: outras });
+        return { labels: top.map(x=>x.l), series: top.map(x=>x.v) };
+    }
 
-    // Gestor (pie)
-    const ctxGestor = document.getElementById('chartVendasPorGestor').getContext('2d');
-    if (gGestor) gGestor.destroy();
-    gGestor = new Chart(ctxGestor, {
-      type: 'doughnut',
-      data: { labels: gestor.labels, datasets: [{ data: gestor.series }] },
-      options: pieOpts
-    });
+    async function loadCharts() {
+        const q = qs(form);
+        const base = "{{ url('/admin/dashboard/charts') }}";
 
-    // Distribuidor (pie)
-    const ctxDistr = document.getElementById('chartVendasPorDistribuidor').getContext('2d');
-    if (gDistribuidor) gDistribuidor.destroy();
-    gDistribuidor = new Chart(ctxDistr, {
-      type: 'doughnut',
-      data: { labels: distr.labels, datasets: [{ data: distr.series }] },
-      options: pieOpts
-    });
-
-    // Cliente (doughnut) — Top 12 + Outras
-    const cliGrouped = groupTopN(porCliente.labels, porCliente.series, 12);
-    const ctxCli = document.getElementById('chartVendasPorCliente').getContext('2d');
-    if (gCliente) gCliente.destroy();
-    gCliente = new Chart(ctxCli, {
-      type: 'doughnut',
-      data: { labels: cliGrouped.labels, datasets: [{ data: cliGrouped.series }] },
-      options: pieOpts
-    });
-
-    // Cidade (barra horizontal 100% largura) — Top 15 + Outras
-    const cidGrouped = groupTopN(porCidade.labels, porCidade.series, 15);
-    const ctxCid = document.getElementById('chartVendasPorCidade').getContext('2d');
-    if (gCidade) gCidade.destroy();
-    gCidade = new Chart(ctxCid, {
-      type: 'bar',
-      data: {
-        labels: cidGrouped.labels,
-        datasets: [{ label: 'Valor (R$)', data: cidGrouped.series }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => BRL.format(ctx.raw ?? 0) } }
-        },
-        scales: {
-          x: { ticks: { callback: (v) => BRL.format(v) }, beginAtZero: true },
-          y: { beginAtZero: true }
+        let notas, gestor, distr, porCliente, porCidade;
+        try {
+        [notas, gestor, distr, porCliente, porCidade] = await Promise.all([
+            fetch(`${base}/notas-pagas${q}`).then(r => r.json()),
+            fetch(`${base}/vendas-por-gestor${q}`).then(r => r.json()),
+            fetch(`${base}/vendas-por-distribuidor${q}`).then(r => r.json()),
+            fetch(`${base}/vendas-por-cliente${q}`).then(r => r.json()),
+            fetch(`${base}/vendas-por-cidade${q}`).then(r => r.json()),
+        ]);
+        } catch (e) {
+        console.error('Falha ao carregar dados dos gráficos', e);
+        return;
         }
-      }
-    });
-  }
 
-  document.addEventListener('DOMContentLoaded', loadCharts);
-</script>
+        // ---- Linha: Notas pagas
+        const ctxNotas = document.getElementById('chartNotasPagas').getContext('2d');
+        if (gNotas) gNotas.destroy();
+        gNotas = new Chart(ctxNotas, {
+        type: 'line',
+        data: {
+            labels: notas.labels,
+            datasets: [
+            {
+                label: 'Quantidade',
+                data: notas.series.quantidade,
+                yAxisID: 'y1',
+                borderWidth: 2,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37,99,235,0.15)',
+                fill: false,
+                tension: 0.25,
+                spanGaps: true,
+                pointRadius: 2
+            },
+            {
+                label: 'Valor (R$)',
+                data: notas.series.valor,
+                yAxisID: 'y2',
+                borderWidth: 2,
+                borderColor: '#16a34a',
+                backgroundColor: 'rgba(22,163,74,0.15)',
+                fill: false,
+                tension: 0.25,
+                spanGaps: true,
+                pointRadius: 2
+            }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+            legend: { display: true },
+            tooltip: {
+                callbacks: {
+                label: (ctx) => {
+                    const dsLabel = ctx.dataset.label || '';
+                    const v = ctx.raw ?? 0;
+                    return dsLabel.includes('Valor') ? `${dsLabel}: ${BRL.format(v)}` : `${dsLabel}: ${v}`;
+                }
+                }
+            }
+            },
+            scales: {
+            x: { ticks: { autoSkip: true, maxTicksLimit: 13 } },
+            y1: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: 'Qtd' } },
+            y2: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: 'R$' }, grid: { drawOnChartArea: false } }
+            },
+            elements: { line: { borderJoinStyle: 'round' } }
+        }
+        });
 
+        // ---- Opções padrão doughnut/pie
+        const pieOpts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${BRL.format(ctx.raw ?? 0)}` } },
+        }
+        };
 
+        // Gestor (pie)
+        const ctxGestor = document.getElementById('chartVendasPorGestor').getContext('2d');
+        if (gGestor) gGestor.destroy();
+        gGestor = new Chart(ctxGestor, {
+        type: 'doughnut',
+        data: { labels: gestor.labels, datasets: [{ data: gestor.series }] },
+        options: pieOpts
+        });
 
+        // Distribuidor (pie)
+        const ctxDistr = document.getElementById('chartVendasPorDistribuidor').getContext('2d');
+        if (gDistribuidor) gDistribuidor.destroy();
+        gDistribuidor = new Chart(ctxDistr, {
+        type: 'doughnut',
+        data: { labels: distr.labels, datasets: [{ data: distr.series }] },
+        options: pieOpts
+        });
+
+        // Cliente (doughnut) — Top 12 + Outras
+        const cliGrouped = groupTopN(porCliente.labels, porCliente.series, 12);
+        const ctxCli = document.getElementById('chartVendasPorCliente').getContext('2d');
+        if (gCliente) gCliente.destroy();
+        gCliente = new Chart(ctxCli, {
+        type: 'doughnut',
+        data: { labels: cliGrouped.labels, datasets: [{ data: cliGrouped.series }] },
+        options: pieOpts
+        });
+
+        // Cidade (barra horizontal 100% largura) — Top 15 + Outras
+        const cidGrouped = groupTopN(porCidade.labels, porCidade.series, 15);
+        const ctxCid = document.getElementById('chartVendasPorCidade').getContext('2d');
+        if (gCidade) gCidade.destroy();
+        gCidade = new Chart(ctxCid, {
+        type: 'bar',
+        data: {
+            labels: cidGrouped.labels,
+            datasets: [{ label: 'Valor (R$)', data: cidGrouped.series }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => BRL.format(ctx.raw ?? 0) } }
+            },
+            scales: {
+            x: { ticks: { callback: (v) => BRL.format(v) }, beginAtZero: true },
+            y: { beginAtZero: true }
+            }
+        }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCharts);
+    </script>
 </x-app-layout>

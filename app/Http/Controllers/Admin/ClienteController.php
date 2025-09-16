@@ -9,20 +9,64 @@ use Illuminate\Validation\Rule;
 
 class ClienteController extends Controller
 {
-    public function index()
+    /** Helper para respostas de erro JSON */
+    protected function jsonError(string $message, array $errors = [], int $status = 422)
     {
-        $clientes = Cliente::orderBy('razao_social')->paginate(10);
+        return response()->json(['message' => $message, 'errors' => $errors ?: null], $status);
+    }
+
+    public function index(Request $request)
+    {
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = max(1, min($perPage, 200));
+
+        $clientes = Cliente::query()
+            ->when($request->filled('q'), function ($q) use ($request) {
+                $term = '%'.$request->q.'%';
+                $q->where(function ($w) use ($term) {
+                    $w->where('razao_social', 'ILIKE', $term)
+                      ->orWhere('email', 'ILIKE', $term)
+                      ->orWhere('cnpj', 'ILIKE', $term)
+                      ->orWhere('cpf', 'ILIKE', $term);
+                });
+            })
+            ->orderBy('razao_social')
+            ->paginate($perPage)
+            ->appends($request->only('q','per_page'));
+
+        if ($request->wantsJson()) {
+            return response()->json($clientes);
+        }
+
         return view('admin.clientes.index', compact('clientes'));
+    }
+
+    /** (API) detalhe; (web) você não usa show, então só JSON */
+    public function show(Request $request, Cliente $cliente)
+    {
+        if ($request->wantsJson()) {
+            return response()->json($cliente);
+        }
+        // opcional: redirecionar para edição no modo web
+        return redirect()->route('admin.clientes.edit', $cliente);
     }
 
     public function create(Request $request)
     {
+        if ($request->wantsJson()) {
+            // poderia devolver listas auxiliares se existirem (ex.: UFs)
+            return response()->json([
+                'meta' => ['ufs' => ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']]
+            ]);
+        }
+
         return view('admin.clientes.create');
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'user_id'        => ['nullable','integer','exists:users,id'],
             'razao_social'   => ['required','string','max:255'],
             'email'          => ['required','email','max:255','unique:clientes,email'],
             'cnpj'           => ['nullable','string','max:18','required_without:cpf'],
@@ -45,8 +89,17 @@ class ClienteController extends Controller
             $validated['uf'] = strtoupper($validated['uf']);
         }
 
-        Cliente::create([
-            'user_id'        => auth()->id(),
+        $resolvedUserId = auth()->id() ?: ($validated['user_id'] ?? null);
+
+        if (!$resolvedUserId && $request->wantsJson()) {
+            return response()->json([
+                'message' => 'Informe "user_id" ou autentique-se para criar clientes.',
+                'errors'  => ['user_id' => ['Obrigatório quando não autenticado.']]
+            ], 422);
+        }
+
+        $cliente = Cliente::create([
+            'user_id'        => $resolvedUserId,
             'razao_social'   => $validated['razao_social'],
             'email'          => $validated['email'],
             'cnpj'           => $validated['cnpj'] ?? null,
@@ -62,12 +115,23 @@ class ClienteController extends Controller
             'cep'            => $validated['cep'] ?? null,
         ]);
 
+        if ($request->wantsJson()) {
+            return response()->json($cliente, 201);
+        }
+
         return redirect()->route('admin.clientes.index')
             ->with('success', 'Cliente cadastrado com sucesso!');
     }
 
-    public function edit(Cliente $cliente)
+    public function edit(Request $request, Cliente $cliente)
     {
+        if ($request->wantsJson()) {
+            return response()->json([
+                'cliente' => $cliente,
+                'meta'    => ['ufs' => ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']]
+            ]);
+        }
+
         return view('admin.clientes.edit', compact('cliente'));
     }
 
@@ -84,9 +148,7 @@ class ClienteController extends Controller
             'cnpj'           => ['nullable','string','max:18','required_without:cpf'],
             'cpf'            => ['nullable','string','max:14','required_without:cnpj'],
             'inscr_estadual' => ['nullable','string','max:30'],
-
             'telefone'       => ['nullable','string','max:20'],
-
             'endereco'       => ['nullable','string','max:255'],
             'numero'         => ['nullable','string','max:20'],
             'complemento'    => ['nullable','string','max:100'],
@@ -119,14 +181,22 @@ class ClienteController extends Controller
             'cep'            => $validated['cep'] ?? null,
         ]);
 
+        if ($request->wantsJson()) {
+            return response()->json($cliente);
+        }
+
         return redirect()->route('admin.clientes.index')
             ->with('success', 'Cliente atualizado com sucesso!');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $cliente = Cliente::findOrFail($id);
         $cliente->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(null, 204);
+        }
 
         return redirect()->route('admin.clientes.index')
             ->with('success', 'Cliente excluído com sucesso!');

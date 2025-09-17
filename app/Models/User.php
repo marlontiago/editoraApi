@@ -73,4 +73,12 @@ class User extends Authenticatable
         return $this->hasOne(DiretorComercial::class, 'user_id');
     }
 
+    public function getEmailLabelAttribute(): string
+    {
+        if (str_contains($this->email, '@placeholder.local')) {
+            return 'Não informado';
+        }
+        return $this->email;
+    }
+
 }

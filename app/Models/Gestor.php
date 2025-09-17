@@ -14,7 +14,7 @@ class Gestor extends Model
 
     protected $fillable = [
         'user_id',
-        'estado_uf',
+        'estado_uf',            // UF de atuação
         'razao_social',
         'cnpj',
         'representante_legal',
@@ -22,15 +22,25 @@ class Gestor extends Model
         'rg',
         'telefone',
         'email',
-        'endereco_completo',
+
+        // Endereço (como no cliente)
+        'endereco',
+        'numero',
+        'complemento',
+        'bairro',
+        'cidade',
+        'uf',                   // UF do endereço
+        'cep',
+
+        // Contratuais
         'percentual_vendas',
         'vencimento_contrato',
         'contrato_assinado',
-        'contrato',
     ];
 
     protected $casts = [
         'vencimento_contrato' => 'date',
+        'contrato_assinado'   => 'boolean',
     ];
 
     public function user()
@@ -46,6 +56,11 @@ class Gestor extends Model
     public function cities()
     {
         return $this->belongsToMany(City::class, 'city_gestor');
+    }
+
+    public function anexos()
+    {
+        return $this->morphMany(\App\Models\Anexo::class, 'anexavel');
     }
 
     // ===== Helpers de formatação =====
@@ -69,9 +84,31 @@ class Gestor extends Model
         return Formatters::formatRg($this->rg);
     }
 
-    // ===== Accessor para não quebrar quando usar $gestor->uf =====
-    public function getUfAttribute(): ?string
+    // NÃO sobrescreva "uf" para não conflitar com a coluna do endereço.
+    // Removido o getUfAttribute().
+
+    public function getEmailExibicaoAttribute(): string
     {
-        return $this->estado_uf;
+        // 1) Se o e-mail do próprio gestor estiver preenchido, use-o
+        $emailGestor = trim((string) $this->email);
+        if ($emailGestor !== '') {
+            return $emailGestor;
+        }
+
+        // 2) Senão, olhe o e-mail do usuário relacionado
+        $emailUser = trim((string) ($this->user->email ?? ''));
+
+        // Considere placeholders como "não informado"
+        $isPlaceholder =
+            $emailUser === '' ||
+            preg_match('/^gestor\+.+@placeholder\.local$/i', $emailUser) ||
+            str_ends_with($emailUser, '@placeholder.local');
+
+        if ($isPlaceholder) {
+            return 'Não informado';
+        }
+
+        // 3) Se for um e-mail real, mostre
+        return $emailUser;
     }
 }

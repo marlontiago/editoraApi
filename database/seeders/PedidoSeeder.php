@@ -28,7 +28,7 @@ class PedidoSeeder extends Seeder
             return;
         }
 
-        for ($i = 1; $i <= 10; $i++) {
+        for ($i = 1; $i <= 5; $i++) {
             DB::transaction(function () use ($clientes, $gestores, $distribuidores, $cidades, $produtos, $i) {
                 $cliente      = $clientes->random();
                 $gestor       = $gestores->random();

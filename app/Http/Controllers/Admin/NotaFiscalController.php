@@ -255,7 +255,7 @@ public function emitir(Request $request, Pedido $pedido)
             'nota'           => $nota,
             'cliEndereco'    => $cliEndereco,
             'cliMunUf'       => $cliMunUf,
-        ])->setPaper('a4'); // retrato
+        ])->setPaper('a4'); 
 
         return $pdf->stream("Nota-{$nota->numero}.pdf");
     }

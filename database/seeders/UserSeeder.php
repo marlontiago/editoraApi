@@ -12,25 +12,29 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Admin
+        // --- Admin ---
         $admin = User::create([
-            'name' => 'Admin',
-            'email' => 'admin@example.com',
+            'name'     => 'Admin',
+            'email'    => 'admin@example.com',
             'password' => Hash::make('admin123'),
         ]);
-        $admin->assignRole('admin');
+        if (method_exists($admin, 'assignRole')) {
+            $admin->assignRole('admin');
+        }
 
-        // ========= GESTOR (endereços separados - NOVO PADRÃO) =========
+        // --- Gestor (endereços separados) ---
         $userGestor = User::create([
-            'name' => 'Gestor Teste',
-            'email' => 'gestor@example.com',
+            'name'     => 'Gestor Teste',
+            'email'    => 'gestor@example.com',
             'password' => Hash::make('senha123'),
         ]);
-        $userGestor->assignRole('gestor');
+        if (method_exists($userGestor, 'assignRole')) {
+            $userGestor->assignRole('gestor');
+        }
 
         $gestor = Gestor::create([
-            'estado_uf'           => 'RJ',
             'user_id'             => $userGestor->id,
+            'estado_uf'           => 'RJ',
             'razao_social'        => 'Jorge Gestor',
             'cnpj'                => '12.345.678/0001-00',
             'representante_legal' => 'Jorge Representante',
@@ -39,7 +43,7 @@ class UserSeeder extends Seeder
             'telefone'            => '41999999999',
             'email'               => 'gestor@example.com',
 
-            // Endereço (SEPARADO)
+            // Endereço fracionado
             'endereco'            => 'Rua dos Gerentes',
             'numero'              => '456',
             'complemento'         => null,
@@ -49,22 +53,25 @@ class UserSeeder extends Seeder
             'cep'                 => '80000-000',
 
             // Contratuais
-            'percentual_vendas'   => 12.5,
+            'percentual_vendas'   => 12.50,
             'vencimento_contrato' => now()->addYear(),
             'contrato_assinado'   => true,
         ]);
 
-        // ========= DISTRIBUIDOR (padrão ANTIGO com endereco_completo) =========
+        // --- Distribuidor (endereços separados) ---
         $userDistribuidor = User::create([
-            'name' => 'Distribuidor Teste',
-            'email' => 'distribuidor@example.com',
+            'name'     => 'Distribuidor Teste',
+            'email'    => 'distribuidor@example.com',
             'password' => Hash::make('senha123'),
         ]);
-        $userDistribuidor->assignRole('distribuidor');
+        if (method_exists($userDistribuidor, 'assignRole')) {
+            $userDistribuidor->assignRole('distribuidor');
+        }
 
         Distribuidor::create([
             'user_id'             => $userDistribuidor->id,
             'gestor_id'           => $gestor->id,
+
             'razao_social'        => 'Distribuidora Teste LTDA',
             'cnpj'                => '99.999.999/0001-00',
             'representante_legal' => 'Maria Oliveira',
@@ -72,16 +79,19 @@ class UserSeeder extends Seeder
             'rg'                  => '12.345.678-9',
             'telefone'            => '41999999998',
 
-            // Endereço (ANTIGO)
-            'endereco_completo'   => 'Rua das Flores, 321 - Batel, Curitiba - PR, 80010-000',
+            // Endereço fracionado (NOVO)
+            'endereco'            => 'Rua das Flores',
+            'numero'              => '321',
+            'complemento'         => null,
+            'bairro'              => 'Batel',
+            'cidade'              => 'Curitiba',
+            'uf'                  => 'PR',
+            'cep'                 => '80010-000',
 
-            // Contratuais (mantém conforme sua migration de distribuidores)
-            'percentual_vendas'   => 8.5,
+            'percentual_vendas'   => 8.50,
+            // Se quiser simular início + validade, pode preencher só o vencimento aqui:
             'vencimento_contrato' => now()->addMonths(18),
             'contrato_assinado'   => true,
-
-            // Se sua migration de distribuidores ainda tiver a coluna "contrato", deixe como null:
-            'contrato'            => null,
         ]);
     }
 }

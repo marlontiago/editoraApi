@@ -9,20 +9,39 @@ return new class extends Migration {
     {
         Schema::create('distribuidores', function (Blueprint $table) {
             $table->id();
+
+            // Relacionamentos
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('gestor_id')->constrained('gestores')->cascadeOnDelete();
+
+            // Dados principais
             $table->string('razao_social');
             $table->string('cnpj');
             $table->string('representante_legal');
             $table->string('cpf');
-            $table->string('rg');
-            $table->string('telefone')->nullable();
-            $table->string('endereco_completo')->nullable();
+            $table->string('rg')->nullable();
+            $table->string('telefone', 20)->nullable();
+
+            // Endereço fracionado (mesmo padrão do gestor/cliente)
+            $table->string('endereco', 255)->nullable();
+            $table->string('numero', 20)->nullable();
+            $table->string('complemento', 100)->nullable();
+            $table->string('bairro', 100)->nullable();
+            $table->string('cidade', 100)->nullable();
+            $table->string('uf', 2)->nullable();
+            $table->string('cep', 9)->nullable();
+
+            // Comercial/Contrato
             $table->decimal('percentual_vendas', 5, 2)->default(0);
-            $table->date('vencimento_contrato')->nullable();
+            $table->date('vencimento_contrato')->nullable(); // calculado por início+validade no controller
             $table->boolean('contrato_assinado')->default(false);
-            $table->string('contrato')->nullable(); // path do arquivo
+
             $table->timestamps();
+
+            // Índices úteis (opcional)
+            $table->index('cnpj');
+            $table->index('cpf');
+            $table->index(['gestor_id', 'uf']);
         });
     }
 

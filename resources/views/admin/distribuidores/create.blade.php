@@ -20,7 +20,7 @@
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
             @csrf
 
-            {{-- ===== Gestor ===== --}}
+            {{-- ===== Gestor + UF/Percentual (coluna da esquerda) ===== --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor <span class="text-red-600">*</span></label>
                 <select name="gestor_id" id="gestor_id"
@@ -33,9 +33,10 @@
                 @error('gestor_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
 
                 <br>
+
                 {{-- ===== UF + Cidades ===== --}}
                 @php
-                $ufs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+                    $ufs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
                 @endphp
                 <div class="col-span-12 md:col-span-3">
                     <label for="uf_cidades" class="block text-sm font-medium text-gray-700">UF de atuação</label>
@@ -50,43 +51,40 @@
                     @error('uf_cidades') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
-                {{-- ===== Condições comerciais ===== --}}
-<div class="col-span-12 md:col-span-5">
-    <label for="percentual_vendas" class="block text-sm font-medium text-gray-700">
-        Percentual sobre vendas
-    </label>
-    <div class="mt-1 flex rounded-md shadow-sm">
-        <input
-            type="number"
-            id="percentual_vendas"
-            name="percentual_vendas"
-            step="0.01"
-            min="0"
-            max="100"
-            value="{{ old('percentual_vendas') }}"
-            class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-        <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">%</span>
-    </div>
-    @error('percentual_vendas')
-        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-    @enderror
-</div>
-            </div>          
-            
+                {{-- ===== Percentual sobre vendas ===== --}}
+                <div class="col-span-12 md:col-span-5">
+                    <label for="percentual_vendas" class="block text-sm font-medium text-gray-700">
+                        Percentual sobre vendas
+                    </label>
+                    <div class="mt-1 flex rounded-md shadow-sm">
+                        <input
+                            type="number"
+                            id="percentual_vendas"
+                            name="percentual_vendas"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value="{{ old('percentual_vendas') }}"
+                            class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                        <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">%</span>
+                    </div>
+                    @error('percentual_vendas')
+                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
 
+            {{-- ===== Cidades (coluna da direita) ===== --}}
             <div class="col-span-12 md:col-span-6">
                 <label class="block text-sm font-medium text-gray-700">Cidades de atuação</label>
                 <select name="cities[]" id="cities" multiple size="10"
                         class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         disabled>
-                    {{-- preenchido via JS --}}
                 </select>
                 <p class="mt-1 text-xs text-gray-500">Segure Ctrl/Cmd para múltipla seleção.</p>
                 @error('cities') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-
-           
 
             {{-- ===== Dados cadastrais ===== --}}
             <div class="col-span-12 md:col-span-6">
@@ -103,65 +101,73 @@
             </div>
             <div class="col-span-12 md:col-span-6">
                 <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ <span class="text-red-600">*</span></label>
-                <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}" maxlength="18" placeholder="00.000.000/0000-00"
+                <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}" maxlength="18"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="cpf" class="block text-sm font-medium text-gray-700">CPF <span class="text-red-600">*</span></label>
-                <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}" maxlength="14" placeholder="000.000.000-00"
+                <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}" maxlength="14"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-3">
                 <label for="rg" class="block text-sm font-medium text-gray-700">RG <span class="text-red-600">*</span></label>
                 <input type="text" id="rg" name="rg" value="{{ old('rg') }}" maxlength="30"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('rg') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-             {{-- ===== Credenciais do usuário (sem confirmar senha) ===== --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="email" class="block text-sm font-medium text-gray-700">E-mail <span class="text-red-600">*</span></label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="email@example.com"
+            {{-- Telefone (apenas UM div, sem wrapper extra) --}}
+            <div class="col-span-12 md:col-span-4">
+                <label for="telefone" class="block text-sm font-medium text-gray-700">Telefone</label>
+                <input type="text" id="telefone" name="telefone" maxlength="20"
+                    value="{{ old('telefone') }}"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('telefone') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- ===== Credenciais ===== --}}
+            <div class="col-span-12 md:col-span-4">
+                <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
+                <input type="email" id="email" name="email" value="{{ old('email') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-            <div class="col-span-12 md:col-span-6">
-                <label for="password" class="block text-sm font-medium text-gray-700">Senha <span class="text-red-600">*</span></label>
+            <div class="col-span-12 md:col-span-4">
+                <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
                 <input type="password" id="password" name="password"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            
-
-            {{-- ===== Endereço (mesmo padrão do Gestor) ===== --}}
-            <div class="col-span-12 md:col-span-6">
+            {{-- ===== Endereço ===== --}}
+            <div class="col-span-12 md:col-span-9">
                 <label for="endereco" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco" name="endereco" value="{{ old('endereco') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('endereco') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-12 md:col-span-1">
                 <label for="numero" class="block text-sm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero" name="numero" value="{{ old('numero') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('numero') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-12 md:col-span-2">
                 <label for="complemento" class="block text-sm font-medium text-gray-700">Complemento</label>
                 <input type="text" id="complemento" name="complemento" value="{{ old('complemento') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('complemento') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-            <div class="col-span-12 md:col-span-4">
+            <div class="col-span-12 md:col-span-3">
                 <label for="bairro" class="block text-sm font-medium text-gray-700">Bairro</label>
                 <input type="text" id="bairro" name="bairro" value="{{ old('bairro') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('bairro') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-            <div class="col-span-12 md:col-span-5">
+            <div class="col-span-12 md:col-span-2">
                 <label for="cidade" class="block text-sm font-medium text-gray-700">Cidade</label>
                 <input type="text" id="cidade" name="cidade" value="{{ old('cidade') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -178,14 +184,98 @@
                 </select>
                 @error('uf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-            <div class="col-span-12 md:col-span-2">
+            <div class="col-span-12 md:col-span-4">
                 <label for="cep" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep" name="cep" value="{{ old('cep') }}" maxlength="9"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cep') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- ===== Início + Validade (meses), perto dos anexos ===== --}}
+            {{-- ===== Contatos (x-data seguro) ===== --}}
+            @php
+                $contatosSeed = old('contatos', [[
+                    'id' => null,
+                    'nome' => '',
+                    'email' => '',
+                    'telefone' => '',
+                    'whatsapp' => '',
+                    'cargo' => '',
+                    'tipo' => 'outro',
+                    'preferencial' => false,
+                    'observacoes' => '',
+                ]]);
+            @endphp
+            <div x-data='@json(["itens" => $contatosSeed])' class="col-span-12">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-sm font-medium text-gray-700">Contatos</label>
+                    <button type="button"
+                            @click="itens.push({id:null,nome:'',email:'',telefone:'',whatsapp:'',cargo:'',tipo:'outro',preferencial:false,observacoes:''})"
+                            class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                        + Adicionar contato
+                    </button>
+                </div>
+
+                <template x-for="(item, idx) in itens" :key="idx">
+                    <div class="grid grid-cols-12 gap-3 p-3 mb-3 rounded-md border">
+                        <input type="hidden" x-model="item.id" :name="'contatos['+idx+'][id]'">
+
+                        <div class="col-span-12 md:col-span-3">
+                            <label class="text-xs text-gray-600">Nome <span class="text-red-600">*</span></label>
+                            <input type="text" class="mt-1 block w-full rounded-md border-gray-300"
+                                   x-model="item.nome" :name="'contatos['+idx+'][nome]'">
+                        </div>
+
+                        <div class="col-span-12 md:col-span-3">
+                            <label class="text-xs text-gray-600">E-mail</label>
+                            <input type="email" class="mt-1 block w-full rounded-md border-gray-300"
+                                   x-model="item.email" :name="'contatos['+idx+'][email]'">
+                        </div>
+
+                        <div class="col-span-6 md:col-span-2">
+                            <label class="text-xs text-gray-600">Telefone</label>
+                            <input type="text" maxlength="30" class="mt-1 block w-full rounded-md border-gray-300"
+                                   x-model="item.telefone" :name="'contatos['+idx+'][telefone]'">
+                        </div>
+
+                        <div class="col-span-6 md:col-span-2">
+                            <label class="text-xs text-gray-600">Tipo</label>
+                            <select class="mt-1 block w-full rounded-md border-gray-300"
+                                    x-model="item.tipo" :name="'contatos['+idx+'][tipo]'">
+                                <option value="principal">Principal</option>
+                                <option value="secundario">Secundário</option>
+                                <option value="financeiro">Financeiro</option>
+                                <option value="comercial">Comercial</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-1 flex items-center gap-2 mt-6">
+                            <input type="checkbox" class="rounded border-gray-300"
+                                   x-model="item.preferencial" :name="'contatos['+idx+'][preferencial]'" value="1">
+                            <span class="text-sm">Preferencial</span>
+                        </div>
+
+                        <div class="col-span-12">
+                            <label class="text-xs text-gray-600">Observações</label>
+                            <textarea rows="2" class="mt-1 block w-full rounded-md border-gray-300"
+                                      x-model="item.observacoes" :name="'contatos['+idx+'][observacoes]'"></textarea>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-2">
+                            <button type="button" @click="itens.splice(idx,1)" x-show="itens.length > 1"
+                                    class="inline-flex h-9 items-center mt-1 rounded-md border px-3 text-sm hover:bg-gray-50 w-full justify-center">
+                                Remover
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                @error('contatos.*.nome')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                @error('contatos.*.email')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                @error('contatos')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+            </div>
+
+            {{-- ===== Início + Validade (meses) ===== --}}
             <div class="col-span-12 md:col-span-4">
                 <label for="inicio_contrato" class="block text-sm font-medium text-gray-700">Início do contrato</label>
                 <input type="date" id="inicio_contrato" name="inicio_contrato" value="{{ old('inicio_contrato') }}"
@@ -208,7 +298,7 @@
                 <template x-for="(item, idx) in itens" :key="item.id">
                     <div class="grid grid-cols-12 gap-3 mb-3">
                         <div class="col-span-12 md:col-span-3">
-                            <select :name="`contratos[${idx}][tipo]`"
+                            <select :name="'contratos['+idx+'][tipo]'"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="contrato">Contrato</option>
                                 <option value="aditivo">Aditivo</option>
@@ -216,7 +306,7 @@
                             </select>
                         </div>
                         <div class="col-span-12 md:col-span-7">
-                            <input type="file" accept="application/pdf" :name="`contratos[${idx}][arquivo]`"
+                            <input type="file" accept="application/pdf" :name="'contratos['+idx+'][arquivo]'"
                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
                         </div>
                         <div class="col-span-12 md:col-span-2">
@@ -227,10 +317,10 @@
                             </button>
                         </div>
                         <div class="col-span-12">
-                            <input type="text" placeholder="Descrição (opcional)" :name="`contratos[${idx}][descricao]`"
+                            <input type="text" placeholder="Descrição (opcional)" :name="'contratos['+idx+'][descricao]'"
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <label class="inline-flex items-center text-sm mt-2">
-                                <input type="checkbox" :name="`contratos[${idx}][assinado]`" value="1" class="rounded border-gray-300">
+                                <input type="checkbox" :name="'contratos['+idx+'][assinado]'" value="1" class="rounded border-gray-300">
                                 <span class="ml-2">Assinado</span>
                             </label>
                         </div>
@@ -258,57 +348,59 @@
         </form>
     </div>
 
-    {{-- JS: carrega cidades por UF (marcando ocupadas) --}}
+    {{-- JS: carrega cidades por UF (sem template strings) --}}
     <script>
-        const ufSelect     = document.getElementById('uf_cidades');
-        const citiesSelect = document.getElementById('cities');
-        const BASE_CIDADES_UF = @json(url('/admin/cidades/por-uf'));
+        (function() {
+            var ufSelect     = document.getElementById('uf_cidades');
+            var citiesSelect = document.getElementById('cities');
+            var BASE_CIDADES_UF = @json(url('/admin/cidades/por-uf'));
 
-        async function carregarCidadesPorUF(uf) {
-            citiesSelect.innerHTML = '';
-            citiesSelect.disabled  = true;
-            if (!uf) return;
+            function carregarCidadesPorUF(uf) {
+                citiesSelect.innerHTML = '';
+                citiesSelect.disabled  = true;
+                if (!uf) return;
 
-            try {
-                const resp = await fetch(`${BASE_CIDADES_UF}/${encodeURIComponent(uf)}?with_occupancy=1`, {
+                fetch(BASE_CIDADES_UF + '/' + encodeURIComponent(uf) + '?with_occupancy=1', {
                     credentials: 'same-origin',
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                if (!(resp.headers.get('content-type') || '').includes('application/json')) {
-                    throw new Error('Resposta não é JSON');
-                }
+                }).then(function(resp) {
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    var ct = resp.headers.get('content-type') || '';
+                    if (ct.indexOf('application/json') === -1) throw new Error('Resposta não é JSON');
+                    return resp.json();
+                }).then(function(payload) {
+                    var cidades = Array.isArray(payload) ? payload : (payload.data || []);
+                    var oldCities = @json(old('cities', []));
 
-                const payload = await resp.json();
-                const cidades = Array.isArray(payload) ? payload : (payload.data ?? []);
-                const oldCities = @json(old('cities', []));
-
-                for (const c of cidades) {
-                    const opt = document.createElement('option');
-                    opt.value = c.id;
-                    if (c.occupied) {
-                        const quem = c.distribuidor_name ? ` — ocupada por ${c.distribuidor_name}` : ' — já ocupada';
-                        opt.textContent = `${c.name}${quem}`;
-                        opt.disabled = true;
-                        opt.classList.add('text-gray-500');
-                    } else {
-                        opt.textContent = c.name;
-                        if (oldCities.includes(String(c.id)) || oldCities.includes(Number(c.id))) {
-                            opt.selected = true;
+                    cidades.forEach(function(c) {
+                        var opt = document.createElement('option');
+                        opt.value = c.id;
+                        if (c.occupied) {
+                            var quem = c.distribuidor_name ? ' — ocupada por ' + c.distribuidor_name : ' — já ocupada';
+                            opt.textContent = c.name + quem;
+                            opt.disabled = true;
+                            opt.classList.add('text-gray-500');
+                        } else {
+                            opt.textContent = c.name;
+                            if (oldCities.indexOf(String(c.id)) !== -1 || oldCities.indexOf(Number(c.id)) !== -1) {
+                                opt.selected = true;
+                            }
                         }
-                    }
-                    citiesSelect.appendChild(opt);
-                }
-                citiesSelect.disabled = cidades.length === 0;
-            } catch (e) {
-                citiesSelect.innerHTML = '';
-                citiesSelect.disabled = true;
-                console.error('[carregarCidadesPorUF] erro:', e);
-                alert('Não foi possível carregar as cidades para a UF selecionada.');
+                        citiesSelect.appendChild(opt);
+                    });
+                    citiesSelect.disabled = cidades.length === 0;
+                }).catch(function(e) {
+                    citiesSelect.innerHTML = '';
+                    citiesSelect.disabled = true;
+                    console.error('[carregarCidadesPorUF] erro:', e);
+                    alert('Não foi possível carregar as cidades para a UF selecionada.');
+                });
             }
-        }
 
-        ufSelect.addEventListener('change', e => carregarCidadesPorUF(e.target.value));
-        @if (old('uf_cidades')) carregarCidadesPorUF(@json(old('uf_cidades'))); @endif
+            if (ufSelect) {
+                ufSelect.addEventListener('change', function(e) { carregarCidadesPorUF(e.target.value); });
+            }
+            @if (old('uf_cidades')) carregarCidadesPorUF(@json(old('uf_cidades'))); @endif
+        })();
     </script>
 </x-app-layout>

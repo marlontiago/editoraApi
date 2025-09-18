@@ -22,7 +22,9 @@
 
             {{-- Razão Social --}}
             <div class="col-span-12 md:col-span-8">
-                <label for="razao_social" class="block text-sm font-medium text-gray-700">Razão Social <span class="text-red-600">*</span></label>
+                <label for="razao_social" class="block text-sm font-medium text-gray-700">
+                    Razão Social <span class="text-red-600">*</span>
+                </label>
                 <input type="text" id="razao_social" name="razao_social" value="{{ old('razao_social') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('razao_social') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -30,7 +32,9 @@
 
             {{-- CNPJ --}}
             <div class="col-span-12 md:col-span-4">
-                <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ <span class="text-red-600">*</span></label>
+                <label for="cnpj" class="block text-sm font-medium text-gray-700">
+                    CNPJ <span class="text-red-600">*</span>
+                </label>
                 <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}" maxlength="18"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -38,7 +42,9 @@
 
             {{-- Representante Legal --}}
             <div class="col-span-12 md:col-span-6">
-                <label for="representante_legal" class="block text-sm font-medium text-gray-700">Representante Legal <span class="text-red-600">*</span></label>
+                <label for="representante_legal" class="block text-sm font-medium text-gray-700">
+                    Representante Legal <span class="text-red-600">*</span>
+                </label>
                 <input type="text" id="representante_legal" name="representante_legal" value="{{ old('representante_legal') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('representante_legal') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -46,7 +52,9 @@
 
             {{-- CPF --}}
             <div class="col-span-12 md:col-span-3">
-                <label for="cpf" class="block text-sm font-medium text-gray-700">CPF <span class="text-red-600">*</span></label>
+                <label for="cpf" class="block text-sm font-medium text-gray-700">
+                    CPF <span class="text-red-600">*</span>
+                </label>
                 <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}" maxlength="14"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -88,7 +96,7 @@
             {{-- UF de atuação do Gestor --}}
             @php
                 $ufs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-                $ufOld = old('estado_uf', $gestor->estado_uf ?? null);
+                $ufOld = old('estado_uf', isset($gestor) ? $gestor->estado_uf : null);
             @endphp
             <div class="col-span-12 md:col-span-3">
                 <label for="estado_uf" class="block text-sm font-medium text-gray-700">UF de Atuação</label>
@@ -114,7 +122,7 @@
                 @error('percentual_vendas') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- Endereço (mesmo padrão de clientes) --}}
+            {{-- Endereço --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="endereco" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco" name="endereco" value="{{ old('endereco') }}"
@@ -169,7 +177,7 @@
                 @error('cep') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- Início do contrato + Validade (meses) — AGORA AQUI, perto dos anexos --}}
+            {{-- Início do contrato + Validade (meses) --}}
             <div class="col-span-12 md:col-span-4">
                 <label for="inicio_contrato" class="block text-sm font-medium text-gray-700">Início do contrato</label>
                 <input type="date" id="inicio_contrato" name="inicio_contrato" value="{{ old('inicio_contrato') }}"
@@ -233,6 +241,98 @@
 
                 @error('contratos.*.arquivo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
+            {{-- ================= CONTATOS ================= --}}
+            @php
+                $contatosInicial = old('contatos') ?? [[
+                    'id'=>null,'nome'=>'','email'=>'','telefone'=>'','whatsapp'=>'',
+                    'cargo'=>'','tipo'=>'outro','preferencial'=>false,'observacoes'=>''
+                ]];
+            @endphp
+
+            <div x-data='@json(["itens" => $contatosInicial])' class="col-span-12">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-sm font-medium text-gray-700">Contatos</label>
+                    <button type="button"
+                            @click="itens.push({id:null,nome:'',email:'',telefone:'',whatsapp:'',cargo:'',tipo:'outro',preferencial:false,observacoes:''})"
+                            class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                        + Adicionar contato
+                    </button>
+                </div>
+
+                <template x-for="(item, idx) in itens" :key="idx">
+                    <div class="grid grid-cols-12 gap-3 p-3 mb-3 rounded-md border">
+                        <input type="hidden" :name="`contatos[${idx}][id]`" x-model="item.id">
+
+                        <div class="col-span-12 md:col-span-4">
+                            <label class="text-xs text-gray-600">Nome <span class="text-red-600">*</span></label>
+                            <input type="text" class="mt-1 block w-full rounded-md border-gray-300"
+                                   x-model="item.nome" :name="`contatos[${idx}][nome]`">
+                        </div>
+
+                        <div class="col-span-12 md:col-span-4">
+                            <label class="text-xs text-gray-600">E-mail</label>
+                            <input type="email" class="mt-1 block w-full rounded-md border-gray-300"
+                                   x-model="item.email" :name="`contatos[${idx}][email]`">
+                        </div>
+
+                        <div class="col-span-6 md:col-span-2">
+                            <label class="text-xs text-gray-600">Telefone</label>
+                            <input type="text" maxlength="30" class="mt-1 block w-full rounded-md border-gray-300"
+                                   x-model="item.telefone" :name="`contatos[${idx}][telefone]`">
+                        </div>
+
+                        <div class="col-span-6 md:col-span-2">
+                            <label class="text-xs text-gray-600">WhatsApp</label>
+                            <input type="text" maxlength="30" class="mt-1 block w-full rounded-md border-gray-300"
+                                   x-model="item.whatsapp" :name="`contatos[${idx}][whatsapp]`">
+                        </div>
+
+                        <div class="col-span-6 md:col-span-2">
+                            <label class="text-xs text-gray-600">Cargo</label>
+                            <input type="text" class="mt-1 block w-full rounded-md border-gray-300"
+                                   x-model="item.cargo" :name="`contatos[${idx}][cargo]`">
+                        </div>
+
+                        <div class="col-span-6 md:col-span-2">
+                            <label class="text-xs text-gray-600">Tipo</label>
+                            <select class="mt-1 block w-full rounded-md border-gray-300"
+                                    x-model="item.tipo" :name="`contatos[${idx}][tipo]`">
+                                <option value="principal">Principal</option>
+                                <option value="secundario">Secundário</option>
+                                <option value="financeiro">Financeiro</option>
+                                <option value="comercial">Comercial</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-2 flex items-center gap-2 mt-6">
+                            <input type="checkbox" class="rounded border-gray-300"
+                                   x-model="item.preferencial" :name="`contatos[${idx}][preferencial]`" value="1">
+                            <span class="text-sm">Preferencial</span>
+                        </div>
+
+                        <div class="col-span-12">
+                            <label class="text-xs text-gray-600">Observações</label>
+                            <textarea rows="2" class="mt-1 block w-full rounded-md border-gray-300"
+                                      x-model="item.observacoes" :name="`contatos[${idx}][observacoes]`"></textarea>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-2">
+                            <button type="button" @click="itens.splice(idx,1)" x-show="itens.length > 1"
+                                    class="inline-flex h-9 items-center mt-1 rounded-md border px-3 text-sm hover:bg-gray-50 w-full justify-center">
+                                Remover
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                {{-- erros de validação específicos de contatos --}}
+                @error('contatos.*.nome')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                @error('contatos.*.email')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                @error('contatos')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+            </div>
+            {{-- =============== /CONTATOS =============== --}}
 
             {{-- Ações --}}
             <div class="col-span-12 flex items-center justify-end gap-3 pt-2">

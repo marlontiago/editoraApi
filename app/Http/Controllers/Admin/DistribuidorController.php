@@ -7,19 +7,20 @@ use App\Models\Distribuidor;
 use App\Models\Gestor;
 use App\Models\User;
 use App\Models\City;
+use App\Models\Anexo;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
 
 class DistribuidorController extends Controller
 {
     public function index()
     {
         $distribuidores = Distribuidor::with(['user','gestor'])->latest()->paginate(20);
-
         return view('admin.distribuidores.index', compact('distribuidores'));
     }
 
@@ -47,7 +48,7 @@ class DistribuidorController extends Controller
             'rg'                  => ['required','string','max:30'],
             'telefone'            => ['nullable','string','max:20'],
 
-            // endereço (mesmo padrão do Gestor)
+            // endereço
             'endereco'            => ['nullable','string','max:255'],
             'numero'              => ['nullable','string','max:20'],
             'complemento'         => ['nullable','string','max:100'],
@@ -67,23 +68,31 @@ class DistribuidorController extends Controller
             // contrato por início + validade (calcula vencimento)
             'inicio_contrato'     => ['nullable','date'],
             'validade_meses'      => ['nullable','integer','min:1','max:120'],
-            'contrato_assinado'   => ['nullable','boolean'],
 
-            // anexos múltiplos
+            // anexos múltiplos (com "assinado" por anexo)
             'contratos'                   => ['nullable','array'],
             'contratos.*.tipo'            => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro'],
             'contratos.*.arquivo'         => ['nullable','file','mimes:pdf','max:5120'],
             'contratos.*.descricao'       => ['nullable','string','max:255'],
             'contratos.*.assinado'        => ['nullable','boolean'],
+
+            // contatos
+            'contatos'               => ['nullable','array'],
+            'contatos.*.id'          => ['nullable','integer'], // ignorado no store
+            'contatos.*.nome'        => ['required_with:contatos.*.email,contatos.*.telefone,contatos.*.whatsapp,contatos.*.cargo,contatos.*.tipo,contatos.*.observacoes','nullable','string','max:255'],
+            'contatos.*.email'       => ['nullable','email','max:255'],
+            'contatos.*.telefone'    => ['nullable','string','max:30'],
+            'contatos.*.whatsapp'    => ['nullable','string','max:30'],
+            'contatos.*.cargo'       => ['nullable','string','max:100'],
+            'contatos.*.tipo'        => ['nullable','in:principal,secundario,financeiro,comercial,outro'],
+            'contatos.*.preferencial'=> ['nullable','boolean'],
+            'contatos.*.observacoes' => ['nullable','string','max:500'],
         ]);
 
-        // Calcula vencimento com base em início + meses
+        // Vencimento = início + meses (igual gestor)
         $inicio = !empty($data['inicio_contrato']) ? Carbon::parse($data['inicio_contrato']) : null;
         $meses  = !empty($data['validade_meses']) ? (int) $data['validade_meses'] : null;
-        $vencimento = null;
-        if ($inicio && $meses) {
-            $vencimento = (clone $inicio)->addMonthsNoOverflow($meses);
-        }
+        $vencimento = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
 
         // Verifica ocupação das cidades (se enviadas)
         $cityIds = collect($data['cities'] ?? [])->map(fn($i)=>(int)$i)->unique()->values();
@@ -103,9 +112,43 @@ class DistribuidorController extends Controller
             }
         }
 
-        $distribuidor = DB::transaction(function () use ($data, $request, $vencimento, $cityIds) {
+        // Contatos: regra do preferencial (máximo 1)
+        $preferenciais = collect($data['contatos'] ?? [])->where('preferencial', true)->count();
+        if ($preferenciais > 1) {
+            throw ValidationException::withMessages([
+                'contatos' => ['Selecione no máximo um contato como preferencial.'],
+            ]);
+        }
 
-            // 1) Resolver e-mail/senha opcionais (usa placeholder se vazio)
+        $contatosSan = collect($data['contatos'] ?? [])
+            ->filter(function($c){
+                return trim((string)($c['nome'] ?? '')) !== '' ||
+                       trim((string)($c['email'] ?? '')) !== '' ||
+                       trim((string)($c['telefone'] ?? '')) !== '' ||
+                       trim((string)($c['whatsapp'] ?? '')) !== '' ||
+                       trim((string)($c['cargo'] ?? '')) !== '' ||
+                       trim((string)($c['observacoes'] ?? '')) !== '';
+            })
+            ->map(function($c){
+                $c['telefone'] = isset($c['telefone']) ? preg_replace('/\D+/', '', $c['telefone']) : null;
+                $c['whatsapp'] = isset($c['whatsapp']) ? preg_replace('/\D+/', '', $c['whatsapp']) : null;
+                $c['preferencial'] = !empty($c['preferencial']);
+                $c['tipo'] = $c['tipo'] ?? 'outro';
+                return $c;
+            })
+            ->values();
+
+        // Derivar contrato_assinado a partir dos anexos enviados (igual gestor)
+        $temAssinado = false;
+        if (!empty($data['contratos']) && is_array($data['contratos'])) {
+            foreach ($data['contratos'] as $meta) {
+                if (!empty($meta['assinado'])) { $temAssinado = true; break; }
+            }
+        }
+
+        $distribuidor = DB::transaction(function () use ($data, $request, $vencimento, $cityIds, $contatosSan, $temAssinado) {
+
+            // 1) e-mail/senha opcionais (usa placeholder se vazio)
             $userEmail = trim((string)($data['email'] ?? ''));
             $userPass  = (string)($data['password'] ?? '');
 
@@ -127,7 +170,7 @@ class DistribuidorController extends Controller
                 $user->assignRole('distribuidor');
             }
 
-            // 3) Criar DISTRIBUIDOR
+            // 3) Criar DISTRIBUIDOR (contrato_assinado derivado)
             /** @var \App\Models\Distribuidor $distribuidor */
             $distribuidor = Distribuidor::create([
                 'user_id'             => $user->id,
@@ -140,7 +183,6 @@ class DistribuidorController extends Controller
                 'rg'                  => $data['rg'],
                 'telefone'            => $data['telefone'] ?? null,
 
-                // endereço
                 'endereco'            => $data['endereco'] ?? null,
                 'numero'              => $data['numero'] ?? null,
                 'complemento'         => $data['complemento'] ?? null,
@@ -149,13 +191,12 @@ class DistribuidorController extends Controller
                 'uf'                  => $data['uf'] ?? null,
                 'cep'                 => $data['cep'] ?? null,
 
-                // comerciais/contratuais
                 'percentual_vendas'   => $data['percentual_vendas'],
                 'vencimento_contrato' => $vencimento,
-                'contrato_assinado'   => !empty($data['contrato_assinado']),
+                'contrato_assinado'   => $temAssinado,
             ]);
 
-            // 4) Cidades (many-to-many) — só attach das livres
+            // 4) Cidades (many-to-many)
             if ($cityIds->isNotEmpty()) {
                 $distribuidor->cities()->attach($cityIds->all());
             }
@@ -177,6 +218,22 @@ class DistribuidorController extends Controller
                 }
             }
 
+            // 6) Contatos (se vieram)
+            if ($contatosSan->isNotEmpty()) {
+                foreach ($contatosSan as $c) {
+                    $distribuidor->contatos()->create([
+                        'nome'         => $c['nome'] ?? null,
+                        'email'        => $c['email'] ?? null,
+                        'telefone'     => $c['telefone'] ?? null,
+                        'whatsapp'     => $c['whatsapp'] ?? null,
+                        'cargo'        => $c['cargo'] ?? null,
+                        'tipo'         => $c['tipo'] ?? 'outro',
+                        'preferencial' => !empty($c['preferencial']),
+                        'observacoes'  => $c['observacoes'] ?? null,
+                    ]);
+                }
+            }
+
             return $distribuidor;
         });
 
@@ -187,13 +244,13 @@ class DistribuidorController extends Controller
 
     public function show(Distribuidor $distribuidor)
     {
-        $distribuidor->load(['user','gestor','cities','anexos']);
+        $distribuidor->load(['user','gestor','cities','anexos','contatos']);
         return view('admin.distribuidores.show', compact('distribuidor'));
     }
 
     public function edit(Distribuidor $distribuidor)
     {
-        $distribuidor->load(['user','gestor','cities','anexos']);
+        $distribuidor->load(['user','gestor','cities','anexos','contatos']);
         $gestores = Gestor::orderBy('razao_social')->get(['id','razao_social']);
         return view('admin.distribuidores.edit', compact('distribuidor','gestores'));
     }
@@ -230,18 +287,29 @@ class DistribuidorController extends Controller
 
             'inicio_contrato'     => ['nullable','date'],
             'validade_meses'      => ['nullable','integer','min:1','max:120'],
-            'contrato_assinado'   => ['nullable','boolean'],
 
             'contratos'                   => ['nullable','array'],
             'contratos.*.tipo'            => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro'],
             'contratos.*.arquivo'         => ['nullable','file','mimes:pdf','max:5120'],
             'contratos.*.descricao'       => ['nullable','string','max:255'],
             'contratos.*.assinado'        => ['nullable','boolean'],
+
+            // contatos
+            'contatos'               => ['nullable','array'],
+            'contatos.*.id'          => ['nullable','integer','exists:contatos,id'],
+            'contatos.*.nome'        => ['required_with:contatos.*.email,contatos.*.telefone,contatos.*.whatsapp,contatos.*.cargo,contatos.*.tipo,contatos.*.observacoes','nullable','string','max:255'],
+            'contatos.*.email'       => ['nullable','email','max:255'],
+            'contatos.*.telefone'    => ['nullable','string','max:30'],
+            'contatos.*.whatsapp'    => ['nullable','string','max:30'],
+            'contatos.*.cargo'       => ['nullable','string','max:100'],
+            'contatos.*.tipo'        => ['nullable','in:principal,secundario,financeiro,comercial,outro'],
+            'contatos.*.preferencial'=> ['nullable','boolean'],
+            'contatos.*.observacoes' => ['nullable','string','max:500'],
         ]);
 
         // Recalcula vencimento se informou início/validade
         $inicio = !empty($data['inicio_contrato']) ? Carbon::parse($data['inicio_contrato']) : null;
-        $meses  = !empty($data['validade_meses']) ? (int) $data['validade_meses'] : null;
+        $meses  = !empty($data['validade_meses']) ? (int)$data['validade_meses'] : null;
         $vencimento = $distribuidor->vencimento_contrato;
         if ($inicio && $meses) {
             $vencimento = (clone $inicio)->addMonthsNoOverflow($meses);
@@ -266,7 +334,34 @@ class DistribuidorController extends Controller
             }
         }
 
-        DB::transaction(function () use ($data, $request, $distribuidor, $vencimento, $cityIds) {
+        // Contatos saneados e regra do preferencial
+        $preferenciais = collect($data['contatos'] ?? [])->where('preferencial', true)->count();
+        if ($preferenciais > 1) {
+            throw ValidationException::withMessages([
+                'contatos' => ['Selecione no máximo um contato como preferencial.'],
+            ]);
+        }
+
+        $contatosSan = collect($data['contatos'] ?? [])
+            ->filter(function($c){
+                return trim((string)($c['nome'] ?? '')) !== '' ||
+                       trim((string)($c['email'] ?? '')) !== '' ||
+                       trim((string)($c['telefone'] ?? '')) !== '' ||
+                       trim((string)($c['whatsapp'] ?? '')) !== '' ||
+                       trim((string)($c['cargo'] ?? '')) !== '' ||
+                       trim((string)($c['observacoes'] ?? '')) !== '' ||
+                       !empty($c['id']); // manter ids para deletar
+            })
+            ->map(function($c){
+                $c['telefone'] = isset($c['telefone']) ? preg_replace('/\D+/', '', $c['telefone']) : null;
+                $c['whatsapp'] = isset($c['whatsapp']) ? preg_replace('/\D+/', '', $c['whatsapp']) : null;
+                $c['preferencial'] = !empty($c['preferencial']);
+                $c['tipo'] = $c['tipo'] ?? 'outro';
+                return $c;
+            })
+            ->values();
+
+        DB::transaction(function () use ($data, $request, $distribuidor, $vencimento, $cityIds, $contatosSan) {
             // Atualizar USER se informou email/senha
             $user = $distribuidor->user;
 
@@ -280,7 +375,7 @@ class DistribuidorController extends Controller
                 $user->save();
             }
 
-            // Atualizar DISTRIBUIDOR
+            // Atualizar DISTRIBUIDOR (sem receber contrato_assinado do form)
             $distribuidor->update([
                 'gestor_id'           => $data['gestor_id'],
 
@@ -301,10 +396,9 @@ class DistribuidorController extends Controller
 
                 'percentual_vendas'   => $data['percentual_vendas'],
                 'vencimento_contrato' => $vencimento,
-                'contrato_assinado'   => !empty($data['contrato_assinado']),
             ]);
 
-            // Cities: sincroniza (mantendo a regra de ocupação já validada)
+            // Cities: sincroniza
             $distribuidor->cities()->sync($cityIds->all());
 
             // Novos anexos (append)
@@ -323,6 +417,48 @@ class DistribuidorController extends Controller
                     ]);
                 }
             }
+
+            // Recalcular contrato_assinado olhando TODOS os anexos atuais (igual gestor)
+            $temAssinadoAgora = $distribuidor->anexos()->where('assinado', true)->exists();
+            if ($distribuidor->contrato_assinado !== $temAssinadoAgora) {
+                $distribuidor->update(['contrato_assinado' => $temAssinadoAgora]);
+            }
+
+            // Contatos: update/create/delete
+            $idsExistentes = $distribuidor->contatos()->pluck('id')->all();
+            $idsRecebidos = $contatosSan->pluck('id')->filter()->map(fn($id)=>(int)$id)->all();
+            $paraDeletar  = array_values(array_diff($idsExistentes, $idsRecebidos));
+            if (!empty($paraDeletar)) {
+                $distribuidor->contatos()->whereIn('id', $paraDeletar)->delete();
+            }
+
+            foreach ($contatosSan as $c) {
+                $payload = [
+                    'nome'         => $c['nome'] ?? null,
+                    'email'        => $c['email'] ?? null,
+                    'telefone'     => $c['telefone'] ?? null,
+                    'whatsapp'     => $c['whatsapp'] ?? null,
+                    'cargo'        => $c['cargo'] ?? null,
+                    'tipo'         => $c['tipo'] ?? 'outro',
+                    'preferencial' => !empty($c['preferencial']),
+                    'observacoes'  => $c['observacoes'] ?? null,
+                ];
+
+                if (!empty($c['id'])) {
+                    $distribuidor->contatos()->where('id', (int)$c['id'])->update($payload);
+                } else {
+                    if (
+                        trim((string)($payload['nome'] ?? '')) !== '' ||
+                        trim((string)($payload['email'] ?? '')) !== '' ||
+                        trim((string)($payload['telefone'] ?? '')) !== '' ||
+                        trim((string)($payload['whatsapp'] ?? '')) !== '' ||
+                        trim((string)($payload['cargo'] ?? '')) !== '' ||
+                        trim((string)($payload['observacoes'] ?? '')) !== ''
+                    ) {
+                        $distribuidor->contatos()->create($payload);
+                    }
+                }
+            }
         });
 
         return redirect()
@@ -333,7 +469,7 @@ class DistribuidorController extends Controller
     public function destroy(Distribuidor $distribuidor)
     {
         DB::transaction(function () use ($distribuidor) {
-            // remove anexos (registros). Se quiser, apague os arquivos do disco também.
+            $distribuidor->contatos()->delete();
             $distribuidor->anexos()->delete();
             $distribuidor->cities()->detach();
             $distribuidor->delete();
@@ -342,5 +478,20 @@ class DistribuidorController extends Controller
         return redirect()
             ->route('admin.distribuidores.index')
             ->with('success', 'Distribuidor removido com sucesso!');
+    }
+
+    public function destroyAnexo(Distribuidor $distribuidor, Anexo $anexo)
+    {
+        if ($anexo->anexavel_id !== $distribuidor->id || $anexo->anexavel_type !== Distribuidor::class) {
+            abort(403, 'Acesso negado.');
+        }
+
+        if ($anexo->arquivo && Storage::disk('public')->exists($anexo->arquivo)) {
+            Storage::disk('public')->delete($anexo->arquivo);
+        }
+
+        $anexo->delete();
+
+        return back()->with('success', 'Anexo excluído com sucesso.');
     }
 }

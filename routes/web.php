@@ -51,13 +51,15 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor']);
     Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('distribuidores.por-gestor');
     Route::get('/cidades/por-distribuidor/{id}', [CidadeController::class, 'cidadesPorDistribuidor']);
+    Route::delete('distribuidores/{distribuidor}/anexos/{anexo}',[DistribuidorController::class, 'destroyAnexo'])->name('distribuidores.anexos.destroy');
 
     Route::resource('gestores', GestorController::class)->parameters(['gestores' => 'gestor']);
     Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('gestores.vincular');
     Route::post('gestores/vincular', [GestorController::class, 'storeVinculo'])->name('gestores.vincular.salvar');
     Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])->name('gestores.cidades');
     Route::get('/cidades/por-gestor/{gestor}', [CidadeController::class, 'cidadesPorGestor'])->name('cidades.por-gestor');
-    
+    Route::delete('gestores/{gestor}/anexos/{anexo}', [GestorController::class, 'destroyAnexo'])->name('gestores.anexos.destroy');
+
     Route::get('cidades/por-uf/{uf}', [CidadeController::class, 'porUf']);
 
     Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');

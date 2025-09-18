@@ -63,6 +63,14 @@ class Gestor extends Model
         return $this->morphMany(\App\Models\Anexo::class, 'anexavel');
     }
 
+    public function contatos()
+    {
+        return $this->morphMany(\App\Models\Contato::class, 'contatavel')
+            ->orderByRaw("CASE WHEN preferencial THEN 0 ELSE 1 END")
+            ->orderBy('tipo')
+            ->orderBy('nome');
+    }
+
     // ===== Helpers de formatação =====
     public function getCpfFormatadoAttribute(): string
     {

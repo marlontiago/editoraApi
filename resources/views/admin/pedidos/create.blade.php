@@ -93,7 +93,7 @@
                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
       </div>
 
-      {{-- Produtos --}}
+      {{-- Produtos (estilo linha única igual ao Edit) --}}
       <div class="col-span-12">
         <label class="block text-sm font-medium text-gray-700">Produtos</label>
         <div id="produtos-container" class="space-y-4 mt-2"></div>
@@ -126,13 +126,13 @@
     </form>
   </div>
 
-  {{-- ===== DADOS PARA JS (sem @json com arrow function) ===== --}}
+  {{-- ===== DADOS PARA JS ===== --}}
   <script>
     const ALL_PRODUCTS = {!! $produtos
         ->map(function ($p) {
           return [
             'id'     => $p->id,
-            'titulo' => $p->titulo,
+            'titulo' => $p->titulo ?? $p->nome,
             'preco'  => (float) ($p->preco ?? 0),
           ];
         })
@@ -145,7 +145,7 @@
     const OLD_CIDADE       = @json(old('cidade_id'));
   </script>
 
-  {{-- ===== PRODUTOS (sem duplicados + desconto + cálculos em tempo real) ===== --}}
+  {{-- ===== PRODUTOS (sem duplicados + linha única de infos) ===== --}}
   <script>
     let produtoIndex = 0;
     const container = document.getElementById('produtos-container');
@@ -218,10 +218,14 @@
         </div>
 
         <div class="col-span-12">
-          <div class="mt-2 rounded-md bg-white border p-3 text-sm text-gray-700 space-y-1 calc-area">
-            <div><span class="font-medium">Preço unit.:</span> <span class="unit-price">R$ 0,00</span></div>
-            <div><span class="font-medium">Unit. c/ desconto:</span> <span class="unit-disc">R$ 0,00</span></div>
-            <div><span class="font-medium">Subtotal:</span> <span class="line-total">R$ 0,00</span></div>
+          <div class="mt-2 rounded-md bg-white border p-3 text-sm text-gray-700 space-x-3 calc-area">
+            <span><span class="font-medium">Preço de tabela:</span> <span class="unit-price">R$ 0,00</span></span>
+            <span>•</span>
+            <span><span class="font-medium">Preço com desconto:</span> <span class="unit-disc">R$ 0,00</span></span>
+            <span>•</span>
+            <span><span class="font-medium">Total:</span> <span class="total-tabela">R$ 0,00</span></span>
+            <span>•</span>
+            <span><span class="font-medium">Total com desconto:</span> <span class="total-desc">R$ 0,00</span></span>
           </div>
         </div>
       `;
@@ -235,22 +239,25 @@
       const qEl = row.querySelector('input[name^="produtos["][name$="[quantidade]"]');
       const dEl = row.querySelector('input[name^="produtos["][name$="[desconto]"]');
 
-      const unitSpan  = row.querySelector('.unit-price');
-      const unitDSpan = row.querySelector('.unit-disc');
-      const totalSpan = row.querySelector('.line-total');
+      const unitSpan   = row.querySelector('.unit-price');
+      const unitDSpan  = row.querySelector('.unit-disc');
+      const totalSpan  = row.querySelector('.total-tabela');
+      const totalDSpan = row.querySelector('.total-desc');
 
       const pid   = sel?.value || '';
       const prod  = getProductById(pid);
       const qtd   = Math.max(1, parseInt(qEl?.value || '1', 10));
       const desc  = Math.max(0, Math.min(100, parseFloat(dEl?.value || '0')));
 
-      const precoUnit = prod ? Number(prod.preco || 0) : 0;
-      const precoDesc = precoUnit * (1 - (desc / 100));
-      const subtotal  = precoDesc * qtd;
+      const unit  = prod ? Number(prod.preco || 0) : 0;
+      const unitD = unit * (1 - (desc / 100));
+      const totalTabela = unit  * qtd;
+      const totalDesc   = unitD * qtd;
 
-      unitSpan.textContent  = fmtBRL.format(precoUnit);
-      unitDSpan.textContent = fmtBRL.format(precoDesc);
-      totalSpan.textContent = fmtBRL.format(subtotal);
+      unitSpan.textContent   = fmtBRL.format(unit);
+      unitDSpan.textContent  = fmtBRL.format(unitD);
+      totalSpan.textContent  = fmtBRL.format(totalTabela);
+      totalDSpan.textContent = fmtBRL.format(totalDesc);
     }
     function calcAll() {
       container.querySelectorAll('.produto').forEach(calcRow);
@@ -301,7 +308,7 @@
     });
   </script>
 
-  {{-- ===== GESTOR / DISTRIBUIDOR ===== --}}
+  {{-- ===== GESTOR / DISTRIBUIDOR / CIDADES ===== --}}
   <script>
     const distSelect = document.getElementById('distribuidor_id');
     const originalDistOptions = Array.from(distSelect.options).map(opt => ({
@@ -356,8 +363,6 @@
     cidadeSelect.classList.add('bg-gray-50');
   }
 
-  // Renderiza opções de cidade; se vier "ocupado = true" e não houver distribuidor,
-  // desabilita a opção e mostra rótulo "(ocupada por ...)".
   function rebuildCidadeOptions(cidades, { allowOccupied = false } = {}) {
     cidadeSelect.innerHTML = '';
     cidadeSelect.add(new Option('-- Selecione --', ''));
@@ -376,14 +381,13 @@
     cidadeSelect.classList.remove('bg-gray-50');
   }
 
-  // Cidades do distribuidor (prioridade máxima quando tiver distribuidor)
   async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
     resetCidadeSelect('-- Carregando... --');
     try {
       const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const cidades = await resp.json(); // [{id,name}]
-      rebuildCidadeOptions(cidades, { allowOccupied: true }); // não vem flag ocupado aqui
+      const cidades = await resp.json();
+      rebuildCidadeOptions(cidades, { allowOccupied: true });
       if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
     } catch (e) {
       console.error(e);
@@ -391,16 +395,13 @@
     }
   }
 
-  // Cidades por UF (com ocupação); se não há distribuidor, desabilita ocupadas
   async function carregarCidadesPorUF(uf, selectedCidadeId = null) {
     resetCidadeSelect('-- Carregando... --');
     try {
       const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}?with_occupancy=1`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const cidades = await resp.json(); // [{id,name,ocupado,distribuidor_id,distribuidor_nome}]
+      const cidades = await resp.json();
       const hasDistribuidor = Boolean(distribuidorSelect.value);
-
-      // se NÃO há distribuidor, não permite selecionar ocupadas
       rebuildCidadeOptions(cidades, { allowOccupied: hasDistribuidor });
       if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
     } catch (e) {
@@ -409,9 +410,6 @@
     }
   }
 
-  // === Eventos ===
-
-  // 1) Distribuidor mudou: se há distribuidor, lista só as dele; se tirou, volta a obedecer a UF
   distribuidorSelect.addEventListener('change', async function () {
     const distId = this.value || null;
     const uf = stateSelect.value || null;
@@ -425,13 +423,10 @@
     }
   });
 
-  // 2) Gestor NÃO trava mais a UF — apenas ignora aqui. (mantemos caso queira usar em outro fluxo)
   gestorSelect.addEventListener('change', function () {
-    // intencionalmente vazio: UF é totalmente livre agora
+    // intencionalmente vazio (UF é livre)
   });
 
-  // 3) UF mudou: se há distribuidor, mantemos as cidades do distribuidor (prioridade);
-  // do contrário, carregamos cidades da UF (com ocupação)
   stateSelect.addEventListener('change', async function () {
     const uf = this.value || null;
     if (!uf) {
@@ -445,7 +440,6 @@
     }
   });
 
-  // Estado inicial (old form)
   document.addEventListener('DOMContentLoaded', async () => {
     const OLD_CIDADE       = @json(old('cidade_id'));
     const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
@@ -459,6 +453,6 @@
       resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
     }
   });
-</script>
+  </script>
 
 </x-app-layout>

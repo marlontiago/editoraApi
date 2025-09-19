@@ -4,24 +4,59 @@
     <meta charset="utf-8">
     <title>Relatório Financeiro</title>
     <style>
-        @page { margin: 70px 30px 60px 30px; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11px; color:#111; }
-        header { position: fixed; top: -50px; left: 0; right: 0; height: 50px; text-align: center; }
-        footer { position: fixed; bottom: -40px; left: 0; right: 0; height: 30px; font-size: 10px; color:#666; }
-        .title { font-size: 18px; font-weight: 700; }
-        .muted { color:#666; }
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th, td { border: 1px solid #ddd; padding: 6px; }
-        th { background: #f5f5f5; text-align: left; }
-        .right { text-align: right; }
-        .chip { display:inline-block; padding:2px 6px; border:1px solid #ccc; border-radius: 20px; font-size:10px; color:#333; }
-        .mb-8{ margin-bottom: 16px; }
-        .mb-4{ margin-bottom: 8px; }
-        .mt-2{ margin-top: 6px; }
-        .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .card { border:1px solid #e5e5e5; padding:10px; border-radius:6px; }
-        .h6 { font-size: 10px; color:#666; margin:0; }
-        .h4 { font-size: 14px; font-weight: 700; margin:2px 0 0; }
+        /* Margens da página devem comportar header e footer fixos */
+        @page { margin: 120px 36px 90px 36px; }
+
+        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11.5px; line-height: 1.45; color:#0f172a; }
+
+        /* ===== Header / Footer ===== */
+        .header { position: fixed; top: -100px; left: 0; right: 0; height: 100px; }
+        .footer { position: fixed; bottom: -70px; left: 0; right: 0; height: 60px; color: #475569; font-size: 10.5px; }
+        .footer .pagenum:after { content: counter(page) " / " counter(pages); }
+
+        .h-top {
+            background: #0b2545;
+            color: #e2e8f0;
+            padding: 14px 18px;
+            border-radius: 10px;
+        }
+        .brand { width:100%; height:100%; }
+        .brand td { border:0; padding:0; }
+        .brand .logo { height: 46px; }
+        .title { font-size:20px; font-weight:700; color:#fff; white-space:nowrap; line-height:1; }
+        .muted { color:#cbd5e1; font-size: 11px; }
+
+        .f-line { border-top: 1px solid #e2e8f0; margin: 8px 0; }
+        .f-wrap td { border:0; padding:2px 0; }
+
+        /* ===== Sections / Cards ===== */
+        .section-title { font-size: 13px; font-weight: 700; margin: 14px 0 8px; color: #0b2545; }
+
+        .stat { border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; background:#f8fafc; }
+        .stat .label { color:#475569; font-size:11px; }
+        .stat .value { font-size:14px; font-weight:700; color:#0f172a; }
+        .emph { color:#0b2545; font-weight:700; }
+
+        /* ===== Table ===== */
+        table { width:100%; border-collapse:collapse; }
+        .tbl { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+        .tbl thead th { background:#f1f5f9; color:#0f172a; font-weight:700; font-size:11.5px; padding:8px; border-bottom:1px solid #e2e8f0; text-align:left; }
+        .tbl th.right, .tbl td.right { text-align:right; }
+        .tbl tbody td { padding:8px; border-bottom:1px solid #f1f5f9; vertical-align:top; }
+        .tbl tbody tr:nth-child(2n) td { background:#fafafa; }
+        .tbl tfoot td { padding:8px; border-top:1px solid #e2e8f0; background:#f8fafc; font-weight:700; }
+
+        /* Repetir cabeçalho da tabela em novas páginas */
+        thead { display: table-header-group; }
+        tfoot { display: table-row-group; }
+        tr { page-break-inside: avoid; }
+
+        /* Utilidades de grid “cards” */
+        .cards-grid { width:100%; border-collapse:separate; border-spacing:0 10px; }
+        .cards-grid td { padding:0; }
+        .pad-r { padding-right:6px; }
+        .pad-l { padding-left:6px; }
+        .pad-x { padding:0 3px; }
     </style>
 </head>
 <body>
@@ -29,57 +64,102 @@
     function moeda_br_pdf($v){ return 'R$ ' . number_format((float)$v, 2, ',', '.'); }
 @endphp
 
-<header>
-    <div class="title">Relatório Financeiro</div>
-    <div class="muted">
-        @if($dataInicio && $dataFim)
-            Período: {{ \Carbon\Carbon::parse($dataInicio)->format('d/m/Y') }}
-            — {{ \Carbon\Carbon::parse($dataFim)->format('d/m/Y') }}
-        @else
-            Todos os períodos
-        @endif
-        @if($statusFiltro) &nbsp;|&nbsp; Status: {{ strtoupper($statusFiltro) }} @endif
-        @if($filtroTipo && $filtroId) &nbsp;|&nbsp; Filtro: {{ ucfirst($filtroTipo) }} #{{ $filtroId }} @endif
-    </div>
-</header>
+{{-- ===== Header ===== --}}
+<div class="header">
+    <div class="h-top">
+        <table class="brand" style="width:100%; height:100%;">
+            <tr>
+                <!-- Título centralizado verticalmente ao lado esquerdo (pode colocar logo se tiver) -->
+                <td style="width:60%; vertical-align: middle;">
+                    <div style="display:flex; align-items:center; gap:14px; height:100%;">
+                        {{-- Se quiser logo, descomente:
+                        @if(isset($logoBase64) && $logoBase64)
+                            <img src="{{ $logoBase64 }}" class="logo" style="display:block; object-fit:contain;">
+                        @endif
+                        --}}
+                        <span class="title">Relatório Financeiro</span>
+                    </div>
+                </td>
 
-<footer>
-    <div style="text-align:center;">Gerado em {{ now()->format('d/m/Y H:i') }}</div>
-    <script type="text/php">
-        if ( isset($pdf) ) {
-            $font = $fontMetrics->get_font("DejaVu Sans", "normal");
-            $pdf->page_text(520, 18, "Página {PAGE_NUM} de {PAGE_COUNT}", $font, 8, [0.4,0.4,0.4]);
-        }
-    </script>
-</footer>
+                <!-- Filtros/contexto à direita -->
+                <td style="width:40%; text-align:right; vertical-align: middle;">
+                    <div style="font-size:11px; line-height:1.5;">
+                        @if($dataInicio && $dataFim)
+                            <div><strong>Período:</strong> {{ \Carbon\Carbon::parse($dataInicio)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($dataFim)->format('d/m/Y') }}</div>
+                        @else
+                            <div><strong>Período:</strong> Todos</div>
+                        @endif
+                        @if($statusFiltro)<div><strong>Status:</strong> {{ strtoupper($statusFiltro) }}</div>@endif
+                        @if($filtroTipo && $filtroId)<div><strong>Filtro:</strong> {{ ucfirst($filtroTipo) }} #{{ $filtroId }}</div>@endif
+                        <div class="muted" style="margin-top:4px;">Gerado em {{ now()->format('d/m/Y H:i') }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+{{-- ===== Footer ===== --}}
+<div class="footer">
+    <div class="f-line"></div>
+    <table class="f-wrap" style="width:100%;">
+        <tr>
+            <td style="text-align:left;">
+                {{ config('empresa.razao_social', env('EMPRESA_RAZAO', 'Sua Empresa LTDA')) }}
+                • CNPJ {{ config('empresa.cnpj', env('EMPRESA_CNPJ', '00.000.000/0000-00')) }}
+                • {{ config('empresa.telefone', env('EMPRESA_FONE', '(00) 0000-0000')) }}
+                • {{ config('empresa.email', env('EMPRESA_EMAIL', 'contato@empresa.com')) }}
+            </td>
+            <td style="text-align:right;">Página <span class="pagenum"></span></td>
+        </tr>
+    </table>
+</div>
+
+<br><br>
 
 <main>
     @if($exportUsuario)
-        <div class="grid3 mb-8">
-            <div class="card">
-                <p class="h6">Total líquido do período</p>
-                <p class="h4">{{ moeda_br_pdf( (float) $pedidos->sum(fn($p) => (float) ($p->valor_liquido_pago_total ?? 0)) ) }}</p>
-            </div>
-            <div class="card">
-                <p class="h6">Total de comissões</p>
-                <p class="h4">{{ moeda_br_pdf( (float) $pedidos->sum(fn($p) => (float) ($p->comissao_do_filtro ?? 0)) ) }}</p>
-            </div>
-            <div class="card">
-                <p class="h6">Pedidos no resultado</p>
-                <p class="h4">{{ $pedidos->count() }}</p>
-            </div>
-        </div>
+        {{-- ===== Cards de Resumo ===== --}}
+        <div class="section-title">Resumo</div>
+        <table class="cards-grid">
+            <tr>
+                <td class="pad-r" style="width:33.3%;">
+                    <div class="stat">
+                        <div class="label">Total líquido do período</div>
+                        <div class="value emph">
+                            {{ moeda_br_pdf( (float) $pedidos->sum(fn($p) => (float) ($p->valor_liquido_pago_total ?? 0)) ) }}
+                        </div>
+                    </div>
+                </td>
+                <td class="pad-x" style="width:33.3%;">
+                    <div class="stat">
+                        <div class="label">Total de comissões</div>
+                        <div class="value">
+                            {{ moeda_br_pdf( (float) $pedidos->sum(fn($p) => (float) ($p->comissao_do_filtro ?? 0)) ) }}
+                        </div>
+                    </div>
+                </td>
+                <td class="pad-l" style="width:33.3%;">
+                    <div class="stat">
+                        <div class="label">Pedidos no resultado</div>
+                        <div class="value">{{ $pedidos->count() }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
 
-        <table>
+        {{-- ===== Tabela ===== --}}
+        <div class="section-title">Detalhamento</div>
+        <table class="tbl">
             <thead>
                 <tr>
-                    <th>Pedido #</th>
+                    <th style="width:70px;">Pedido</th>
                     <th>Cliente</th>
                     <th>Gestor</th>
                     <th>Distribuidor</th>
-                    <th class="right">Valor Líquido Pago</th>
-                    <th>Financeiro</th>
-                    <th class="right">Comissão</th>
+                    <th class="right" style="width:120px;">Valor Líquido Pago</th>
+                    <th style="width:100px;">Financeiro</th>
+                    <th class="right" style="width:110px;">Comissão</th>
                 </tr>
             </thead>
             <tbody>
@@ -97,43 +177,57 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="4" class="right">Totais:</th>
-                    <th class="right">
+                    <td colspan="4" class="right">Totais:</td>
+                    <td class="right">
                         {{ moeda_br_pdf( (float) $pedidos->sum(fn($p) => (float) ($p->valor_liquido_pago_total ?? 0)) ) }}
-                    </th>
-                    <th></th>
-                    <th class="right">
+                    </td>
+                    <td></td>
+                    <td class="right">
                         {{ moeda_br_pdf( (float) $pedidos->sum(fn($p) => (float) ($p->comissao_do_filtro ?? 0)) ) }}
-                    </th>
+                    </td>
                 </tr>
             </tfoot>
         </table>
 
     @elseif($exportStatus)
-        <div class="grid3 mb-8">
-            <div class="card">
-                <p class="h6">Pedidos no resultado</p>
-                <p class="h4">{{ $pedidoStatus->count() }}</p>
-            </div>
-            <div class="card">
-                <p class="h6">Soma do valor da nota</p>
-                <p class="h4">{{ moeda_br_pdf( (float) $pedidoStatus->sum(fn($p) => (float) optional($p->notaFiscal)->valor_total) ) }}</p>
-            </div>
-            <div class="card">
-                <p class="h6">Status</p>
-                <p class="h4">{{ strtoupper($statusFiltro ?? '—') }}</p>
-            </div>
-        </div>
+        {{-- ===== Cards de Resumo ===== --}}
+        <div class="section-title">Resumo</div>
+        <table class="cards-grid">
+            <tr>
+                <td class="pad-r" style="width:33.3%;">
+                    <div class="stat">
+                        <div class="label">Pedidos no resultado</div>
+                        <div class="value">{{ $pedidoStatus->count() }}</div>
+                    </div>
+                </td>
+                <td class="pad-x" style="width:33.3%;">
+                    <div class="stat">
+                        <div class="label">Soma do valor da nota</div>
+                        <div class="value emph">
+                            {{ moeda_br_pdf( (float) $pedidoStatus->sum(fn($p) => (float) optional($p->notaFiscal)->valor_total) ) }}
+                        </div>
+                    </div>
+                </td>
+                <td class="pad-l" style="width:33.3%;">
+                    <div class="stat">
+                        <div class="label">Status</div>
+                        <div class="value">{{ strtoupper($statusFiltro ?? '—') }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
 
-        <table>
+        {{-- ===== Tabela ===== --}}
+        <div class="section-title">Detalhamento</div>
+        <table class="tbl">
             <thead>
                 <tr>
-                    <th>Pedido #</th>
+                    <th style="width:70px;">Pedido</th>
                     <th>Cliente</th>
                     <th>Gestor</th>
                     <th>Distribuidor</th>
-                    <th class="right">Valor da Nota</th>
-                    <th>Financeiro</th>
+                    <th class="right" style="width:120px;">Valor da Nota</th>
+                    <th style="width:120px;">Financeiro</th>
                 </tr>
             </thead>
             <tbody>
@@ -150,15 +244,16 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="4" class="right">Total:</th>
-                    <th class="right">
+                    <td colspan="4" class="right">Total:</td>
+                    <td class="right">
                         {{ moeda_br_pdf( (float) $pedidoStatus->sum(fn($p) => (float) optional($p->notaFiscal)->valor_total) ) }}
-                    </th>
-                    <th></th>
+                    </td>
+                    <td></td>
                 </tr>
             </tfoot>
         </table>
     @endif
 </main>
+
 </body>
 </html>

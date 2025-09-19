@@ -77,10 +77,12 @@
                class="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
                 Exportar Orçamento
             </a>
-            <a href="{{ route('admin.notas.show', $notaAtual) }}"
-                           class="inline-flex items-center px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">
-                            Ver Nota
-            </a>
+            @if($notaAtual)
+    <a href="{{ route('admin.notas.show', ['nota' => $notaAtual]) }}"
+       class="inline-flex items-center px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">
+        Ver Nota
+    </a>
+@endif
 
             {{-- Botões de Nota Fiscal --}}
             @if(!empty($temNotaFaturada) && $temNotaFaturada)

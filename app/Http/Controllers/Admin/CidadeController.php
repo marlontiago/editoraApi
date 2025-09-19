@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use App\Models\Distribuidor;
 use App\Models\Gestor;
 use App\Models\City;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
 
 class CidadeController extends Controller
 {
+    /**
+     * (Opcional) Mantido por compatibilidade.
+     * Agora o gestor NÃO trava mais a UF/cidade. Use apenas se quiser listar
+     * as cidades da UF do gestor como atalho.
+     */
     public function cidadesPorGestor(Gestor $gestor)
     {
-        // Usa o campo correto da tabela gestores
         $ufGestor = $gestor->estado_uf;
 
         if ($ufGestor) {
@@ -28,7 +32,7 @@ class CidadeController extends Controller
             }
         }
 
-        // Fallback via pivot (se quiser manter vínculo manual de cidades x gestor)
+        // Fallback via pivot (se você mantiver esse vínculo manual)
         $cidades = City::query()
             ->select('cities.id', 'cities.name')
             ->join('city_gestor', 'city_gestor.city_id', '=', 'cities.id')
@@ -39,6 +43,10 @@ class CidadeController extends Controller
         return response()->json($cidades);
     }
 
+    /**
+     * Prioridade máxima: quando há um distribuidor escolhido,
+     * listar SOMENTE as cidades onde ele atua.
+     */
     public function cidadesPorDistribuidor($id)
     {
         $distribuidor = Distribuidor::with('cities')->findOrFail($id);
@@ -50,39 +58,40 @@ class CidadeController extends Controller
         );
     }
 
+    /**
+     * Lista cidades por UF SEM travar UF por gestor e informando “ocupação”.
+     * Se a cidade estiver “ocupada” por algum distribuidor, retorna ocupado=true
+     * e os dados do(s) distribuidor(es). Para fins de UI, agregamos em um único nome.
+     */
     public function porUf(string $uf, Request $request)
     {
-        $withOccupancy = $request->boolean('with_occupancy');
+        $uf = strtoupper(trim($uf));
 
-        $cities = City::query()
-            ->where('state', strtoupper($uf)) // ajuste conforme teu schema (coluna da UF na tabela cities)
-            ->orderBy('name')
-            ->get(['id','name']);
+        // Left join para descobrir se a cidade está vinculada a algum distribuidor
+        // Observação: se houver mais de um distribuidor na mesma cidade, agregamos.
+        $rows = DB::table('cities as c')
+            ->leftJoin('city_distribuidor as cd', 'cd.city_id', '=', 'c.id')
+            ->leftJoin('distribuidores as d', 'd.id', '=', 'cd.distribuidor_id')
+            ->whereRaw('UPPER(c.state) = ?', [$uf])
+            ->groupBy('c.id', 'c.name')
+            ->orderBy('c.name')
+            ->get([
+                'c.id',
+                'c.name',
+                DB::raw('MAX(cd.distribuidor_id) as distribuidor_id'),
+                DB::raw('MIN(d.razao_social) as distribuidor_nome'),
+            ]);
 
-        // Se pediu ocupação, marcamos se a cidade já tem distribuidor vinculado
-        if ($withOccupancy) {
-            // city_distribuidor: city_id x distribuidor_id
-            // Traz ocupações agregadas por city_id
-            $ocupacoes = DB::table('city_distribuidor')
-                ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
-                ->select('city_distribuidor.city_id', DB::raw('MIN(distribuidores.razao_social) as distribuidor_name'))
-                ->groupBy('city_distribuidor.city_id')
-                ->pluck('distribuidor_name', 'city_distribuidor.city_id');
-
-            $data = $cities->map(function ($c) use ($ocupacoes) {
-                $name = $c->name;
-                return [
-                    'id'                => $c->id,
-                    'name'              => $name,
-                    'occupied'          => $ocupacoes->has($c->id),
-                    'distribuidor_name' => $ocupacoes->get($c->id),
-                ];
-            })->values();
-        } else {
-            $data = $cities->map(fn($c) => ['id'=>$c->id, 'name'=>$c->name])->values();
-        }
+        $data = $rows->map(function ($r) {
+            return [
+                'id'                => $r->id,
+                'name'              => $r->name,
+                'ocupado'           => !is_null($r->distribuidor_id),
+                'distribuidor_id'   => $r->distribuidor_id,
+                'distribuidor_nome' => $r->distribuidor_nome,
+            ];
+        })->values();
 
         return response()->json($data);
     }
-
 }

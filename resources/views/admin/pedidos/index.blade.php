@@ -19,7 +19,7 @@
                     class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
                     @foreach($produtosComEstoqueBaixo as $produto)
                         <li>
-                            {{ $produto->nome }} 
+                            {{ $produto->titulo }} 
                             <span class="text-red-600 font-semibold">
                                 - {{ $produto->quantidade_estoque }} em estoque
                             </span>
@@ -40,7 +40,7 @@
                     class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-2">
                     @foreach($estoqueParaPedidosEmPotencial as $produto)
                         <li>
-                            Produto: <strong>{{ $produto->nome }}</strong> <br>
+                            Produto: <strong>{{ $produto->titulo }}</strong> <br>
                             Em pedidos: <span class="font-medium text-green-700">{{ $produto->qtd_em_pedidos }}</span> <br>
                             Disponível: <span class="font-medium text-red-600">{{ $produto->quantidade_estoque }}</span>
                         </li>

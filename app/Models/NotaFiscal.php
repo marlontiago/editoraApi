@@ -123,31 +123,48 @@ class NotaFiscal extends Model
     */
     public function atualizarStatusFinanceiro(): void
     {
-        // Soma BRUTA (o que o cliente paga)
+        // Se ainda não está faturada, padroniza como aguardando_pagamento
+        if ($this->status !== 'faturada') {
+            $this->forceFill([
+                'status_financeiro' => 'aguardando_pagamento',
+                'pago_em'           => null,
+            ])->save();
+            return;
+        }
+
+        // Soma BRUTA (o que o cliente pagou)
         $somaBruto = (float) $this->pagamentos()->sum('valor_pago');
 
-        // compara por centavos para evitar erro de float
-        $toCents = fn($v) => (int) round(((float) $v) * 100);
-        $totalCents = $toCents($this->valor_total);
-        $somaCents  = $toCents($somaBruto);
-
-        $quitado = $somaCents >= $totalCents;
+        // Centavos para evitar problemas de float
+        $toCents   = fn ($v) => (int) round(((float) $v) * 100);
+        $totalCents= $toCents($this->valor_total);
+        $somaCents = $toCents($somaBruto);
 
         $update = [];
-        if ($quitado) {
-            if ($this->status_financeiro !== 'pago') {
-                $update['status_financeiro'] = 'pago';
-                $update['pago_em'] = now();
-            }
-        } else {
-            if ($this->status === 'faturada' && $this->status_financeiro !== 'aguardando_pagamento') {
+
+        if ($somaCents <= 0) {
+            // Nada pago
+            if ($this->status_financeiro !== 'aguardando_pagamento') {
                 $update['status_financeiro'] = 'aguardando_pagamento';
                 $update['pago_em'] = null;
             }
+        } elseif ($somaCents < $totalCents) {
+            // Pago parcial
+            if ($this->status_financeiro !== 'pago_parcial') {
+                $update['status_financeiro'] = 'pago_parcial';
+                $update['pago_em'] = null;
+            }
+        } else {
+            // Quitado
+            if ($this->status_financeiro !== 'pago') {
+                $update['status_financeiro'] = 'pago';
+                $update['pago_em'] = $this->pago_em ?: now();
+            }
         }
 
-        if (!empty($update)) {
-            $this->fill($update)->save();
+        if ($update) {
+            $this->forceFill($update)->save();
         }
     }
+
 }

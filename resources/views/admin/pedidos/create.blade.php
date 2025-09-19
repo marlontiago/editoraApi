@@ -1,499 +1,464 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Criar Novo Pedido</h2>
-    </x-slot>
+  <x-slot name="header">
+    <h2 class="text-xl font-semibold text-gray-800">Criar Novo Pedido</h2>
+  </x-slot>
 
-    <div class="max-w-6xl mx-auto p-6">
-        @if(session('success'))
-            <div class="mb-6 rounded-md border border-green-300 bg-green-50 p-4 text-green-800">
-                {{ session('success') }}
-            </div>
-        @endif
+  <div class="max-w-6xl mx-auto p-6">
+    @if(session('success'))
+      <div class="mb-6 rounded-md border border-green-300 bg-green-50 p-4 text-green-800">
+        {{ session('success') }}
+      </div>
+    @endif
 
-        @if($errors->any())
-            <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
-                <ul class="list-disc pl-5 space-y-1">
-                    @foreach($errors->all() as $error)
-                        <li class="text-sm">{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+    @if($errors->any())
+      <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
+        <ul class="list-disc pl-5 space-y-1">
+          @foreach($errors->all() as $error)
+            <li class="text-sm">{{ $error }}</li>
+          @endforeach
+        </ul>
+      </div>
+    @endif
 
-        <form action="{{ route('admin.pedidos.store') }}" method="POST"
-              class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
-            @csrf
+    <form action="{{ route('admin.pedidos.store') }}" method="POST"
+          class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
+      @csrf
 
-            {{-- Cliente (obrigatório) --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="cliente_id" class="block text-sm font-medium text-gray-700">Cliente</label>
-                <select name="cliente_id" id="cliente_id" required
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">-- Selecione --</option>
-                    @foreach($clientes as $cliente)
-                        <option value="{{ $cliente->id }}" @selected(old('cliente_id') == $cliente->id)>{{ $cliente->razao_social ?? $cliente->nome }}</option>
-                    @endforeach
-                </select>
-            </div>
+      {{-- Cliente (obrigatório) --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="cliente_id" class="block text-sm font-medium text-gray-700">Cliente</label>
+        <select name="cliente_id" id="cliente_id" required
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="">-- Selecione --</option>
+          @foreach($clientes as $cliente)
+            <option value="{{ $cliente->id }}" @selected(old('cliente_id') == $cliente->id)>{{ $cliente->razao_social ?? $cliente->nome }}</option>
+          @endforeach
+        </select>
+      </div>
 
-            {{-- Gestor (opcional) --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor (opcional)</label>
-                <select name="gestor_id" id="gestor_id"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">-- Sem gestor --</option>
-                    @foreach($gestores as $gestor)
-                        <option value="{{ $gestor->id }}" data-uf="{{ $gestor->estado_uf }}" @selected(old('gestor_id') == $gestor->id)>{{ $gestor->razao_social }}</option>
-                    @endforeach
-                </select>
-            </div>
+      {{-- Gestor (opcional) --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor (opcional)</label>
+        <select name="gestor_id" id="gestor_id"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="">-- Sem gestor --</option>
+          @foreach($gestores as $gestor)
+            <option value="{{ $gestor->id }}" data-uf="{{ $gestor->estado_uf }}" @selected(old('gestor_id') == $gestor->id)>{{ $gestor->razao_social }}</option>
+          @endforeach
+        </select>
+      </div>
 
-            {{-- Distribuidor (opcional) --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="distribuidor_id" class="block text-sm font-medium text-gray-700">Distribuidor (opcional)</label>
-                <select name="distribuidor_id" id="distribuidor_id"
-        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-    <option value="">-- Sem distribuidor --</option>
-    @foreach($distribuidores as $d)
-        <option value="{{ $d->id }}"
-                data-gestor-id="{{ $d->gestor_id ?? '' }}"
-                @selected(old('distribuidor_id') == $d->id)>
-            {{ $d->razao_social }}
-        </option>
-    @endforeach
-</select>
-            </div>
+      {{-- Distribuidor (opcional) --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="distribuidor_id" class="block text-sm font-medium text-gray-700">Distribuidor (opcional)</label>
+        <select name="distribuidor_id" id="distribuidor_id"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="">-- Sem distribuidor --</option>
+          @foreach($distribuidores as $d)
+            <option value="{{ $d->id }}"
+                    data-gestor-id="{{ $d->gestor_id ?? '' }}"
+                    @selected(old('distribuidor_id') == $d->id)>
+              {{ $d->razao_social }}
+            </option>
+          @endforeach
+        </select>
+      </div>
 
-            {{-- UF --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="state" class="block text-sm font-medium text-gray-800">UF</label>
-                <select name="state" id="state"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">-- Selecione --</option>
-                    @foreach($cidadesUF as $uf)
-                        <option value="{{ $uf }}" @selected(old('state') == $uf)>{{ $uf }}</option>
-                    @endforeach
-                </select>
-            </div>
+      {{-- UF --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="state" class="block text-sm font-medium text-gray-800">UF</label>
+        <select name="state" id="state"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="">-- Selecione --</option>
+          @foreach($cidadesUF as $uf)
+            <option value="{{ $uf }}" @selected(old('state') == $uf)>{{ $uf }}</option>
+          @endforeach
+        </select>
+      </div>
 
-            {{-- Cidade da Venda (via gestor/UF ou distribuidor) --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
-                @php
-                    $temDistOuGestor = old('distribuidor_id') || old('gestor_id') || old('state');
-                @endphp
-                <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
-                        class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor, distribuidor ou UF --' }}</option>
-                </select>
-            </div>
+      {{-- Cidade da Venda --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
+        @php $temDistOuGestor = old('distribuidor_id') || old('gestor_id') || old('state'); @endphp
+        <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
+                class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor, distribuidor ou UF --' }}</option>
+        </select>
+      </div>
 
-            {{-- Data --}}
-            <div class="col-span-12 md:col-span-6">
-                <label for="data" class="block text-sm font-medium text-gray-700">Data</label>
-                <input type="date" name="data" id="data" value="{{ old('data') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-            </div>
+      {{-- Data --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="data" class="block text-sm font-medium text-gray-700">Data</label>
+        <input type="date" name="data" id="data" value="{{ old('data') }}"
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+      </div>
 
-            {{-- Produtos --}}
-            <div class="col-span-12">
-                <label class="block text-sm font-medium text-gray-700">Produtos</label>
-                <div id="produtos-container" class="space-y-4 mt-2"></div>
+      {{-- Produtos --}}
+      <div class="col-span-12">
+        <label class="block text-sm font-medium text-gray-700">Produtos</label>
+        <div id="produtos-container" class="space-y-4 mt-2"></div>
 
-                <button type="button" onclick="adicionarProduto()"
-                        class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                    + Adicionar Produto
-                </button>
-            </div>
+        <button type="button" onclick="adicionarProduto()"
+                class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          + Adicionar Produto
+        </button>
+      </div>
 
-            {{-- Observações --}}
-            <div class="col-span-12">
-                <label class="block text-sm font-medium text-gray-700">Observações</label>
-                <textarea
-                    name="observacoes"
-                    rows="3"
-                    class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Anotações internas sobre o pedido (opcional)"
-                >{{ old('observacoes') }}</textarea>
-            </div>
+      {{-- Observações --}}
+      <div class="col-span-12">
+        <label class="block text-sm font-medium text-gray-700">Observações</label>
+        <textarea name="observacoes" rows="3"
+                  class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Anotações internas sobre o pedido (opcional)">{{ old('observacoes') }}</textarea>
+      </div>
 
-            {{-- Botões --}}
-            <div class="col-span-12 flex justify-end gap-3 pt-4">
-                <a href="{{ route('admin.pedidos.index') }}"
-                   class="inline-flex h-10 items-center rounded-md border px-4 text-sm hover:bg-gray-50">
-                    Cancelar
-                </a>
-                <button type="submit"
-                        class="inline-flex h-10 items-center rounded-md bg-green-600 px-5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
-                    Salvar Pedido
-                </button>
-            </div>
-        </form>
-    </div>
+      {{-- Botões --}}
+      <div class="col-span-12 flex justify-end gap-3 pt-4">
+        <a href="{{ route('admin.pedidos.index') }}"
+           class="inline-flex h-10 items-center rounded-md border px-4 text-sm hover:bg-gray-50">
+          Cancelar
+        </a>
+        <button type="submit"
+                class="inline-flex h-10 items-center rounded-md bg-green-600 px-5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+          Salvar Pedido
+        </button>
+      </div>
+    </form>
+  </div>
 
-    {{-- Dados para JS --}}
-    <script>
-        const ALL_PRODUCTS     = @json($produtos->map(fn($p)=>['id'=>$p->id,'nome'=>$p->nome])->values());
-        const OLD_PRODUTOS     = @json(old('produtos', []));
-        const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
-        const OLD_GESTOR       = @json(old('gestor_id'));
-        const OLD_CIDADE       = @json(old('cidade_id'));
-    </script>
+  {{-- ===== DADOS PARA JS (sem @json com arrow function) ===== --}}
+  <script>
+    const ALL_PRODUCTS = {!! $produtos
+        ->map(function ($p) {
+          return [
+            'id'     => $p->id,
+            'titulo' => $p->titulo,
+            'preco'  => (float) ($p->preco ?? 0),
+          ];
+        })
+        ->values()
+        ->toJson() !!};
 
-    <script>
-        // ================== PRODUTOS (sem duplicados + desconto por item) ==================
-        let produtoIndex = 0;
-        const container = document.getElementById('produtos-container');
-        const addBtn    = document.querySelector('button[onclick="adicionarProduto()"]');
+    const OLD_PRODUTOS     = @json(old('produtos', []));
+    const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
+    const OLD_GESTOR       = @json(old('gestor_id'));
+    const OLD_CIDADE       = @json(old('cidade_id'));
+  </script>
 
-        function getSelectedProductIds() {
-            return Array.from(container.querySelectorAll('select[name^="produtos["][name$="[id]"]'))
-                .map(sel => sel.value).filter(v => v !== '');
-        }
+  {{-- ===== PRODUTOS (sem duplicados + desconto + cálculos em tempo real) ===== --}}
+  <script>
+    let produtoIndex = 0;
+    const container = document.getElementById('produtos-container');
+    const addBtn    = document.querySelector('button[onclick="adicionarProduto()"]');
 
-        function buildOptions(excludeIds = [], selectedId = null) {
-            const frag = document.createDocumentFragment();
-            frag.append(new Option('-- Selecione --', ''));
-            ALL_PRODUCTS.forEach(p => {
-                const isSelected = String(p.id) === String(selectedId);
-                const isExcluded = excludeIds.includes(String(p.id));
-                if (isExcluded && !isSelected) return;
-                const opt = new Option(p.nome, p.id);
-                if (isSelected) opt.selected = true;
-                frag.append(opt);
-            });
-            return frag;
-        }
+    const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-        function refreshAllProductSelects() {
-            const chosen = getSelectedProductIds();
-            const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
-            selects.forEach(sel => {
-                const current = sel.value || null;
-                sel.innerHTML = '';
-                const exclude = chosen.filter(id => id !== current);
-                sel.append(buildOptions(exclude, current));
-            });
-            const maxReached = chosen.length >= ALL_PRODUCTS.length;
-            addBtn.disabled = maxReached;
-            addBtn.classList.toggle('opacity-50', maxReached);
-            addBtn.title = maxReached ? 'Todos os produtos já foram adicionados' : '';
-        }
+    function getProductById(id) {
+      return ALL_PRODUCTS.find(p => String(p.id) === String(id)) || null;
+    }
+    function getSelectedProductIds() {
+      return Array.from(container.querySelectorAll('select[name^="produtos["][name$="[id]"]'))
+        .map(sel => sel.value).filter(v => v !== '');
+    }
+    function buildOptions(excludeIds = [], selectedId = null) {
+      const frag = document.createDocumentFragment();
+      frag.append(new Option('-- Selecione --', ''));
+      ALL_PRODUCTS.forEach(p => {
+        const isSelected = String(p.id) === String(selectedId);
+        const isExcluded = excludeIds.includes(String(p.id));
+        if (isExcluded && !isSelected) return;
+        const opt = new Option(p.titulo, p.id);
+        if (isSelected) opt.selected = true;
+        frag.append(opt);
+      });
+      return frag;
+    }
+    function refreshAllProductSelects() {
+      const chosen = getSelectedProductIds();
+      const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
+      selects.forEach(sel => {
+        const current = sel.value || null;
+        sel.innerHTML = '';
+        const exclude = chosen.filter(id => id !== current);
+        sel.append(buildOptions(exclude, current));
+      });
+      const maxReached = chosen.length >= ALL_PRODUCTS.length;
+      addBtn.disabled = maxReached;
+      addBtn.classList.toggle('opacity-50', maxReached);
+      addBtn.title = maxReached ? 'Todos os produtos já foram adicionados' : '';
+    }
 
-        function makeProdutoRow(preset = {}) {
-            const idx = produtoIndex++;
-            const row = document.createElement('div');
-            row.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4';
-            row.innerHTML = `
-                <div class="col-span-12 md:col-span-6">
-                    <label class="block text-sm font-medium text-gray-700">Produto</label>
-                    <select name="produtos[${idx}][id]"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
-                </div>
-                <div class="col-span-12 md:col-span-3">
-                    <label class="block text-sm font-medium text-gray-700">Quantidade</label>
-                    <input type="number" min="1" value="${preset.quantidade ?? 1}" name="produtos[${idx}][quantidade]"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div class="col-span-12 md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700">Desc. item (%)</label>
-                    <input type="number" min="0" max="100" step="0.01" value="${preset.desconto ?? 0}" name="produtos[${idx}][desconto]"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div class="col-span-12 md:col-span-1 flex items-end">
-                    <button type="button" class="remove-row inline-flex items-center rounded-md border px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700">
-                        Remover
-                    </button>
-                </div>
-            `;
-            const sel = row.querySelector('select');
-            sel.append(buildOptions(getSelectedProductIds(), preset.id ?? null));
-            return row;
-        }
+    function makeProdutoRow(preset = {}) {
+      const idx = produtoIndex++;
+      const row = document.createElement('div');
+      row.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4';
+      row.innerHTML = `
+        <div class="col-span-12 md:col-span-6">
+          <label class="block text-sm font-medium text-gray-700">Produto</label>
+          <select name="produtos[${idx}][id]"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+        </div>
 
-        function adicionarProduto(preset = {}) {
-            const row = makeProdutoRow(preset);
-            container.appendChild(row);
-            refreshAllProductSelects();
-        }
+        <div class="col-span-12 md:col-span-3">
+          <label class="block text-sm font-medium text-gray-700">Quantidade</label>
+          <input type="number" min="1" value="${preset.quantidade ?? 1}" name="produtos[${idx}][quantidade]"
+                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+        </div>
 
-        container.addEventListener('change', (e) => {
-            if (e.target.matches('select[name^="produtos["][name$="[id]"]')) {
-                refreshAllProductSelects();
-            }
-        });
+        <div class="col-span-12 md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700">Desc. item (%)</label>
+          <input type="number" min="0" max="100" step="0.01" value="${preset.desconto ?? 0}" name="produtos[${idx}][desconto]"
+                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
 
-        container.addEventListener('click', (e) => {
-            if (e.target.closest('.remove-row')) {
-                e.target.closest('.produto').remove();
-                refreshAllProductSelects();
-            }
-        });
+        <div class="col-span-12 md:col-span-1 flex items-end">
+          <button type="button" class="remove-row inline-flex items-center rounded-md border px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700">
+            Remover
+          </button>
+        </div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            if (Array.isArray(OLD_PRODUTOS) && OLD_PRODUTOS.length) {
-                OLD_PRODUTOS.forEach(p => adicionarProduto(p));
-            } else {
-                adicionarProduto();
-            }
-        });
-    </script>
+        <div class="col-span-12">
+          <div class="mt-2 rounded-md bg-white border p-3 text-sm text-gray-700 space-y-1 calc-area">
+            <div><span class="font-medium">Preço unit.:</span> <span class="unit-price">R$ 0,00</span></div>
+            <div><span class="font-medium">Unit. c/ desconto:</span> <span class="unit-disc">R$ 0,00</span></div>
+            <div><span class="font-medium">Subtotal:</span> <span class="line-total">R$ 0,00</span></div>
+          </div>
+        </div>
+      `;
+      const sel = row.querySelector('select');
+      sel.append(buildOptions(getSelectedProductIds(), preset.id ?? null));
+      return row;
+    }
 
-    {{-- =================== GESTOR / DISTRIBUIDOR / UF / CIDADE =================== --}}
+    function calcRow(row) {
+      const sel = row.querySelector('select[name^="produtos["][name$="[id]"]');
+      const qEl = row.querySelector('input[name^="produtos["][name$="[quantidade]"]');
+      const dEl = row.querySelector('input[name^="produtos["][name$="[desconto]"]');
 
-    <script>
-        // Salva um snapshot das opções originais de distribuidores
-        const distSelect = document.getElementById('distribuidor_id');
-        const originalDistOptions = Array.from(distSelect.options).map(opt => ({
-            value: opt.value,
-            text: opt.text,
-            gestorId: opt.getAttribute('data-gestor-id') || '',
-            selected: opt.selected
-        }));
+      const unitSpan  = row.querySelector('.unit-price');
+      const unitDSpan = row.querySelector('.unit-disc');
+      const totalSpan = row.querySelector('.line-total');
 
-        function rebuildDistribuidorOptions(gestorId) {
-            const hadValue = distSelect.value;
-            distSelect.innerHTML = '';
+      const pid   = sel?.value || '';
+      const prod  = getProductById(pid);
+      const qtd   = Math.max(1, parseInt(qEl?.value || '1', 10));
+      const desc  = Math.max(0, Math.min(100, parseFloat(dEl?.value || '0')));
 
-            // Sempre começa com a opção "sem distribuidor"
-            const first = new Option('-- Sem distribuidor --', '');
-            distSelect.add(first);
+      const precoUnit = prod ? Number(prod.preco || 0) : 0;
+      const precoDesc = precoUnit * (1 - (desc / 100));
+      const subtotal  = precoDesc * qtd;
 
-            // Se não selecionou gestor, mostra todos
-            const pool = (!gestorId)
-                ? originalDistOptions
-                : originalDistOptions.filter(o => o.value === '' || (o.gestorId && String(o.gestorId) === String(gestorId)));
+      unitSpan.textContent  = fmtBRL.format(precoUnit);
+      unitDSpan.textContent = fmtBRL.format(precoDesc);
+      totalSpan.textContent = fmtBRL.format(subtotal);
+    }
+    function calcAll() {
+      container.querySelectorAll('.produto').forEach(calcRow);
+    }
 
-            // Remonta as opções (exceto a vazia já criada)
-            pool.forEach(o => {
-                if (o.value === '') return; // já criamos a vazia
-                const opt = new Option(o.text, o.value);
-                opt.setAttribute('data-gestor-id', o.gestorId || '');
-                distSelect.add(opt);
-            });
+    function adicionarProduto(preset = {}) {
+      const row = makeProdutoRow(preset);
+      container.appendChild(row);
+      refreshAllProductSelects();
+      calcRow(row);
+    }
 
-            // Se a opção previamente escolhida ainda é válida, mantém
-            const stillValid = Array.from(distSelect.options).some(o => o.value === hadValue);
-            if (stillValid) {
-                distSelect.value = hadValue;
-            } else {
-                distSelect.value = ''; // limpa se não for mais válida
-            }
-        }
+    container.addEventListener('change', (e) => {
+      if (e.target.matches('select[name^="produtos["][name$="[id]"]')) {
+        refreshAllProductSelects();
+        calcRow(e.target.closest('.produto'));
+      }
+      if (
+        e.target.matches('input[name^="produtos["][name$="[quantidade]"]') ||
+        e.target.matches('input[name^="produtos["][name$="[desconto]"]')
+      ) {
+        calcRow(e.target.closest('.produto'));
+      }
+    });
+    container.addEventListener('input', (e) => {
+      if (
+        e.target.matches('input[name^="produtos["][name$="[quantidade]"]') ||
+        e.target.matches('input[name^="produtos["][name$="[desconto]"]')
+      ) {
+        calcRow(e.target.closest('.produto'));
+      }
+    });
+    container.addEventListener('click', (e) => {
+      if (e.target.closest('.remove-row')) {
+        e.target.closest('.produto').remove();
+        refreshAllProductSelects();
+        calcAll();
+      }
+    });
 
-        // Reage ao trocar de gestor
-        document.getElementById('gestor_id').addEventListener('change', function () {
-            const gestorId = this.value || '';
-            rebuildDistribuidorOptions(gestorId);
-        });
+    document.addEventListener('DOMContentLoaded', () => {
+      if (Array.isArray(OLD_PRODUTOS) && OLD_PRODUTOS.length) {
+        OLD_PRODUTOS.forEach(p => adicionarProduto(p));
+      } else {
+        adicionarProduto();
+      }
+      calcAll();
+    });
+  </script>
 
-        // Estado inicial (quando volta com old())
-        document.addEventListener('DOMContentLoaded', function () {
-            const oldGestor = @json(old('gestor_id'));
-            rebuildDistribuidorOptions(oldGestor || '');
-        });
-    </script>
+  {{-- ===== GESTOR / DISTRIBUIDOR ===== --}}
+  <script>
+    const distSelect = document.getElementById('distribuidor_id');
+    const originalDistOptions = Array.from(distSelect.options).map(opt => ({
+      value: opt.value,
+      text: opt.text,
+      gestorId: opt.getAttribute('data-gestor-id') || '',
+      selected: opt.selected
+    }));
 
-    <script>
-            const distribuidorSelect = document.getElementById('distribuidor_id');
-            const gestorSelect       = document.getElementById('gestor_id');
-            const cidadeSelect       = document.getElementById('cidade_id');
-            const stateSelect        = document.getElementById('state');
+    function rebuildDistribuidorOptions(gestorId) {
+      const hadValue = distSelect.value;
+      distSelect.innerHTML = '';
 
-            function resetCidadeSelect(placeholder = '-- Selecione --') {
-                cidadeSelect.innerHTML = '';
-                cidadeSelect.add(new Option(placeholder, ''));
-                cidadeSelect.disabled = true;
-                cidadeSelect.classList.add('bg-gray-50');
-            }
+      const first = new Option('-- Sem distribuidor --', '');
+      distSelect.add(first);
 
-            // Seleciona a UF no <select> de modo robusto
-            function setUfValue(ufRaw) {
-                const target = (ufRaw ?? '').toString().trim().toUpperCase();
-                if (!target) {
-                    stateSelect.value = '';
-                    return;
-                }
+      const pool = (!gestorId)
+        ? originalDistOptions
+        : originalDistOptions.filter(o => o.value === '' || (o.gestorId && String(o.gestorId) === String(gestorId)));
 
-                // tenta selecionar por comparação case-insensitive
-                let found = false;
-                for (const opt of stateSelect.options) {
-                    if (String(opt.value).trim().toUpperCase() === target) {
-                        opt.selected = true;
-                        found = true;
-                        break;
-                    }
-                }
+      pool.forEach(o => {
+        if (o.value === '') return;
+        const opt = new Option(o.text, o.value);
+        opt.setAttribute('data-gestor-id', o.gestorId || '');
+        distSelect.add(opt);
+      });
 
-                // se não tiver na lista, cria uma opção temporária e seleciona
-                if (!found) {
-                    const temp = new Option(target, target);
-                    temp.dataset.temp = '1';
-                    try { stateSelect.add(temp, 1); } catch { stateSelect.add(temp); }
-                    temp.selected = true;
-                }
-            }
+      const stillValid = Array.from(distSelect.options).some(o => o.value === hadValue);
+      distSelect.value = stillValid ? hadValue : '';
+    }
 
-            // Habilita/Desabilita o UF conforme regra
-            function toggleUfSelect() {
-                const mustDisable = Boolean(distribuidorSelect.value || gestorSelect.value);
-                if (mustDisable) {
-                    stateSelect.disabled = true;
-                    stateSelect.classList.add('bg-gray-50');
-                } else {
-                    stateSelect.disabled = false;
-                    stateSelect.classList.remove('bg-gray-50');
-                }
-            }
+    document.getElementById('gestor_id').addEventListener('change', function () {
+      rebuildDistribuidorOptions(this.value || '');
+    });
 
-            function aplicarUfDoGestor() {
-                // limpar qualquer opção temporária anterior
-                Array.from(stateSelect.options)
-                    .filter(o => o.dataset.temp === '1')
-                    .forEach(o => o.remove());
+    document.addEventListener('DOMContentLoaded', function () {
+      const oldGestor = @json(old('gestor_id'));
+      rebuildDistribuidorOptions(oldGestor || '');
+    });
+  </script>
 
-                if (gestorSelect.value) {
-                    const option = gestorSelect.options[gestorSelect.selectedIndex];
-                    const uf = option?.getAttribute('data-uf') || '';
-                    setUfValue(uf);
-                    stateSelect.disabled = true;
-                    stateSelect.classList.add('bg-gray-50');
-                } else if (!distribuidorSelect.value) {
-                    stateSelect.disabled = false;
-                    stateSelect.classList.remove('bg-gray-50');
-                }
-            }
+  <script>
+  const distribuidorSelect = document.getElementById('distribuidor_id');
+  const gestorSelect       = document.getElementById('gestor_id');
+  const cidadeSelect       = document.getElementById('cidade_id');
+  const stateSelect        = document.getElementById('state');
 
-            async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
-                resetCidadeSelect('-- Carregando... --');
-                try {
-                    const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
-                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                    const cidades = await resp.json();
-                    cidadeSelect.innerHTML = '';
-                    cidadeSelect.add(new Option('-- Selecione --', ''));
-                    cidades.forEach(c => {
-                        const opt = new Option(c.name, c.id);
-                        if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                        cidadeSelect.add(opt);
-                    });
-                    cidadeSelect.disabled = false;
-                    cidadeSelect.classList.remove('bg-gray-50');
-                    if (!cidades.length) resetCidadeSelect('Distribuidor sem cidades vinculadas');
-                } catch (e) {
-                    console.error(e);
-                    resetCidadeSelect('Falha ao carregar cidades');
-                }
-            }
+  function resetCidadeSelect(placeholder = '-- Selecione --') {
+    cidadeSelect.innerHTML = '';
+    cidadeSelect.add(new Option(placeholder, ''));
+    cidadeSelect.disabled = true;
+    cidadeSelect.classList.add('bg-gray-50');
+  }
 
-            async function carregarCidadesPorGestor(gestorId, selectedCidadeId = null) {
-                resetCidadeSelect('-- Carregando... --');
-                try {
-                    const resp = await fetch(`/admin/cidades/por-gestor/${gestorId}`);
-                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                    const cidades = await resp.json();
-                    cidadeSelect.innerHTML = '';
-                    cidadeSelect.add(new Option('-- Selecione --', ''));
-                    cidades.forEach(c => {
-                        const opt = new Option(c.name, c.id);
-                        if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                        cidadeSelect.add(opt);
-                    });
-                    cidadeSelect.disabled = false;
-                    cidadeSelect.classList.remove('bg-gray-50');
-                    if (!cidades.length) resetCidadeSelect('Nenhuma cidade para a UF do gestor');
-                } catch (e) {
-                    console.error(e);
-                    resetCidadeSelect('Falha ao carregar cidades');
-                }
-            }
+  // Renderiza opções de cidade; se vier "ocupado = true" e não houver distribuidor,
+  // desabilita a opção e mostra rótulo "(ocupada por ...)".
+  function rebuildCidadeOptions(cidades, { allowOccupied = false } = {}) {
+    cidadeSelect.innerHTML = '';
+    cidadeSelect.add(new Option('-- Selecione --', ''));
+    cidades.forEach(c => {
+      const opt = new Option(c.name, c.id);
+      const isOccupied = Boolean(c.ocupado);
+      const distName   = c.distribuidor_nome || null;
 
-            async function carregarCidadesPorUF(uf, selectedCidadeId = null) {
-                resetCidadeSelect('-- Carregando... --');
-                try {
-                    const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}`);
-                    if (!resp.ok) {
-                        const text = await resp.text();
-                        console.error('Falha ao carregar cidades:', resp.status, text);
-                        throw new Error(`HTTP ${resp.status}`);
-                    }
-                    const cidades = await resp.json();
-                    cidadeSelect.innerHTML = '';
-                    cidadeSelect.add(new Option('-- Selecione --', ''));
-                    cidades.forEach(c => {
-                        const opt = new Option(c.name, c.id);
-                        if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                        cidadeSelect.add(opt);
-                    });
-                    cidadeSelect.disabled = false;
-                    cidadeSelect.classList.remove('bg-gray-50');
-                    if (!cidades.length) resetCidadeSelect('UF sem cidades cadastradas');
-                } catch (e) {
-                    console.error(e);
-                    resetCidadeSelect('Falha ao carregar cidades');
-                }
-            }
+      if (isOccupied && !allowOccupied) {
+        opt.disabled = true;
+        opt.text = `${c.name} ${distName ? `(ocupada por ${distName})` : '(ocupada)'}`;
+      }
+      cidadeSelect.add(opt);
+    });
+    cidadeSelect.disabled = false;
+    cidadeSelect.classList.remove('bg-gray-50');
+  }
 
-            // ==== EVENTOS ====
-            distribuidorSelect.addEventListener('change', async function () {
-                toggleUfSelect();
-                const distribuidorId = this.value || null;
-                if (distribuidorId) {
-                    await carregarCidadesPorDistribuidor(distribuidorId, null);
-                } else if (gestorSelect.value) {
-                    await carregarCidadesPorGestor(gestorSelect.value, null);
-                } else if (stateSelect.value) {
-                    await carregarCidadesPorUF(stateSelect.value, null);
-                } else {
-                    resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
-                }
-            });
+  // Cidades do distribuidor (prioridade máxima quando tiver distribuidor)
+  async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
+    resetCidadeSelect('-- Carregando... --');
+    try {
+      const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const cidades = await resp.json(); // [{id,name}]
+      rebuildCidadeOptions(cidades, { allowOccupied: true }); // não vem flag ocupado aqui
+      if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
+    } catch (e) {
+      console.error(e);
+      resetCidadeSelect('Falha ao carregar cidades');
+    }
+  }
 
-            gestorSelect.addEventListener('change', async function () {
-                aplicarUfDoGestor();
-                toggleUfSelect();
-                if (distribuidorSelect.value) return; // prioridade do distribuidor
-                const gestorId = this.value || null;
-                if (gestorId) {
-                    await carregarCidadesPorGestor(gestorId, null);
-                } else if (stateSelect.value) {
-                    await carregarCidadesPorUF(stateSelect.value, null);
-                } else {
-                    resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
-                }
-            });
+  // Cidades por UF (com ocupação); se não há distribuidor, desabilita ocupadas
+  async function carregarCidadesPorUF(uf, selectedCidadeId = null) {
+    resetCidadeSelect('-- Carregando... --');
+    try {
+      const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}?with_occupancy=1`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const cidades = await resp.json(); // [{id,name,ocupado,distribuidor_id,distribuidor_nome}]
+      const hasDistribuidor = Boolean(distribuidorSelect.value);
 
-            stateSelect.addEventListener('change', async function () {
-                if (distribuidorSelect.value || gestorSelect.value) return;
-                const uf = this.value || null;
-                if (uf) {
-                    await carregarCidadesPorUF(uf, null);
-                } else {
-                    resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
-                }
-            });
+      // se NÃO há distribuidor, não permite selecionar ocupadas
+      rebuildCidadeOptions(cidades, { allowOccupied: hasDistribuidor });
+      if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
+    } catch (e) {
+      console.error(e);
+      resetCidadeSelect('Falha ao carregar cidades');
+    }
+  }
 
-            // Estado inicial (old)
-            document.addEventListener('DOMContentLoaded', async () => {
-                toggleUfSelect();
-                aplicarUfDoGestor(); // aplica a regra já no carregamento
+  // === Eventos ===
 
-                const OLD_CIDADE       = @json(old('cidade_id'));
-                const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
-                const OLD_GESTOR       = @json(old('gestor_id'));
-                const OLD_STATE        = @json(old('state'));
+  // 1) Distribuidor mudou: se há distribuidor, lista só as dele; se tirou, volta a obedecer a UF
+  distribuidorSelect.addEventListener('change', async function () {
+    const distId = this.value || null;
+    const uf = stateSelect.value || null;
 
-                if (OLD_DISTRIBUIDOR) {
-                    await carregarCidadesPorDistribuidor(OLD_DISTRIBUIDOR, OLD_CIDADE);
-                } else if (OLD_GESTOR) {
-                    await carregarCidadesPorGestor(OLD_GESTOR, OLD_CIDADE);
-                } else if (OLD_STATE) {
-                    await carregarCidadesPorUF(OLD_STATE, OLD_CIDADE);
-                } else {
-                    resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
-                }
-            });
-    </script>
+    if (distId) {
+      await carregarCidadesPorDistribuidor(distId, null);
+    } else if (uf) {
+      await carregarCidadesPorUF(uf, null);
+    } else {
+      resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+    }
+  });
 
+  // 2) Gestor NÃO trava mais a UF — apenas ignora aqui. (mantemos caso queira usar em outro fluxo)
+  gestorSelect.addEventListener('change', function () {
+    // intencionalmente vazio: UF é totalmente livre agora
+  });
+
+  // 3) UF mudou: se há distribuidor, mantemos as cidades do distribuidor (prioridade);
+  // do contrário, carregamos cidades da UF (com ocupação)
+  stateSelect.addEventListener('change', async function () {
+    const uf = this.value || null;
+    if (!uf) {
+      resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+      return;
+    }
+    if (distribuidorSelect.value) {
+      await carregarCidadesPorDistribuidor(distribuidorSelect.value, null);
+    } else {
+      await carregarCidadesPorUF(uf, null);
+    }
+  });
+
+  // Estado inicial (old form)
+  document.addEventListener('DOMContentLoaded', async () => {
+    const OLD_CIDADE       = @json(old('cidade_id'));
+    const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
+    const OLD_STATE        = @json(old('state'));
+
+    if (OLD_DISTRIBUIDOR) {
+      await carregarCidadesPorDistribuidor(OLD_DISTRIBUIDOR, OLD_CIDADE);
+    } else if (OLD_STATE) {
+      await carregarCidadesPorUF(OLD_STATE, OLD_CIDADE);
+    } else {
+      resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+    }
+  });
+</script>
 
 </x-app-layout>

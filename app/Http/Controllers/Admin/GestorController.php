@@ -29,6 +29,21 @@ class GestorController extends Controller
 
     public function store(Request $request)
     {
+
+        // Remove linhas totalmente vazias de "contatos" antes da validação
+        $rawContatos = $request->input('contatos', []);
+        $contatosSan = collect($rawContatos)->filter(function ($c) {
+            // considera "preenchido" se QUALQUER um desses campos tiver conteúdo
+            return trim($c['nome'] ?? '') !== ''
+                || trim($c['email'] ?? '') !== ''
+                || trim($c['telefone'] ?? '') !== ''
+                || trim($c['whatsapp'] ?? '') !== ''
+                || trim($c['cargo'] ?? '') !== ''
+                || !empty($c['preferencial']); // opcional
+        })->values()->all();
+
+        $request->merge(['contatos' => $contatosSan]);
+
         $data = $request->validate([
             // Gestor
             'razao_social'        => ['required','string','max:255'],
@@ -212,6 +227,20 @@ class GestorController extends Controller
 
     public function update(Request $request, Gestor $gestor)
     {
+        // Remove linhas totalmente vazias de "contatos" antes da validação
+        $rawContatos = $request->input('contatos', []);
+        $contatosSan = collect($rawContatos)->filter(function ($c) {
+            // considera "preenchido" se QUALQUER um desses campos tiver conteúdo
+            return trim($c['nome'] ?? '') !== ''
+                || trim($c['email'] ?? '') !== ''
+                || trim($c['telefone'] ?? '') !== ''
+                || trim($c['whatsapp'] ?? '') !== ''
+                || trim($c['cargo'] ?? '') !== ''
+                || !empty($c['preferencial']); // opcional
+        })->values()->all();
+
+        $request->merge(['contatos' => $contatosSan]);
+        
         $data = $request->validate([
             'razao_social'        => ['required','string','max:255'],
             'cnpj'                => ['required','string','max:18'],

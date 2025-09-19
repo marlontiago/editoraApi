@@ -24,18 +24,18 @@ class PedidoController extends Controller
         $produtosComEstoqueBaixo = Produto::where('quantidade_estoque', '<=', 100)->get();
 
         $estoqueParaPedidosEmPotencial = DB::table('pedido_produto as pp')
-        ->join('pedidos as pe', 'pe.id', '=', 'pp.pedido_id')
-        ->join('produtos as pr', 'pr.id', '=', 'pp.produto_id')
-        ->where('pe.status', 'em_andamento')
-        ->groupBy('pp.produto_id', 'pr.nome', 'pr.quantidade_estoque')
-        ->havingRaw('SUM(pp.quantidade) > pr.quantidade_estoque')
-        ->get([
-            'pp.produto_id',
-            'pr.nome',
-            DB::raw('SUM(pp.quantidade) as qtd_em_pedidos'),
-            'pr.quantidade_estoque',
-            DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
-        ]);
+            ->join('pedidos as pe', 'pe.id', '=', 'pp.pedido_id')
+            ->join('produtos as pr', 'pr.id', '=', 'pp.produto_id')
+            ->where('pe.status', 'em_andamento')
+            ->groupBy('pp.produto_id', 'pr.titulo', 'pr.quantidade_estoque')
+            ->havingRaw('SUM(pp.quantidade) > pr.quantidade_estoque')
+            ->get([
+                'pp.produto_id',
+                DB::raw('pr.titulo as titulo'),
+                DB::raw('SUM(pp.quantidade) as qtd_em_pedidos'),
+                'pr.quantidade_estoque',
+                DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
+            ]);
 
         $pedidos = Pedido::with(['cidades', 'gestor', 'distribuidor.user', 'cliente'])->latest()->get();
 
@@ -46,7 +46,7 @@ class PedidoController extends Controller
     {
         $gestores       = Gestor::with('user')->orderBy('razao_social')->get();
         $distribuidores = Distribuidor::with('user')->orderBy('razao_social')->get();
-        $produtos       = Produto::orderBy('nome')->get();
+        $produtos       = Produto::orderBy('titulo')->get();
         $cidades        = City::orderBy('name')->get();
         $clientes       = Cliente::orderBy('razao_social')->get();
         $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
@@ -95,13 +95,6 @@ class PedidoController extends Controller
         // Valida os dados do pedido
         $validated = $request->validate($rules, $messages);
 
-        // Regras condicionais para cidade
-        if (filled($request->gestor_id) || filled($request->distribuidor_id)) {
-            if (blank($request->cidade_id)) {
-                return back()->withErrors(['cidade_id' => 'Selecione a cidade da venda.'])->withInput();
-            }
-        }
-
         // Filtro para verificar se a cidade pertence ao distribuidor ou gestor selecionado
         // Se a cidade foi selecionada, verifica se pertence ao distribuidor ou gestor
         // Se o distribuidor foi selecionado, verifica se a cidade pertence a ele
@@ -119,16 +112,24 @@ class PedidoController extends Controller
                         'cidade_id' => 'A cidade selecionada não pertence ao distribuidor escolhido.',
                     ])->withInput();
                 }
-            } elseif (filled($request->gestor_id)) {
-                $gestor = Gestor::find($request->gestor_id);
-                if ($gestor) {
-                    $okUF = City::whereKey($request->cidade_id)
-                        ->whereRaw('UPPER(state) = ?', [strtoupper($gestor->estado_uf)])
+            } else {
+                // Sem distribuidor: se cidade foi escolhida, ela não pode estar ocupada
+                if (filled($request->cidade_id)) {
+                    $ocupada = DB::table('city_distribuidor')
+                        ->where('city_id', $request->cidade_id)
                         ->exists();
 
-                    if (!$okUF) {
+                    if ($ocupada) {
+                        // (opcional) Descobrir o nome do distribuidor, pra mensagem mais amigável:
+                        $distName = DB::table('city_distribuidor')
+                            ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
+                            ->where('city_distribuidor.city_id', $request->cidade_id)
+                            ->value('distribuidores.razao_social');
+
                         return back()->withErrors([
-                            'cidade_id' => 'A cidade selecionada não pertence à UF do gestor.',
+                            'cidade_id' => $distName
+                                ? "Esta cidade é atendida pelo distribuidor {$distName}. Selecione esse distribuidor para vender nesta cidade, ou escolha outra cidade/UF."
+                                : 'Esta cidade é atendida por um distribuidor. Selecione o distribuidor correspondente ou escolha outra cidade.',
                         ])->withInput();
                     }
                 }
@@ -183,17 +184,9 @@ class PedidoController extends Controller
             // Se houver estoque suficiente, adiciona o item ao pedido
 
             foreach ($itens as $produtoData) {
-                $produto  = Produto::whereKey($produtoData['id'])->lockForUpdate()->firstOrFail();
+                $produto  = Produto::findOrFail($produtoData['id']);
                 $qtd      = (int) $produtoData['quantidade'];
                 $descItem = (float) ($produtoData['desconto'] ?? 0.0);
-
-                // estoque
-                $disponivel = (int) $produto->quantidade_estoque;
-                if ($disponivel < $qtd) {
-                    throw new \RuntimeException(
-                        "Estoque insuficiente para o produto {$produto->nome}. Disponível: {$disponivel}, solicitado: {$qtd}"
-                    );
-                }
 
                 $precoUnit   = (float) $produto->preco;
                 $subBruto    = $precoUnit * $qtd;
@@ -316,7 +309,7 @@ class PedidoController extends Controller
         // Carrega gestores, distribuidores, produtos, cidades e clientes para a view
         $gestores       = Gestor::with('user')->orderBy('razao_social')->get();
         $distribuidores = Distribuidor::with('user')->orderBy('razao_social')->get();
-        $produtos       = Produto::orderBy('nome')->get();
+        $produtos       = Produto::orderBy('titulo')->get();
         $cidades        = City::orderBy('name')->get();
         $clientes       = Cliente::orderBy('razao_social')->get();
         $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
@@ -401,16 +394,27 @@ class PedidoController extends Controller
                 'cidade_id' => 'A cidade selecionada não pertence ao distribuidor deste pedido.',
             ])->withInput();
         }
-    } elseif (filled($pedido->gestor_id) && filled($request->cidade_id)) {
-        $okUF = \App\Models\City::whereKey($request->cidade_id)
-            ->whereRaw('UPPER(state) = ?', [strtoupper(optional($pedido->gestor)->estado_uf)])
-            ->exists();
-        if (!$okUF) {
-            return back()->withErrors([
-                'cidade_id' => 'A cidade selecionada não pertence à UF do gestor deste pedido.',
-            ])->withInput();
-        }
-    }
+    } else {
+                // Pedido sem distribuidor: se cidade foi escolhida, não pode ser ocupada
+                if (filled($request->cidade_id)) {
+                    $ocupada = DB::table('city_distribuidor')
+                        ->where('city_id', $request->cidade_id)
+                        ->exists();
+
+                    if ($ocupada) {
+                        $distName = DB::table('city_distribuidor')
+                            ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
+                            ->where('city_distribuidor.city_id', $request->cidade_id)
+                            ->value('distribuidores.razao_social');
+
+                        return back()->withErrors([
+                            'cidade_id' => $distName
+                                ? "Esta cidade é atendida pelo distribuidor {$distName}. Selecione esse distribuidor ou escolha outra cidade."
+                                : 'Esta cidade é atendida por um distribuidor. Selecione o distribuidor correspondente ou escolha outra cidade.',
+                        ])->withInput();
+                    }
+                }
+            }
 
     DB::beginTransaction();
     try {
@@ -498,7 +502,7 @@ class PedidoController extends Controller
                 if (!$p) throw new \RuntimeException("Produto {$pid} não encontrado.");
                 $disp = (int) $p->quantidade_estoque;
                 if ($disp < $delta) {
-                    throw new \RuntimeException("Estoque insuficiente para o produto {$p->nome}. Disponível: {$disp}, necessário: {$delta}");
+                    throw new \RuntimeException("Estoque insuficiente para o produto {$p->titulo}. Disponível: {$disp}, necessário: {$delta}");
                 }
             }
         }
@@ -656,7 +660,7 @@ class PedidoController extends Controller
         $comuns      = array_values(array_intersect($idsAntes, $idsDepois));
 
         $nomeProduto = function ($id) {
-            return \App\Models\Produto::find($id)?->nome ?? "Produto #{$id}";
+            return \App\Models\Produto::find($id)?->titulo ?? "Produto #{$id}";
         };
 
         foreach ($adicionados as $pid) {

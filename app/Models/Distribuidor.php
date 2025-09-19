@@ -86,7 +86,27 @@ class Distribuidor extends Model
     // por consistência com o Gestor (exibição simples do e-mail do user)
     public function getEmailExibicaoAttribute(): string
     {
-        return $this->user?->email ?: 'Não informado';
+         // 1) Se o e-mail do próprio gestor estiver preenchido, use-o
+        $emailDistribuidor = trim((string) $this->email);
+        if ($emailDistribuidor !== '') {
+            return $emailDistribuidor;
+        }
+
+        // 2) Senão, olhe o e-mail do usuário relacionado
+        $emailUser = trim((string) ($this->user->email ?? ''));
+
+        // Considere placeholders como "não informado"
+        $isPlaceholder =
+            $emailUser === '' ||
+            preg_match('/^gestor\+.+@placeholder\.local$/i', $emailUser) ||
+            str_ends_with($emailUser, '@placeholder.local');
+
+        if ($isPlaceholder) {
+            return 'Não informado';
+        }
+
+        // 3) Se for um e-mail real, mostre
+        return $emailUser;
     }
 
     // compat: alguns lugares podem usar $distribuidor->estado_uf

@@ -32,6 +32,20 @@ class DistribuidorController extends Controller
 
     public function store(Request $request)
     {
+        // Remove linhas totalmente vazias de "contatos" antes da validação
+        $rawContatos = $request->input('contatos', []);
+        $contatosSan = collect($rawContatos)->filter(function ($c) {
+            // considera "preenchido" se QUALQUER um desses campos tiver conteúdo
+            return trim($c['nome'] ?? '') !== ''
+                || trim($c['email'] ?? '') !== ''
+                || trim($c['telefone'] ?? '') !== ''
+                || trim($c['whatsapp'] ?? '') !== ''
+                || trim($c['cargo'] ?? '') !== ''
+                || !empty($c['preferencial']); // opcional
+        })->values()->all();
+
+        $request->merge(['contatos' => $contatosSan]);
+
         $data = $request->validate([
             // vínculo
             'gestor_id'           => ['required','exists:gestores,id'],
@@ -45,7 +59,7 @@ class DistribuidorController extends Controller
             'cnpj'                => ['required','string','max:18'],
             'representante_legal' => ['required','string','max:255'],
             'cpf'                 => ['required','string','max:14'],
-            'rg'                  => ['required','string','max:30'],
+            'rg'                  => ['nullable','string','max:30'],
             'telefone'            => ['nullable','string','max:20'],
 
             // endereço
@@ -257,6 +271,21 @@ class DistribuidorController extends Controller
 
     public function update(Request $request, Distribuidor $distribuidor)
     {
+
+        // Remove linhas totalmente vazias de "contatos" antes da validação
+        $rawContatos = $request->input('contatos', []);
+        $contatosSan = collect($rawContatos)->filter(function ($c) {
+            // considera "preenchido" se QUALQUER um desses campos tiver conteúdo
+            return trim($c['nome'] ?? '') !== ''
+                || trim($c['email'] ?? '') !== ''
+                || trim($c['telefone'] ?? '') !== ''
+                || trim($c['whatsapp'] ?? '') !== ''
+                || trim($c['cargo'] ?? '') !== ''
+                || !empty($c['preferencial']); // opcional
+        })->values()->all();
+
+        $request->merge(['contatos' => $contatosSan]);
+        
         $data = $request->validate([
             'gestor_id'           => ['required','exists:gestores,id'],
 
@@ -268,7 +297,7 @@ class DistribuidorController extends Controller
             'cnpj'                => ['required','string','max:18'],
             'representante_legal' => ['required','string','max:255'],
             'cpf'                 => ['required','string','max:14'],
-            'rg'                  => ['required','string','max:30'],
+            'rg'                  => ['nullable','string','max:30'],
             'telefone'            => ['nullable','string','max:20'],
 
             'endereco'            => ['nullable','string','max:255'],

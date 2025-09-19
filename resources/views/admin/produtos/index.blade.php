@@ -23,9 +23,9 @@
                     class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
                     @foreach($produtosComEstoqueBaixo as $produto)
                         <li>
-                            {{ $produto->nome }} 
+                            {{ $produto->titulo }} 
                             <span class="text-red-600 font-semibold">
-                                - {{ $produto->quantidade_estoque }} em estoque
+                                : {{ $produto->quantidade_estoque ?? 'vazio'}} em estoque
                             </span>
                         </li>
                     @endforeach
@@ -44,7 +44,7 @@
                     class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-2">
                     @foreach($estoqueParaPedidosEmPotencial as $produto)
                         <li>
-                            Produto: <strong>{{ $produto->nome }}</strong> <br>
+                            Produto: <strong>{{ $produto->titulo }}</strong> <br>
                             Em pedidos: <span class="font-medium text-green-700">{{ $produto->qtd_em_pedidos }}</span> <br>
                             Disponível: <span class="font-medium text-red-600">{{ $produto->quantidade_estoque }}</span>
                         </li>
@@ -84,7 +84,6 @@
                 <thead class="bg-gray-50 text-gray-700">
                     <tr class="text-left text-xs font-semibold uppercase tracking-wide">
                         <th class="px-3 py-2">Imagem</th>
-                        <th class="px-3 py-2">Nome</th>
                         <th class="px-3 py-2 hidden md:table-cell">Título</th>
                         <th class="px-3 py-2 hidden lg:table-cell">Coleção</th>
                         <th class="px-3 py-2 hidden lg:table-cell">ISBN</th>
@@ -112,14 +111,6 @@
                                         sem<br>imagem
                                     </div>
                                 @endif
-                            </td>
-
-                            {{-- Nome (sempre visível) --}}
-                            <td class="px-3 py-2 align-top">
-                                <div class="font-medium text-gray-900">{{ $produto->nome }}</div>
-                                <div class="mt-0.5 text-xs text-gray-500 hidden md:block">
-                                    {{ $produto->colecao?->nome ?? '—' }}
-                                </div>
                             </td>
 
                             <td class="px-3 py-2 hidden md:table-cell">{{ $produto->titulo ?? '—' }}</td>

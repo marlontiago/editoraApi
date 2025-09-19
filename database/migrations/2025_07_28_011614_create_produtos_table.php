@@ -10,11 +10,10 @@ return new class extends Migration {
         Schema::create('produtos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('colecao_id')->nullable()->constrained('colecoes')->onDelete('set null');
-            $table->string('nome');
             $table->text('descricao')->nullable();
-            $table->decimal('preco', 10, 2);
+            $table->decimal('preco', 10, 2)->nullable();
             $table->string('imagem')->nullable();
-            $table->integer('quantidade_estoque')->default(0);
+            $table->integer('quantidade_estoque')->nullable();
             $table->integer('quantidade_por_caixa')->default(1);
             $table->string('titulo')->nullable();
             $table->string('isbn')->nullable();

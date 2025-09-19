@@ -20,22 +20,16 @@
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
             @csrf
 
-            {{-- Nome --}}
-            <div class="col-span-12">
-                <label for="nome" class="block text-sm font-medium text-gray-700">Nome <span class="text-red-600">*</span></label>
-                <input type="text" id="nome" name="nome" value="{{ old('nome') }}"
+            {{-- Título (único, substitui "Nome") --}}
+            <div class="col-span-12 md:col-span-8">
+                <label for="titulo" class="block text-sm font-medium text-gray-700">Título <span class="text-red-600">*</span></label>
+                <input type="text" id="titulo" name="titulo" value="{{ old('titulo') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                        required>
-                @error('nome') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-            </div>
-
-            {{-- Título e Coleção --}}
-            <div class="col-span-12 md:col-span-8">
-                <label for="titulo" class="block text-sm font-medium text-gray-700">Título</label>
-                <input type="text" id="titulo" name="titulo" value="{{ old('titulo') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                 @error('titulo') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
+            {{-- Coleção --}}
             <div class="col-span-12 md:col-span-4">
                 <label for="colecao_id" class="block text-sm font-medium text-gray-700">Coleção</label>
                 <select id="colecao_id" name="colecao_id"
@@ -53,8 +47,7 @@
                 <label for="isbn" class="block text-sm font-medium text-gray-700">ISBN</label>
                 <input type="text" id="isbn" name="isbn" value="{{ old('isbn') }}" placeholder="000-00-0000-000-0" maxlength="17"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                       oninput="this.value=(v=>{v=v.replace(/\D/g,'').slice(0,13);let out='',i=0;for(const len of [3,2,4,3,1]){const p=v.slice(i,i+len);if(!p) break;out+=(out?'-':'')+p;i+=len}return out})(this.value)"
-/>
+                       oninput="this.value=(v=>{v=v.replace(/\D/g,'').slice(0,13);let out='',i=0;for(const len of [3,2,4,3,1]){const p=v.slice(i,i+len);if(!p) break;out+=(out?'-':'')+p;i+=len}return out})(this.value)">
                 @error('isbn') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
@@ -80,7 +73,7 @@
             <div class="col-span-12 md:col-span-4">
                 <label for="quantidade_por_caixa" class="block text-sm font-medium text-gray-700">Quantidade por Caixa <span class="text-red-600">*</span></label>
                 <input type="number" id="quantidade_por_caixa" name="quantidade_por_caixa" min="1"
-                       value="{{ old('quantidade_por_caixa', $produto->quantidade_por_caixa ?? 1) }}"
+                       value="{{ old('quantidade_por_caixa', 1) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500" required>
                 @error('quantidade_por_caixa') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -130,14 +123,14 @@
                 <div class="mt-1 flex rounded-md shadow-sm">
                     <span class="inline-flex items-center rounded-l-md border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">R$</span>
                     <input type="number" step="0.01" id="preco" name="preco" value="{{ old('preco') }}"
-                           class="flex-1 rounded-r-md border border-l-0 border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500" required>
+                           class="flex-1 rounded-r-md border border-l-0 border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                 </div>
                 @error('preco') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
                 <label for="quantidade_estoque" class="block text-sm font-medium text-gray-700">Estoque <span class="text-red-600">*</span></label>
                 <input type="number" id="quantidade_estoque" name="quantidade_estoque" value="{{ old('quantidade_estoque') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                 @error('quantidade_estoque') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -147,7 +140,7 @@
                 <input type="file" id="imagem" name="imagem"
                        class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
                 @error('imagem') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                <p class="mt-1 text-xs text-gray-500">Formatos aceitos: JPG/PNG. Tamanho máximo recomendado 2MB.</p>
+                <p class="mt-1 text-xs text-gray-500">Formatos aceitos: JPG/PNG/WEBP. Máx. 2 MB.</p>
             </div>
 
             {{-- Ações --}}

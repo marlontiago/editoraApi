@@ -77,6 +77,10 @@
                class="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
                 Exportar Orçamento
             </a>
+            <a href="{{ route('admin.notas.show', $notaAtual) }}"
+                           class="inline-flex items-center px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">
+                            Ver Nota
+            </a>
 
             {{-- Botões de Nota Fiscal --}}
             @if(!empty($temNotaFaturada) && $temNotaFaturada)
@@ -157,14 +161,6 @@
                                 • Faturada em: <span class="font-medium">{{ optional($notaAtual->faturada_em)->format('d/m/Y H:i') }}</span>
                             @endif
                         </span>
-                        <a href="{{ route('admin.notas.show', $notaAtual) }}"
-                           class="inline-flex items-center ml-3 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 border border-gray-300 text-sm">
-                            Ver Nota
-                        </a>
-                        <a href="{{ route('admin.notas.pdf', $notaAtual) }}" target="_blank"
-                           class="inline-flex items-center ml-2 px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-sm">
-                            Exportar PDF
-                        </a>
                     </div>
                 @endif
 

@@ -80,7 +80,6 @@
             <td class="right" style="border:0;">
                 <div style="font-size:12px;">
                     Data: {{ \Carbon\Carbon::parse($pedido->data)->format('d/m/Y') }}<br>
-                    Status: {{ ucfirst(str_replace('_',' ',$pedido->status)) }}
                 </div>
             </td>
         </tr>
@@ -101,6 +100,7 @@
 
 {{-- Meta --}}
 <div style="margin-top: 8px;">
+    <br>
     <p><strong>Cliente:</strong> {{ $pedido->cliente->razao_social ?? $pedido->cliente->nome ?? '-' }}</p>
     <p><strong>Distribuidor:</strong> {{ $pedido->distribuidor->user->name ?? '-' }}</p>
     <p><strong>Cidades:</strong>
@@ -116,13 +116,13 @@
 <table style="margin-top: 8px;">
     <thead>
         <tr>
-            <th style="width:70px;">Imagem</th>
-            <th>Produto</th>
-            <th style="width:60px;" class="right">Qtd</th>
-            <th style="width:90px;" class="right">Preço Unit.</th>
-            <th style="width:80px;" class="right">Desc. (%)</th>
-            <th style="width:100px;" class="right">Desc. (R$)</th>
-            <th style="width:110px;" class="right">Subtotal</th>
+            <th style="width:90px;" class="right">Imagem</th>
+            <th stylr="width:110px" class="right">Produto</th>
+            <th style="width:30px;" class="right">Qtd</th>
+            <th style="width:60px;" class="right">Preço Unit.</th>
+            <th style="width:60px;" class="right">Desc. (%)</th>
+            <th style="width:60px;" class="right">Desc. (R$)</th>
+            <th style="width:90px;" class="right">Subtotal</th>
         </tr>
     </thead>
     <tbody>

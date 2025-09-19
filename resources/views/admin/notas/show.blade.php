@@ -68,45 +68,66 @@
                 <div><strong>Série:</strong> {{ $nota->serie ?? '-' }}</div>
 
                 {{-- Status da nota + Status financeiro (badges lado a lado) --}}
-                <div class="flex items-center gap-2">
-                    <strong>Status:</strong>
-                    @php
-                        // classes do status da nota
-                        $notaStatusMap = [
-                            'emitida'   => 'bg-blue-100 text-blue-800 border-blue-200',
-                            'faturada'  => 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                            'cancelada' => 'bg-red-100 text-red-800 border-red-200',
-                        ];
-                        $notaStatusClasses = $notaStatusMap[$nota->status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
-
-                        // preparar variáveis do financeiro
-                        $finKey          = $nota->status_financeiro;
-                        $notaFinLabel    = null;
-                        $notaFinClasses  = null;
-
-                        if ($finKey) {
-                            $notaFinMap = [
-                                'aguardando_pagamento' => ['Aguardando pagamento', 'bg-amber-100 text-amber-800 border-amber-200'],
-                                'pago'                  => ['Pago',                 'bg-green-100 text-green-800 border-green-200'],
+                <div class="col-span-2">
+                    <div class="flex items-center gap-2">
+                        <strong>Status:</strong>
+                        @php
+                            // classes do status da NOTA (não inclui pago_parcial aqui!)
+                            $notaStatusMap = [
+                                'emitida'   => 'bg-blue-100 text-blue-800 border-blue-200',
+                                'faturada'  => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                                'cancelada' => 'bg-red-100 text-red-800 border-red-200',
                             ];
-                            [$notaFinLabel, $notaFinClasses] = $notaFinMap[$finKey]
-                                ?? [ucfirst(str_replace('_',' ',$finKey)), 'bg-gray-100 text-gray-800 border-gray-200'];
-                        }
-                    @endphp
+                            $notaStatusClasses = $notaStatusMap[$nota->status] ?? 'bg-gray-100 text-gray-800 border-gray-200';
 
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $notaStatusClasses }}">
-                        {{ ucfirst($nota->status) }}
-                    </span>
+                            // preparar variáveis do FINANCEIRO
+                            $finKey         = $nota->status_financeiro;
+                            $notaFinLabel   = null;
+                            $notaFinClasses = null;
 
-                    @if($notaFinLabel)
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $notaFinClasses }}">
-                            {{ $notaFinLabel }}
+                            if ($finKey) {
+                                $notaFinMap = [
+                                    'aguardando_pagamento' => ['Aguardando pagamento', 'bg-amber-100 text-amber-800 border-amber-200'],
+                                    'pago_parcial'         => ['Pago parcial',         'bg-blue-100 text-blue-800 border-blue-200'],
+                                    'pago'                 => ['Pago',                 'bg-green-100 text-green-800 border-green-200'],
+                                ];
+                                [$notaFinLabel, $notaFinClasses] = $notaFinMap[$finKey]
+                                    ?? [ucfirst(str_replace('_',' ',$finKey)), 'bg-gray-100 text-gray-800 border-gray-200'];
+                            }
+
+                            // cálculo de progresso para pago_parcial
+                            $valTotal = (float) $nota->valor_total;
+                            $valPago  = (float) $nota->total_pago_bruto; // ou total_pago_liquido
+                            $pct = $valTotal > 0 ? min(100, floor(($valPago / $valTotal) * 100)) : 0;
+                        @endphp
+
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $notaStatusClasses }}">
+                            {{ ucfirst($nota->status) }}
                         </span>
+
+                        @if($notaFinLabel)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full border {{ $notaFinClasses }}">
+                                {{ $notaFinLabel }}
+                            </span>
+                        @endif
+                    </div>
+
+                    {{-- Barra de progresso quando for pago_parcial --}}
+                    @if($nota->status_financeiro === 'pago_parcial')
+                        <div class="w-full mt-2">
+                            <div class="h-2 bg-gray-200 rounded">
+                                <div class="h-2 rounded bg-blue-500" style="width: {{ $pct }}%"></div>
+                            </div>
+                            <div class="text-xs text-gray-600 mt-1">
+                                Recebido: R$ {{ number_format($valPago, 2, ',', '.') }}
+                                ({{ $pct }}%) de
+                                R$ {{ number_format($valTotal, 2, ',', '.') }}
+                            </div>
+                        </div>
                     @endif
                 </div>
 
                 <div><strong>Ambiente:</strong> {{ strtoupper($nota->ambiente ?? 'INTERNO') }}</div>
-
                 <div><strong>Emitida em:</strong> {{ optional($nota->emitida_em)->format('d/m/Y H:i') }}</div>
                 <div><strong>Faturada em:</strong> {{ optional($nota->faturada_em)->format('d/m/Y H:i') ?? '-' }}</div>
 
@@ -167,14 +188,23 @@
             </div>
         </div>
 
-        {{-- Resumo Financeiro (opcional – mantém além dos badges) --}}
+        {{-- Resumo Financeiro --}}
         <div class="bg-white p-6 rounded-lg shadow border">
             <h3 class="text-lg font-semibold mb-4">Resumo Financeiro</h3>
             <div class="grid grid-cols-3 gap-4 text-sm">
                 <div>
                     <strong>Status financeiro:</strong>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 border">
-                        {{ $nota->status_financeiro ? str_replace('_',' ', ucfirst($nota->status_financeiro)) : '—' }}
+                    @php
+                        $finKey = $nota->status_financeiro;
+                        $finBadge = match($finKey) {
+                            'aguardando_pagamento' => 'bg-amber-100 text-amber-800 border-amber-200',
+                            'pago_parcial'         => 'bg-blue-100 text-blue-800 border-blue-200',
+                            'pago'                 => 'bg-green-100 text-green-800 border-green-200',
+                            default                => 'bg-gray-100 text-gray-800 border-gray-200',
+                        };
+                    @endphp
+                    <span class="inline-flex items-center px-2 py-0.5 rounded border {{ $finBadge }}">
+                        {{ $finKey ? str_replace('_',' ', ucfirst($finKey)) : '—' }}
                     </span>
                 </div>
                 <div>

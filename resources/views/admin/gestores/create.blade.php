@@ -244,10 +244,7 @@
 
             {{-- ================= CONTATOS ================= --}}
             @php
-                $contatosInicial = old('contatos') ?? [[
-                    'id'=>null,'nome'=>'','email'=>'','telefone'=>'','whatsapp'=>'',
-                    'cargo'=>'','tipo'=>'outro','preferencial'=>false,'observacoes'=>''
-                ]];
+                $contatosInicial = old('contatos') ?? [];
             @endphp
 
             <div x-data='@json(["itens" => $contatosInicial])' class="col-span-12">

@@ -16,7 +16,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.gestores.update', $gestor) }}" enctype="multipart/form-data"
+        <form method="POST" action="{{ route('admin.gestores.update', ['gestor' => $gestor->id]) }}" enctype="multipart/form-data"
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
             @csrf
             @method('PUT')
@@ -111,7 +111,7 @@
                 @error('estado_uf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- Percentual sobre vendas --}}
+            {{-- Percentual sobre vendas (campo do Gestor) --}}
             <div class="col-span-12 md:col-span-5">
                 <label for="percentual_vendas" class="block text-sm font-medium text-gray-700">Percentual sobre vendas</label>
                 <div class="mt-1 flex rounded-md shadow-sm">
@@ -120,6 +120,9 @@
                            class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">%</span>
                 </div>
+                <p class="mt-1 text-xs text-gray-500">
+                    Se houver um contrato/aditivo marcado como <strong>Ativo</strong>, o percentual acima será atualizado automaticamente por ele.
+                </p>
                 @error('percentual_vendas') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -178,30 +181,14 @@
                 @error('cep') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- Início do contrato + Validade (meses) --}}
-            <div class="col-span-12 md:col-span-4">
-                <label for="inicio_contrato" class="block text-sm font-medium text-gray-700">Início do contrato</label>
-                <input type="date" id="inicio_contrato" name="inicio_contrato" value="{{ old('inicio_contrato') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('inicio_contrato') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                <p class="mt-1 text-xs text-gray-500">Se informar aqui + validade (meses), recalcula vencimento.</p>
-            </div>
-
-            <div class="col-span-12 md:col-span-2">
-                <label for="validade_meses" class="block text-sm font-medium text-gray-700">Validade (meses)</label>
-                <input type="number" id="validade_meses" name="validade_meses" value="{{ old('validade_meses') }}"
-                       min="1" max="120" step="1"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('validade_meses') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-            </div>
-
-            {{-- Anexos (Contrato / Aditivo / Outros) - Append only --}}
+            {{-- ================= ANEXOS (NOVOS) ================= --}}
             <div x-data="{ itens: [{id: Date.now()}] }" class="col-span-12">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Anexos (PDF)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Adicionar novos anexos (PDF)</label>
 
                 <template x-for="(item, idx) in itens" :key="item.id">
-                    <div class="grid grid-cols-12 gap-3 mb-3">
+                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border">
                         <div class="col-span-12 md:col-span-3">
+                            <label class="text-xs text-gray-600">Tipo</label>
                             <select :name="`contratos[${idx}][tipo]`"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="contrato">Contrato</option>
@@ -210,9 +197,53 @@
                             </select>
                         </div>
 
-                        <div class="col-span-12 md:col-span-7">
+                        <div class="col-span-12 md:col-span-5">
+                            <label class="text-xs text-gray-600">Arquivo (PDF)</label>
                             <input type="file" accept="application/pdf" :name="`contratos[${idx}][arquivo]`"
                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
+                        </div>
+
+                        <div class="col-span-12 md:col-span-2">
+                            <label class="text-xs text-gray-600">Percentual</label>
+                            <div class="mt-1 flex rounded-md shadow-sm">
+                                <input type="number" step="0.01" min="0" max="100"
+                                       :name="`contratos[${idx}][percentual_vendas]`"
+                                       class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm">%</span>
+                            </div>
+                            <p class="mt-1 text-[11px] text-gray-500">Se marcado como <b>Ativo</b>, este percentual será aplicado ao Gestor.</p>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-2">
+                            <label class="text-xs text-gray-600">Ativo?</label>
+                            <div class="mt-2">
+                                <label class="inline-flex items-center text-sm">
+                                    <input type="checkbox" :name="`contratos[${idx}][ativo]`" value="1" class="rounded border-gray-300">
+                                    <span class="ml-2">Ativo</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-3">
+                            <label class="text-xs text-gray-600">Data de Assinatura</label>
+                            <input type="date" :name="`contratos[${idx}][data_assinatura]`"
+                                   class="mt-1 block w-full rounded-md border-gray-300">
+                        </div>
+
+                        <div class="col-span-12 md:col-span-3">
+                            <label class="text-xs text-gray-600">Validade (meses)</label>
+                            <input type="number" min="1" max="120" step="1" :name="`contratos[${idx}][validade_meses]`"
+                                   class="mt-1 block w-full rounded-md border-gray-300">
+                            <p class="mt-1 text-[11px] text-gray-500">Vencimento = Assinatura + Validade.</p>
+                        </div>
+
+                        <div class="col-span-12">
+                            <input type="text" placeholder="Descrição (opcional)" :name="`contratos[${idx}][descricao]`"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <label class="inline-flex items-center text-sm mt-2">
+                                <input type="checkbox" :name="`contratos[${idx}][assinado]`" value="1" class="rounded border-gray-300">
+                                <span class="ml-2">Assinado</span>
+                            </label>
                         </div>
 
                         <div class="col-span-12 md:col-span-2">
@@ -221,15 +252,6 @@
                                     @click="itens.splice(idx,1)" x-show="itens.length > 1">
                                 Remover
                             </button>
-                        </div>
-
-                        <div class="col-span-12 md:col-span-12">
-                            <input type="text" placeholder="Descrição (opcional)" :name="`contratos[${idx}][descricao]`"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <label class="inline-flex items-center text-sm mt-2">
-                                <input type="checkbox" :name="`contratos[${idx}][assinado]`" value="1" class="rounded border-gray-300">
-                                <span class="ml-2">Assinado</span>
-                            </label>
                         </div>
                     </div>
                 </template>
@@ -241,7 +263,71 @@
                 </button>
 
                 @error('contratos.*.arquivo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.percentual_vendas') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.data_assinatura') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.validade_meses') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
+            {{-- LISTA DE ANEXOS EXISTENTES (sem forms aninhados) --}}
+            @if($gestor->anexos->count())
+                <div class="col-span-12">
+                    <h3 class="text-sm font-semibold mb-2">Contratos / Aditivos existentes</h3>
+                    <ul class="space-y-2">
+                        @foreach($gestor->anexos as $anexo)
+                            <li class="border rounded p-3 flex items-center justify-between">
+                                <div class="text-sm">
+                                    <div>
+                                        <strong>{{ strtoupper($anexo->tipo) }}</strong>
+                                        @if($anexo->assinado)
+                                            <span class="ml-2 px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">Assinado</span>
+                                        @endif
+                                        @if($anexo->ativo)
+                                            <span class="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">Ativo</span>
+                                        @endif
+                                    </div>
+
+                                    @if(!is_null($anexo->percentual_vendas))
+                                        <div>Percentual desse contrato: <strong>{{ number_format($anexo->percentual_vendas, 2, ',', '.') }}%</strong></div>
+                                    @endif
+
+                                    @if($anexo->data_assinatura)
+                                        <div>Assinado em: {{ \Carbon\Carbon::parse($anexo->data_assinatura)->format('d/m/Y') }}</div>
+                                    @endif
+
+                                    @if($anexo->data_vencimento)
+                                        <div>Vence em: {{ \Carbon\Carbon::parse($anexo->data_vencimento)->format('d/m/Y') }}</div>
+                                    @endif
+
+                                    @if($anexo->descricao)
+                                        <div class="text-gray-600">{{ $anexo->descricao }}</div>
+                                    @endif
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    @if($anexo->arquivo)
+                                        <a href="{{ Storage::disk('public')->url($anexo->arquivo) }}" target="_blank"
+                                           class="text-blue-600 text-sm underline">Abrir</a>
+                                    @endif
+
+                                    @unless($anexo->ativo)
+                                        <button type="button"
+                                            class="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                                            onclick="document.getElementById('form-ativar-{{ $anexo->id }}').submit()">
+                                            Ativar
+                                        </button>
+                                    @endunless
+
+                                    <button type="button"
+                                        class="text-sm px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+                                        onclick="if(confirm('Excluir este anexo?')) document.getElementById('form-excluir-{{ $anexo->id }}').submit()">
+                                        Excluir
+                                    </button>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             {{-- ================= CONTATOS ================= --}}
             @php
@@ -303,12 +389,6 @@
                         </div>
 
                         <div class="col-span-6 md:col-span-2">
-                            <label class="text-xs text-gray-600">Cargo</label>
-                            <input type="text" class="mt-1 block w-full rounded-md border-gray-300"
-                                   x-model="item.cargo" :name="`contatos[${idx}][cargo]`">
-                        </div>
-
-                        <div class="col-span-6 md:col-span-2">
                             <label class="text-xs text-gray-600">Tipo</label>
                             <select class="mt-1 block w-full rounded-md border-gray-300"
                                     x-model="item.tipo" :name="`contatos[${idx}][tipo]`">
@@ -360,5 +440,19 @@
                 </button>
             </div>
         </form>
+
+        {{-- ===== Forms ocultos para ATIVAR/EXCLUIR anexos (fora do form principal!) ===== --}}
+        @if($gestor->anexos->count())
+            @foreach($gestor->anexos as $anexo)
+                <form id="form-ativar-{{ $anexo->id }}" method="POST" action="{{ route('admin.gestores.anexos.ativar', [$gestor, $anexo]) }}" class="hidden">
+                    @csrf
+                </form>
+                <form id="form-excluir-{{ $anexo->id }}" method="POST" action="{{ route('admin.gestores.anexos.destroy', [$gestor, $anexo]) }}" class="hidden">
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endforeach
+        @endif
+        {{-- ============================================================================ --}}
     </div>
 </x-app-layout>

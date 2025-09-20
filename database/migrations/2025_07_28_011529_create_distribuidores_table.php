@@ -11,8 +11,15 @@ return new class extends Migration {
             $table->id();
 
             // Relacionamentos
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('gestor_id')->constrained('gestores')->cascadeOnDelete();
+            $table->foreignId('user_id')
+                ->constrained()            // referencia 'users.id'
+                ->cascadeOnDelete();       // ao apagar user, apaga distribuidor
+
+            // ATENÇÃO: vínculo opcional com gestor (pode ficar sem vínculo)
+            $table->foreignId('gestor_id')
+                ->nullable()
+                ->constrained('gestores')  // referencia 'gestores.id'
+                ->nullOnDelete();          // ao apagar gestor, seta NULL no distribuidor
 
             // Dados principais
             $table->string('razao_social');
@@ -22,7 +29,7 @@ return new class extends Migration {
             $table->string('rg')->nullable();
             $table->string('telefone', 20)->nullable();
 
-            // Endereço fracionado (mesmo padrão do gestor/cliente)
+            // Endereço
             $table->string('endereco', 255)->nullable();
             $table->string('numero', 20)->nullable();
             $table->string('complemento', 100)->nullable();
@@ -31,14 +38,14 @@ return new class extends Migration {
             $table->string('uf', 2)->nullable();
             $table->string('cep', 9)->nullable();
 
-            // Comercial/Contrato
+            // Comercial / Contrato
             $table->decimal('percentual_vendas', 5, 2)->default(0);
             $table->date('vencimento_contrato')->nullable(); // calculado por início+validade no controller
             $table->boolean('contrato_assinado')->default(false);
 
             $table->timestamps();
 
-            // Índices úteis (opcional)
+            // Índices úteis
             $table->index('cnpj');
             $table->index('cpf');
             $table->index(['gestor_id', 'uf']);

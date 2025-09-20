@@ -24,6 +24,58 @@ class DashboardController extends Controller
         $totalProdutos = Produto::count();
         $totalGestores = Gestor::count();
         $totalUsuarios = User::count();
+        $produtosComEstoqueBaixo = Produto::where('quantidade_estoque', '<=', 100)->get();
+        $estoqueParaPedidosEmPotencial = DB::table('pedido_produto as pp')
+            ->join('pedidos as pe', 'pe.id', '=', 'pp.pedido_id')
+            ->join('produtos as pr', 'pr.id', '=', 'pp.produto_id')
+            ->where('pe.status', 'em_andamento')
+            ->groupBy('pp.produto_id', 'pr.titulo', 'pr.quantidade_estoque')
+            ->havingRaw('SUM(pp.quantidade) > pr.quantidade_estoque')
+            ->get([
+                'pp.produto_id',
+                DB::raw('pr.titulo as titulo'),
+                DB::raw('SUM(pp.quantidade) as qtd_em_pedidos'),
+                'pr.quantidade_estoque',
+                DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
+            ]);
+        
+         // Gestores com contrato vencendo nos próximos 30 dias
+        $gestoresVencendo = Gestor::vencendoEmAte(30)
+            ->orderBy('vencimento_contrato')
+            ->get(['id','razao_social','vencimento_contrato'])
+            ->map(function ($g) {
+                $g->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($g->vencimento_contrato), false);
+                return $g;
+            });
+
+        // (Opcional) Gestores já vencidos
+        $gestoresVencidos = Gestor::vencidos()
+            ->orderBy('vencimento_contrato')
+            ->get(['id','razao_social','vencimento_contrato'])
+            ->map(function ($g) {
+                $g->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($g->vencimento_contrato), false);
+                return $g;
+            });
+
+            // Distribuidores com contrato vencendo (≤ 30 dias)
+        $distribuidoresVencendo = Distribuidor::vencendoEmAte(30)
+            ->with('gestor:id,razao_social') // opcional, pra mostrar quem é o gestor
+            ->orderBy('vencimento_contrato')
+            ->get(['id','razao_social','vencimento_contrato','gestor_id'])
+            ->map(function ($d) {
+                $d->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($d->vencimento_contrato), false);
+                return $d;
+            });
+
+        // (Opcional) Distribuidores já vencidos
+        $distribuidoresVencidos = Distribuidor::vencidos()
+            ->with('gestor:id,razao_social')
+            ->orderBy('vencimento_contrato')
+            ->get(['id','razao_social','vencimento_contrato','gestor_id'])
+            ->map(function ($d) {
+                $d->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($d->vencimento_contrato), false);
+                return $d;
+            });
 
         $gestoresList = Gestor::with('user:id,name')->orderBy('razao_social')->get();
         $distribuidoresList = Distribuidor::with('user:id,name')->orderBy('razao_social')->get();
@@ -102,6 +154,12 @@ class DashboardController extends Controller
             'status'                    => $status,
             'cidadesList'               => $cidadesList,
             'cidadesIds'                => $cidadesIds,
+            'produtosComEstoqueBaixo'   => $produtosComEstoqueBaixo,
+            'estoqueParaPedidosEmPotencial' => $estoqueParaPedidosEmPotencial,
+            'gestoresVencendo'          => $gestoresVencendo,
+            'gestoresVencidos'          => $gestoresVencidos,
+            'distribuidoresVencendo'    => $distribuidoresVencendo,
+            'distribuidoresVencidos'    => $distribuidoresVencidos,
         ]);
     }
 

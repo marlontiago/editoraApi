@@ -4,10 +4,16 @@
             <h2 class="text-xl font-semibold text-gray-800">
                 Gestores
             </h2>
+            <div>
+            <a href="{{ route('admin.gestores.vincular') }}"
+                class="inline-flex h-9 items-center bg-blue-700  text-white rounded-md border px-3 text-sm hover:bg-blue-900">
+                    Vincular Distribuidores
+            </a>
             <a href="{{ route('admin.gestores.create') }}"
                class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
                 + Novo Gestor
             </a>
+            </div>
         </div>
     </x-slot>
 

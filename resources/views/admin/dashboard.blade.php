@@ -18,6 +18,138 @@
             </div>
         </div>
     </x-slot>
+    
+    {{-- Produtos com estoque baixo --}}
+        @if($produtosComEstoqueBaixo->isNotEmpty())
+            <div x-data="{ open: false }" class="bg-red-100 p-3 rounded shadow mb-4 m-4">
+                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
+                    ⚠️ Produtos com estoque baixo 
+                    <span class="ml-auto text-sm text-red-600">({{ $produtosComEstoqueBaixo->count() }} itens)</span>
+                </button>
+                <ul x-show="open" x-transition 
+                    class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                    @foreach($produtosComEstoqueBaixo as $produto)
+                        <li>
+                            {{ $produto->titulo }} 
+                            <span class="text-red-600 font-semibold">
+                                - {{ $produto->quantidade_estoque }} em estoque
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Estoque em pedidos em potencial --}}
+        @if($estoqueParaPedidosEmPotencial->isNotEmpty())
+            <div x-data="{ open: false }" class="bg-yellow-100 p-3 rounded shadow m-4">
+                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
+                    ⚠️ Estoque em risco para pedidos futuros
+                    <span class="ml-auto text-sm text-yellow-700">({{ $estoqueParaPedidosEmPotencial->count() }} itens)</span>
+                </button>
+                <ul x-show="open" x-transition 
+                    class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-2">
+                    @foreach($estoqueParaPedidosEmPotencial as $produto)
+                        <li>
+                            Produto: <strong>{{ $produto->titulo }}</strong> <br>
+                            Em pedidos: <span class="font-medium text-green-700">{{ $produto->qtd_em_pedidos }}</span> <br>
+                            Disponível: <span class="font-medium text-red-600">{{ $produto->quantidade_estoque }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Contratos de gestores vencendo em até 30 dias --}}
+        @if($gestoresVencendo->isNotEmpty())
+            <div x-data="{ open: false }" class="bg-blue-100 p-3 rounded shadow mb-4 m-4">
+                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
+                    🔔 Contratos de gestores a vencer (30 dias)
+                    <span class="ml-auto text-sm text-blue-700">({{ $gestoresVencendo->count() }})</span>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                    @foreach($gestoresVencendo as $g)
+                        <li>
+                            <strong>{{ $g->razao_social }}</strong>
+                            — vence em {{ \Carbon\Carbon::parse($g->vencimento_contrato)->format('d/m/Y') }}
+                            <span class="text-blue-700 font-medium">
+                                (em {{ $g->dias_restantes }} dia{{ $g->dias_restantes == 1 ? '' : 's' }})
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- (Opcional) Contratos de gestores vencidos --}}
+        @if($gestoresVencidos->isNotEmpty())
+            <div x-data="{ open: true }" class="bg-red-100 p-3 rounded shadow mb-4 m-4">
+                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
+                    ⚠️ Contratos de gestores vencidos
+                    <span class="ml-auto text-sm text-red-700">({{ $gestoresVencidos->count() }})</span>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                    @foreach($gestoresVencidos as $g)
+                        <li>
+                            <strong>{{ $g->razao_social }}</strong>
+                            — venceu em {{ \Carbon\Carbon::parse($g->vencimento_contrato)->format('d/m/Y') }}
+                            <span class="text-red-700 font-medium">
+                                (há {{ abs($g->dias_restantes) }} dia{{ abs($g->dias_restantes) == 1 ? '' : 's' }})
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Contratos de distribuidores vencendo em até 30 dias --}}
+        @if($distribuidoresVencendo->isNotEmpty())
+            <div x-data="{ open: false }" class="bg-blue-100 p-3 rounded shadow mb-4 m-4">
+                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
+                    🔔 Contratos de distribuidores a vencer (30 dias)
+                    <span class="ml-auto text-sm text-blue-700">({{ $distribuidoresVencendo->count() }})</span>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                    @foreach($distribuidoresVencendo as $d)
+                        <li>
+                            <strong>{{ $d->razao_social }}</strong>
+                            — vence em {{ \Carbon\Carbon::parse($d->vencimento_contrato)->format('d/m/Y') }}
+                            <span class="text-blue-700 font-medium">
+                                (em {{ $d->dias_restantes }} dia{{ $d->dias_restantes == 1 ? '' : 's' }})
+                            </span>
+                            @if($d->gestor)
+                                <span class="text-xs text-gray-600"> • Gestor: {{ $d->gestor->razao_social }}</span>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- (Opcional) Contratos de distribuidores vencidos --}}
+        @if($distribuidoresVencidos->isNotEmpty())
+            <div x-data="{ open: true }" class="bg-red-100 p-3 rounded shadow mb-4 m-4">
+                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
+                    ⚠️ Contratos de distribuidores vencidos
+                    <span class="ml-auto text-sm text-red-700">({{ $distribuidoresVencidos->count() }})</span>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                    @foreach($distribuidoresVencidos as $d)
+                        <li>
+                            <strong>{{ $d->razao_social }}</strong>
+                            — venceu em {{ \Carbon\Carbon::parse($d->vencimento_contrato)->format('d/m/Y') }}
+                            <span class="text-red-700 font-medium">
+                                (há {{ abs($d->dias_restantes) }} dia{{ abs($d->dias_restantes) == 1 ? '' : 's' }})
+                            </span>
+                            @if($d->gestor)
+                                <span class="text-xs text-gray-600"> • Gestor: {{ $d->gestor->razao_social }}</span>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
 
     <div class="max-w-7xl mx-auto p-6 space-y-6">
         {{-- Chips de filtros ativos --}}

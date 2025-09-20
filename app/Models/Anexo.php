@@ -18,6 +18,8 @@ class Anexo extends Model
         'data_assinatura',
         'data_vencimento',
         'assinado',
+        'percentual_vendas',
+        'ativo'
     ];
 
     public function anexavel()

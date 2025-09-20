@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Support\Formatters;
+use Carbon\Carbon;
 
 class Distribuidor extends Model
 {
@@ -113,5 +114,26 @@ class Distribuidor extends Model
     public function getEstadoUfAttribute(): ?string
     {
         return $this->uf;
+    }
+
+    public function scopeVencendoEmAte($q, int $dias = 30)
+    {
+        return $q->whereNotNull('vencimento_contrato')
+                 ->whereDate('vencimento_contrato', '>=', now()->toDateString())
+                 ->whereDate('vencimento_contrato', '<=', now()->addDays($dias)->toDateString());
+    }
+
+    // Contratos já vencidos
+    public function scopeVencidos($q)
+    {
+        return $q->whereNotNull('vencimento_contrato')
+                 ->whereDate('vencimento_contrato', '<', now()->toDateString());
+    }
+
+    // Quantos dias faltam (negativo se já venceu)
+    public function getDiasRestantesAttribute(): ?int
+    {
+        if (!$this->vencimento_contrato) return null;
+        return Carbon::today()->diffInDays(Carbon::parse($this->vencimento_contrato), false);
     }
 }

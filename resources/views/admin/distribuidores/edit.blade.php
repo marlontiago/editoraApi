@@ -4,7 +4,6 @@
     </x-slot>
 
     <div class="max-w-6xl mx-auto p-6">
-        {{-- Resumo de validação --}}
         @if ($errors->any())
             <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
                 <div class="font-semibold mb-2">Corrija os campos abaixo:</div>
@@ -16,12 +15,13 @@
             </div>
         @endif
 
+        {{-- ========= FORM PRINCIPAL ========= --}}
         <form action="{{ route('admin.distribuidores.update', $distribuidor) }}" method="POST" enctype="multipart/form-data"
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
             @csrf
             @method('PUT')
 
-            {{-- ===== Gestor + UF/Percentual (coluna esquerda) ===== --}}
+            {{-- ===== Gestor + UF/Percentual ===== --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor <span class="text-red-600">*</span></label>
                 <select name="gestor_id" id="gestor_id"
@@ -35,7 +35,6 @@
 
                 <br>
 
-                {{-- UF + instrução --}}
                 @php
                     $ufs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
                 @endphp
@@ -52,7 +51,6 @@
                     @error('uf_cidades') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
-                {{-- Percentual sobre vendas --}}
                 <div class="col-span-12 md:col-span-5">
                     <label for="percentual_vendas" class="block text-sm font-medium text-gray-700">
                         Percentual sobre vendas
@@ -76,7 +74,7 @@
                 </div>
             </div>
 
-            {{-- ===== Cidades (coluna direita). Pré-popula com cidades atuais ===== --}}
+            {{-- ===== Cidades ===== --}}
             <div class="col-span-12 md:col-span-6">
                 <label class="block text-sm font-medium text-gray-700">Cidades de atuação</label>
                 <select name="cities[]" id="cities" multiple size="10"
@@ -120,7 +118,7 @@
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
-                <label for="rg" class="block text-sm font-medium text-gray-700">RG <span class="text-red-600">*</span></label>
+                <label for="rg" class="block text-sm font-medium text-gray-700">RG</label>
                 <input type="text" id="rg" name="rg" value="{{ old('rg', $distribuidor->rg) }}" maxlength="30"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('rg') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -135,7 +133,6 @@
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('telefone') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-
 
             {{-- ===== Credenciais ===== --}}
             <div class="col-span-12 md:col-span-6">
@@ -201,7 +198,7 @@
                 @error('cep') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- ===== Contatos (preserva existentes) ===== --}}
+            {{-- ===== Contatos ===== --}}
             @php
                 $contatosInit = old('contatos');
                 if ($contatosInit === null) {
@@ -316,30 +313,14 @@
                 @error('contatos')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
             </div>
 
-
-            {{-- ===== Início + Validade (meses) ===== --}}
-            <div class="col-span-12 md:col-span-4">
-                <label for="inicio_contrato" class="block text-sm font-medium text-gray-700">Início do contrato</label>
-                <input type="date" id="inicio_contrato" name="inicio_contrato" value="{{ old('inicio_contrato') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('inicio_contrato') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                <p class="mt-1 text-xs text-gray-500">Ao preencher estes campos, o vencimento será recalculado.</p>
-            </div>
-            <div class="col-span-12 md:col-span-2">
-                <label for="validade_meses" class="block text-sm font-medium text-gray-700">Validade (meses)</label>
-                <input type="number" id="validade_meses" name="validade_meses" value="{{ old('validade_meses') }}"
-                       min="1" max="120" step="1"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('validade_meses') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-            </div>
-
-            {{-- ===== Anexos (múltiplos - append) ===== --}}
+            {{-- ===== Novos anexos (append) ===== --}}
             <div x-data="{ itens: [{id: Date.now()}] }" class="col-span-12">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Novos anexos (PDF)</label>
 
                 <template x-for="(item, idx) in itens" :key="item.id">
-                    <div class="grid grid-cols-12 gap-3 mb-3">
+                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border">
                         <div class="col-span-12 md:col-span-3">
+                            <label class="text-xs text-gray-600">Tipo</label>
                             <select :name="'contratos['+idx+'][tipo]'"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="contrato">Contrato</option>
@@ -347,17 +328,43 @@
                                 <option value="outro">Outro</option>
                             </select>
                         </div>
-                        <div class="col-span-12 md:col-span-7">
+                        <div class="col-span-12 md:col-span-5">
+                            <label class="text-xs text-gray-600">Arquivo (PDF)</label>
                             <input type="file" accept="application/pdf" :name="'contratos['+idx+'][arquivo]'"
                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
                         </div>
                         <div class="col-span-12 md:col-span-2">
-                            <button type="button"
-                                    class="inline-flex h-9 items-center mt-1 rounded-md border px-3 text-sm hover:bg-gray-50 w-full justify-center"
-                                    @click="itens.splice(idx,1)" x-show="itens.length > 1">
-                                Remover
-                            </button>
+                            <label class="text-xs text-gray-600">Percentual</label>
+                            <div class="mt-1 flex rounded-md shadow-sm">
+                                <input type="number" step="0.01" min="0" max="100"
+                                       :name="'contratos['+idx+'][percentual_vendas]'"
+                                       class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm">%</span>
+                            </div>
                         </div>
+                        <div class="col-span-12 md:col-span-2">
+                            <label class="text-xs text-gray-600">Ativo?</label>
+                            <div class="mt-2">
+                                <label class="inline-flex items-center text-sm">
+                                    <input type="checkbox" :name="'contratos['+idx+'][ativo]'" value="1" class="rounded border-gray-300">
+                                    <span class="ml-2">Ativo</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-3">
+                            <label class="text-xs text-gray-600">Data de Assinatura</label>
+                            <input type="date" :name="'contratos['+idx+'][data_assinatura]'"
+                                   class="mt-1 block w-full rounded-md border-gray-300">
+                        </div>
+
+                        <div class="col-span-12 md:col-span-3">
+                            <label class="text-xs text-gray-600">Validade (meses)</label>
+                            <input type="number" min="1" max="120" step="1" :name="'contratos['+idx+'][validade_meses]'"
+                                   class="mt-1 block w-full rounded-md border-gray-300">
+                            <p class="mt-1 text-[11px] text-gray-500">Vencimento = Assinatura + Validade.</p>
+                        </div>
+
                         <div class="col-span-12">
                             <input type="text" placeholder="Descrição (opcional)" :name="'contratos['+idx+'][descricao]'"
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -365,6 +372,14 @@
                                 <input type="checkbox" :name="'contratos['+idx+'][assinado]'" value="1" class="rounded border-gray-300">
                                 <span class="ml-2">Assinado</span>
                             </label>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-2">
+                            <button type="button"
+                                    class="inline-flex h-9 items-center mt-1 rounded-md border px-3 text-sm hover:bg-gray-50 w-full justify-center"
+                                    @click="itens.splice(idx,1)" x-show="itens.length > 1">
+                                Remover
+                            </button>
                         </div>
                     </div>
                 </template>
@@ -376,6 +391,9 @@
                 </button>
 
                 @error('contratos.*.arquivo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.percentual_vendas') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.data_assinatura') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.validade_meses') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- ===== Ações ===== --}}
@@ -388,9 +406,73 @@
                 </button>
             </div>
         </form>
+
+        {{-- ========= LISTA DE ANEXOS EXISTENTES (FORA DO FORM PRINCIPAL) ========= --}}
+        @if($distribuidor->anexos->count())
+            <div class="bg-white shadow rounded-lg p-6 mt-6">
+                <h3 class="text-sm font-semibold mb-2">Contratos / Aditivos existentes</h3>
+                <ul class="space-y-2">
+                    @foreach($distribuidor->anexos as $anexo)
+                        <li class="border rounded p-3 flex items-center justify-between">
+                            <div class="text-sm">
+                                <div>
+                                    <strong>{{ strtoupper($anexo->tipo) }}</strong>
+                                    @if($anexo->assinado)
+                                        <span class="ml-2 px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">Assinado</span>
+                                    @endif
+                                    @if($anexo->ativo)
+                                        <span class="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">Ativo</span>
+                                    @endif
+                                </div>
+
+                                @if(!is_null($anexo->percentual_vendas))
+                                    <div>Percentual desse contrato: <strong>{{ number_format($anexo->percentual_vendas, 2, ',', '.') }}%</strong></div>
+                                @endif
+
+                                @if($anexo->data_assinatura)
+                                    <div>Assinado em: {{ \Carbon\Carbon::parse($anexo->data_assinatura)->format('d/m/Y') }}</div>
+                                @endif
+
+                                @if($anexo->data_vencimento)
+                                    <div>Vence em: {{ \Carbon\Carbon::parse($anexo->data_vencimento)->format('d/m/Y') }}</div>
+                                @endif
+
+                                @if($anexo->descricao)
+                                    <div class="text-gray-600">{{ $anexo->descricao }}</div>
+                                @endif
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                @if($anexo->arquivo)
+                                    <a href="{{ Storage::disk('public')->url($anexo->arquivo) }}" target="_blank"
+                                       class="text-blue-600 text-sm underline">Abrir</a>
+                                @endif
+
+                                @unless($anexo->ativo)
+                                    <form method="POST" action="{{ route('admin.distribuidores.anexos.ativar', [$distribuidor, $anexo]) }}">
+                                        @csrf
+                                        <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">
+                                            Ativar
+                                        </button>
+                                    </form>
+                                @endunless
+
+                                <form method="POST" action="{{ route('admin.distribuidores.anexos.destroy', [$distribuidor, $anexo]) }}"
+                                      onsubmit="return confirm('Excluir este anexo?')">
+                                    @csrf @method('DELETE')
+                                    <button class="text-sm px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700">
+                                        Excluir
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
     </div>
 
-    {{-- JS: carrega cidades por UF (sem template strings) --}}
+    {{-- JS: carrega cidades por UF --}}
     <script>
         (function() {
             var ufSelect     = document.getElementById('uf_cidades');

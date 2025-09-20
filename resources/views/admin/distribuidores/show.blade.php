@@ -132,34 +132,70 @@
 
         {{-- Anexos --}}
         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold mb-2">Anexos</h3>
+            <h3 class="text-lg font-semibold mb-2">Contratos / Aditivos</h3>
 
             @if($distribuidor->anexos->isNotEmpty())
                 <ul class="divide-y">
                     @foreach($distribuidor->anexos as $anexo)
-                        <li class="py-2 flex items-center justify-between">
+                        <li class="py-3 flex items-center justify-between">
                             <div>
-                                <p>
+                                <p class="mb-1">
                                     <span class="font-medium">{{ ucfirst($anexo->tipo) }}</span>
                                     @if($anexo->descricao) - {{ $anexo->descricao }} @endif
+
                                     @if($anexo->assinado)
                                         <span class="ml-2 inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
                                             Assinado
                                         </span>
                                     @endif
+
+                                    @if($anexo->ativo)
+                                        <span class="ml-2 inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
+                                            Ativo
+                                        </span>
+                                    @endif
+                                </p>
+
+                                @if(!is_null($anexo->percentual_vendas))
+                                    <p class="text-sm">Percentual deste contrato:
+                                        <strong>{{ number_format($anexo->percentual_vendas, 2, ',', '.') }}%</strong>
+                                    </p>
+                                @endif
+
+                                <p class="text-xs text-gray-600">
+                                    @if($anexo->data_assinatura)
+                                        Assinado em: {{ \Carbon\Carbon::parse($anexo->data_assinatura)->format('d/m/Y') }}
+                                    @endif
+                                    @if($anexo->data_vencimento)
+                                        {{ $anexo->data_assinatura ? ' | ' : '' }}
+                                        Vence em: {{ \Carbon\Carbon::parse($anexo->data_vencimento)->format('d/m/Y') }}
+                                    @endif
                                 </p>
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($anexo->arquivo) }}"
-                                target="_blank"
-                                class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
-                                    Ver PDF
-                                </a>
+                                @if($anexo->arquivo)
+                                    <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($anexo->arquivo) }}"
+                                       target="_blank"
+                                       class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                                        Ver PDF
+                                    </a>
+                                @endif
+
+                                @unless($anexo->ativo)
+                                    <form action="{{ route('admin.distribuidores.anexos.ativar', [$distribuidor, $anexo]) }}"
+                                          method="POST">
+                                        @csrf
+                                        <button type="submit"
+                                                class="inline-flex h-8 items-center rounded-md bg-blue-600 px-3 text-xs text-white hover:bg-blue-700">
+                                            Ativar
+                                        </button>
+                                    </form>
+                                @endunless
 
                                 <form action="{{ route('admin.distribuidores.anexos.destroy', [$distribuidor, $anexo]) }}"
-                                    method="POST"
-                                    onsubmit="return confirm('Tem certeza que deseja excluir este anexo?');">
+                                      method="POST"
+                                      onsubmit="return confirm('Tem certeza que deseja excluir este anexo?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"
@@ -175,7 +211,5 @@
                 <p class="text-gray-500">Nenhum anexo enviado.</p>
             @endif
         </div>
-
-
     </div>
 </x-app-layout>

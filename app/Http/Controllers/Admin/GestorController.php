@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Gestor;
 use App\Models\User;
 use App\Models\Anexo;
+use App\Models\Distribuidor;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,19 +30,16 @@ class GestorController extends Controller
 
     public function store(Request $request)
     {
-
-        // Remove linhas totalmente vazias de "contatos" antes da validação
+        // Remove linhas vazias de contatos
         $rawContatos = $request->input('contatos', []);
         $contatosSan = collect($rawContatos)->filter(function ($c) {
-            // considera "preenchido" se QUALQUER um desses campos tiver conteúdo
             return trim($c['nome'] ?? '') !== ''
                 || trim($c['email'] ?? '') !== ''
                 || trim($c['telefone'] ?? '') !== ''
                 || trim($c['whatsapp'] ?? '') !== ''
                 || trim($c['cargo'] ?? '') !== ''
-                || !empty($c['preferencial']); // opcional
+                || !empty($c['preferencial']);
         })->values()->all();
-
         $request->merge(['contatos' => $contatosSan]);
 
         $data = $request->validate([
@@ -58,7 +56,7 @@ class GestorController extends Controller
             'email'               => ['nullable','email','max:255'],
             'password'            => ['nullable','string','min:8'],
 
-            // Endereço (todos opcionais)
+            // Endereço
             'endereco'            => ['nullable','string','max:255'],
             'numero'              => ['nullable','string','max:20'],
             'complemento'         => ['nullable','string','max:100'],
@@ -67,19 +65,21 @@ class GestorController extends Controller
             'uf'                  => ['nullable','string','size:2'],
             'cep'                 => ['nullable','string','max:9'],
 
-            // Contratuais (início + validade)
-            'inicio_contrato'     => ['nullable','date'],
-            'validade_meses'      => ['nullable','integer','min:1','max:120'],
+            // Contratuais
             'percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
 
-            // Anexos múltiplos
-            'contratos'             => ['nullable','array'],
-            'contratos.*.tipo'      => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro'],
-            'contratos.*.arquivo'   => ['nullable','file','mimes:pdf','max:5120'],
-            'contratos.*.descricao' => ['nullable','string','max:255'],
-            'contratos.*.assinado'  => ['nullable','boolean'],
+            // Anexos (múltiplos)
+            'contratos'                       => ['nullable','array'],
+            'contratos.*.tipo'                => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro'],
+            'contratos.*.arquivo'             => ['nullable','file','mimes:pdf','max:5120'],
+            'contratos.*.descricao'           => ['nullable','string','max:255'],
+            'contratos.*.assinado'            => ['nullable','boolean'],
+            'contratos.*.percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
+            'contratos.*.ativo'               => ['nullable','boolean'],
+            'contratos.*.data_assinatura'     => ['nullable','date'],
+            'contratos.*.validade_meses'      => ['nullable','integer','min:1','max:120'],
 
-            // ===== CONTATOS (NOVO) =====
+            // Contatos
             'contatos'                 => ['nullable','array'],
             'contatos.*.id'            => ['nullable','integer','exists:contatos,id'],
             'contatos.*.nome'          => ['required_with:contatos.*.tipo,contatos.*.email,contatos.*.telefone,contatos.*.whatsapp','string','max:255'],
@@ -92,20 +92,12 @@ class GestorController extends Controller
             'contatos.*.observacoes'   => ['nullable','string','max:2000'],
         ]);
 
-        // Regra opcional: permitir no máximo UM preferencial
+        // 1 preferencial no máx
         $preferenciais = collect($data['contatos'] ?? [])->where('preferencial', true)->count();
         if ($preferenciais > 1) {
             throw ValidationException::withMessages([
                 'contatos' => 'Selecione no máximo um contato como preferencial.'
             ]);
-        }
-
-        // Calcula vencimento com base em início + meses
-        $inicio = !empty($data['inicio_contrato']) ? Carbon::parse($data['inicio_contrato']) : null;
-        $meses  = !empty($data['validade_meses']) ? (int) $data['validade_meses'] : null;
-        $vencimento = null;
-        if ($inicio && $meses) {
-            $vencimento = (clone $inicio)->addMonthsNoOverflow($meses);
         }
 
         // Deriva se há contrato assinado a partir dos anexos enviados
@@ -116,19 +108,13 @@ class GestorController extends Controller
             }
         }
 
-        $gestor = DB::transaction(function () use ($data, $request, $vencimento, $temAssinado) {
-            // 1) Resolver e-mail/senha do USER (placeholder se vazio)
+        $gestor = DB::transaction(function () use ($data, $request, $temAssinado) {
+            // USER (placeholder se vazio)
             $userEmail = trim((string)($data['email'] ?? ''));
             $userPass  = (string)($data['password'] ?? '');
+            if ($userEmail === '') $userEmail = 'gestor+'.Str::uuid().'@placeholder.local';
+            if ($userPass === '')  $userPass  = Str::random(12);
 
-            if ($userEmail === '') {
-                $userEmail = 'gestor+'.Str::uuid().'@placeholder.local';
-            }
-            if ($userPass === '') {
-                $userPass = Str::random(12);
-            }
-
-            // 2) Criar USER
             /** @var \App\Models\User $user */
             $user = User::create([
                 'name'     => $data['razao_social'],
@@ -139,7 +125,6 @@ class GestorController extends Controller
                 $user->assignRole('gestor');
             }
 
-            // 3) Criar GESTOR
             /** @var \App\Models\Gestor $gestor */
             $gestor = Gestor::create([
                 'user_id'             => $user->id,
@@ -159,31 +144,62 @@ class GestorController extends Controller
                 'uf'                  => $data['uf'] ?? null,
                 'cep'                 => $data['cep'] ?? null,
                 'percentual_vendas'   => $data['percentual_vendas'] ?? 0,
-                'vencimento_contrato' => $vencimento,
+                'vencimento_contrato' => null, // será definido pelo anexo ativo
                 'contrato_assinado'   => $temAssinado,
             ]);
 
-            // 4) Salvar ANEXOS (se vieram)
+            // ANEXOS
             if (!empty($data['contratos']) && is_array($data['contratos'])) {
+                $idAtivoEscolhido = null;
+
                 foreach ($data['contratos'] as $idx => $meta) {
                     $file = $request->file("contratos.$idx.arquivo");
                     if (!$file) continue;
 
-                    $path = $file->store("gestores/{$gestor->id}", 'public');
+                    $path   = $file->store("gestores/{$gestor->id}", 'public');
+                    $ativo  = !empty($meta['ativo']);
 
-                    $gestor->anexos()->create([
-                        'tipo'       => $meta['tipo'] ?? 'contrato',
-                        'arquivo'    => $path,
-                        'descricao'  => $meta['descricao'] ?? null,
-                        'assinado'   => !empty($meta['assinado']),
+                    // Datas do anexo
+                    $inicio = !empty($meta['data_assinatura']) ? Carbon::parse($meta['data_assinatura']) : null;
+                    $meses  = !empty($meta['validade_meses']) ? (int)$meta['validade_meses'] : null;
+                    $dataVenc = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
+
+                    $anexo = $gestor->anexos()->create([
+                        'tipo'              => $meta['tipo'] ?? 'contrato',
+                        'arquivo'           => $path,
+                        'descricao'         => $meta['descricao'] ?? null,
+                        'assinado'          => !empty($meta['assinado']),
+                        'percentual_vendas' => isset($meta['percentual_vendas']) ? (float)$meta['percentual_vendas'] : null,
+                        'ativo'             => $ativo,
+                        'data_assinatura'   => $inicio,
+                        'data_vencimento'   => $dataVenc,
                     ]);
+
+                    if ($ativo) $idAtivoEscolhido = $anexo->id;
+                }
+
+                // Garante no máx 1 ativo
+                if ($gestor->anexos()->where('ativo', true)->count() > 1) {
+                    $gestor->anexos()->where('ativo', true)
+                        ->where('id', '<>', $idAtivoEscolhido)
+                        ->update(['ativo' => false]);
+                }
+
+                // Aplica percentual e vencimento do anexo ATIVO
+                $ativo = $gestor->anexos()->where('ativo', true)->latest('id')->first();
+                if ($ativo) {
+                    if ($ativo->percentual_vendas !== null) {
+                        $gestor->update(['percentual_vendas' => $ativo->percentual_vendas]);
+                    }
+                    if ($ativo->data_vencimento) {
+                        $gestor->update(['vencimento_contrato' => $ativo->data_vencimento]);
+                    }
                 }
             }
 
-            // ===== 5) Salvar CONTATOS (NOVO) =====
+            // CONTATOS (createMany)
             $contatos = collect($data['contatos'] ?? [])
                 ->map(function ($c) {
-                    // normalização simples de telefone/whatsapp (opcional)
                     $tel = isset($c['telefone']) ? preg_replace('/\D+/', '', (string)$c['telefone']) : null;
                     $zap = isset($c['whatsapp']) ? preg_replace('/\D+/', '', (string)$c['whatsapp']) : null;
 
@@ -212,7 +228,6 @@ class GestorController extends Controller
             ->with('success', 'Gestor criado com sucesso!');
     }
 
-
     public function show(Gestor $gestor)
     {
         $gestor->load('anexos');
@@ -221,26 +236,24 @@ class GestorController extends Controller
 
     public function edit(Gestor $gestor)
     {
-        $gestor->load('anexos');
+        $gestor->load('anexos', 'contatos');
         return view('admin.gestores.edit', compact('gestor'));
     }
 
     public function update(Request $request, Gestor $gestor)
     {
-        // Remove linhas totalmente vazias de "contatos" antes da validação
+        // Remove linhas vazias de contatos
         $rawContatos = $request->input('contatos', []);
         $contatosSan = collect($rawContatos)->filter(function ($c) {
-            // considera "preenchido" se QUALQUER um desses campos tiver conteúdo
             return trim($c['nome'] ?? '') !== ''
                 || trim($c['email'] ?? '') !== ''
                 || trim($c['telefone'] ?? '') !== ''
                 || trim($c['whatsapp'] ?? '') !== ''
                 || trim($c['cargo'] ?? '') !== ''
-                || !empty($c['preferencial']); // opcional
+                || !empty($c['preferencial']);
         })->values()->all();
-
         $request->merge(['contatos' => $contatosSan]);
-        
+
         $data = $request->validate([
             'razao_social'        => ['required','string','max:255'],
             'cnpj'                => ['required','string','max:18'],
@@ -250,7 +263,7 @@ class GestorController extends Controller
             'telefone'            => ['nullable','string','max:20'],
             'estado_uf'           => ['nullable','string','size:2'],
 
-            // e-mail/senha OPCIONAIS (apenas se desejar atualizar o USER)
+            // e-mail/senha OPCIONAIS
             'email'               => ['nullable','email','max:255'],
             'password'            => ['nullable','string','min:8'],
 
@@ -264,18 +277,20 @@ class GestorController extends Controller
             'cep'                 => ['nullable','string','max:9'],
 
             // Contratuais
-            'inicio_contrato'     => ['nullable','date'],
-            'validade_meses'      => ['nullable','integer','min:1','max:120'],
             'percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
 
-            // Anexos
-            'contratos'             => ['nullable','array'],
-            'contratos.*.tipo'      => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro'],
-            'contratos.*.arquivo'   => ['nullable','file','mimes:pdf','max:5120'],
-            'contratos.*.descricao' => ['nullable','string','max:255'],
-            'contratos.*.assinado'  => ['nullable','boolean'],
+            // Anexos novos (append)
+            'contratos'                       => ['nullable','array'],
+            'contratos.*.tipo'                => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro'],
+            'contratos.*.arquivo'             => ['nullable','file','mimes:pdf','max:5120'],
+            'contratos.*.descricao'           => ['nullable','string','max:255'],
+            'contratos.*.assinado'            => ['nullable','boolean'],
+            'contratos.*.percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
+            'contratos.*.ativo'               => ['nullable','boolean'],
+            'contratos.*.data_assinatura'     => ['nullable','date'],
+            'contratos.*.validade_meses'      => ['nullable','integer','min:1','max:120'],
 
-            // ===== CONTATOS (NOVO) =====
+            // Contatos
             'contatos'                 => ['nullable','array'],
             'contatos.*.id'            => ['nullable','integer','exists:contatos,id'],
             'contatos.*.nome'          => ['required_with:contatos.*.tipo,contatos.*.email,contatos.*.telefone,contatos.*.whatsapp','string','max:255'],
@@ -288,7 +303,7 @@ class GestorController extends Controller
             'contatos.*.observacoes'   => ['nullable','string','max:2000'],
         ]);
 
-        // Máximo 1 preferencial
+        // 1 preferencial no máx
         $preferenciais = collect($data['contatos'] ?? [])->where('preferencial', true)->count();
         if ($preferenciais > 1) {
             throw ValidationException::withMessages([
@@ -296,29 +311,14 @@ class GestorController extends Controller
             ]);
         }
 
-        // Recalcular vencimento, se informou início/validade
-        $inicio = !empty($data['inicio_contrato']) ? Carbon::parse($data['inicio_contrato']) : null;
-        $meses  = !empty($data['validade_meses']) ? (int) $data['validade_meses'] : null;
-        $vencimento = $gestor->vencimento_contrato; // mantém o atual por padrão
-        if ($inicio && $meses) {
-            $vencimento = (clone $inicio)->addMonthsNoOverflow($meses);
-        }
-
-        DB::transaction(function () use ($data, $request, $gestor, $vencimento) {
-            // Atualizar USER se email/senha reais vierem
+        DB::transaction(function () use ($data, $request, $gestor) {
+            // USER
             $user = $gestor->user;
+            if (!empty($data['email']))    $user->email    = $data['email'];
+            if (!empty($data['password'])) $user->password = Hash::make($data['password']);
+            if (!empty($data['email']) || !empty($data['password'])) $user->save();
 
-            if (!empty($data['email'])) {
-                $user->email = $data['email'];
-            }
-            if (!empty($data['password'])) {
-                $user->password = Hash::make($data['password']);
-            }
-            if (!empty($data['email']) || !empty($data['password'])) {
-                $user->save();
-            }
-
-            // Atualizar GESTOR
+            // GESTOR (atualiza dados básicos; vencimento será definido após checar anexo ativo)
             $gestor->update([
                 'estado_uf'           => $data['estado_uf'] ?? null,
                 'razao_social'        => $data['razao_social'],
@@ -335,54 +335,74 @@ class GestorController extends Controller
                 'cidade'              => $data['cidade'] ?? null,
                 'uf'                  => $data['uf'] ?? null,
                 'cep'                 => $data['cep'] ?? null,
-                'percentual_vendas'   => $data['percentual_vendas'] ?? 0,
-                'vencimento_contrato' => $vencimento,
+                'percentual_vendas'   => $data['percentual_vendas'] ?? ($gestor->percentual_vendas ?? 0),
             ]);
 
-            // Novos anexos (append)
+            // ANEXOS (append)
             if (!empty($data['contratos']) && is_array($data['contratos'])) {
+                $idAtivoEscolhido = null;
+
                 foreach ($data['contratos'] as $idx => $meta) {
                     $file = $request->file("contratos.$idx.arquivo");
                     if (!$file) continue;
 
-                    $path = $file->store("gestores/{$gestor->id}", 'public');
+                    $path   = $file->store("gestores/{$gestor->id}", 'public');
+                    $ativo  = !empty($meta['ativo']);
 
-                    $gestor->anexos()->create([
-                        'tipo'       => $meta['tipo'] ?? 'contrato',
-                        'arquivo'    => $path,
-                        'descricao'  => $meta['descricao'] ?? null,
-                        'assinado'   => !empty($meta['assinado']),
+                    // Datas do anexo
+                    $inicio = !empty($meta['data_assinatura']) ? Carbon::parse($meta['data_assinatura']) : null;
+                    $meses  = !empty($meta['validade_meses']) ? (int)$meta['validade_meses'] : null;
+                    $dataVenc = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
+
+                    $anexo = $gestor->anexos()->create([
+                        'tipo'              => $meta['tipo'] ?? 'contrato',
+                        'arquivo'           => $path,
+                        'descricao'         => $meta['descricao'] ?? null,
+                        'assinado'          => !empty($meta['assinado']),
+                        'percentual_vendas' => isset($meta['percentual_vendas']) ? (float)$meta['percentual_vendas'] : null,
+                        'ativo'             => $ativo,
+                        'data_assinatura'   => $inicio,
+                        'data_vencimento'   => $dataVenc,
                     ]);
+
+                    if ($ativo) $idAtivoEscolhido = $anexo->id;
+                }
+
+                // Garante no máx 1 ativo
+                if ($gestor->anexos()->where('ativo', true)->count() > 1) {
+                    $gestor->anexos()->where('ativo', true)
+                        ->where('id', '<>', $idAtivoEscolhido)
+                        ->update(['ativo' => false]);
                 }
             }
 
-            // Recalcular contrato_assinado olhando TODOS os anexos atuais
+            // contrato_assinado (derivado)
             $temAssinadoAgora = $gestor->anexos()->where('assinado', true)->exists();
             if ($gestor->contrato_assinado !== $temAssinadoAgora) {
                 $gestor->update(['contrato_assinado' => $temAssinadoAgora]);
             }
 
-            // ===== CONTATOS: sincronizar (NOVO) =====
-            $inputContatos = collect($data['contatos'] ?? [])
-                ->map(function ($c) {
-                    $tel = isset($c['telefone']) ? preg_replace('/\D+/', '', (string)$c['telefone']) : null;
-                    $zap = isset($c['whatsapp']) ? preg_replace('/\D+/', '', (string)$c['whatsapp']) : null;
+            // Ajusta percentual e vencimento pelo anexo ativo, se houver
+            $ativo = $gestor->anexos()->where('ativo', true)->latest('id')->first();
+            if ($ativo) {
+                $payload = [];
+                if ($ativo->percentual_vendas !== null) {
+                    $payload['percentual_vendas'] = $ativo->percentual_vendas;
+                }
+                if ($ativo->data_vencimento) {
+                    $payload['vencimento_contrato'] = $ativo->data_vencimento;
+                }
+                if (!empty($payload)) {
+                    $gestor->update($payload);
+                }
+            }
 
-                    return [
-                        'id'           => $c['id'] ?? null,
-                        'nome'         => $c['nome'] ?? '',
-                        'email'        => $c['email'] ?? null,
-                        'telefone'     => $tel,
-                        'whatsapp'     => $zap,
-                        'cargo'        => $c['cargo'] ?? null,
-                        'tipo'         => $c['tipo'] ?? 'outro',
-                        'preferencial' => !empty($c['preferencial']),
-                        'observacoes'  => $c['observacoes'] ?? null,
-                    ];
-                })
-                ->filter(fn ($c) => trim($c['nome']) !== '')
-                ->values()
-                ->all();
+            // CONTATOS (sync completo)
+            $inputContatos = collect($data['contatos'] ?? [])->map(function ($c) {
+                $c['telefone'] = isset($c['telefone']) ? preg_replace('/\D+/', '', (string)$c['telefone']) : null;
+                $c['whatsapp'] = isset($c['whatsapp']) ? preg_replace('/\D+/', '', (string)$c['whatsapp']) : null;
+                return $c;
+            })->values()->all();
 
             $this->syncContatos($gestor, $inputContatos);
         });
@@ -391,7 +411,6 @@ class GestorController extends Controller
             ->route('admin.gestores.index')
             ->with('success', 'Gestor atualizado com sucesso!');
     }
-
 
     public function destroy(Gestor $gestor)
     {
@@ -423,11 +442,9 @@ class GestorController extends Controller
             ];
 
             if (!empty($c['id']) && $existentes->has($c['id'])) {
-                // atualizar
                 $existentes[$c['id']]->update($payload);
                 $idsMantidos[] = (int) $c['id'];
             } else {
-                // criar novo
                 if (trim($payload['nome']) !== '') {
                     $novo = $dono->contatos()->create($payload);
                     $idsMantidos[] = $novo->id;
@@ -435,23 +452,19 @@ class GestorController extends Controller
             }
         }
 
-        // remover os que não vieram mais
         if (!empty($idsMantidos)) {
             $dono->contatos()->whereNotIn('id', $idsMantidos)->delete();
         } else {
-            // se a lista veio vazia e deseja limpar tudo:
             $dono->contatos()->delete();
         }
     }
 
     public function destroyAnexo(Gestor $gestor, Anexo $anexo)
     {
-        // Garante que o anexo realmente pertence a este gestor
         if ($anexo->anexavel_id !== $gestor->id || $anexo->anexavel_type !== Gestor::class) {
             abort(403, 'Acesso negado.');
         }
 
-        // Apaga o arquivo físico, se existir
         if ($anexo->arquivo && Storage::disk('public')->exists($anexo->arquivo)) {
             Storage::disk('public')->delete($anexo->arquivo);
         }
@@ -461,4 +474,116 @@ class GestorController extends Controller
         return back()->with('success', 'Anexo excluído com sucesso.');
     }
 
+    /**
+     * Marcar um anexo do gestor como ATIVO e aplicar seu percentual.
+     */
+    public function ativarAnexo(Gestor $gestor, Anexo $anexo)
+    {
+        if ($anexo->anexavel_type !== Gestor::class || $anexo->anexavel_id !== $gestor->id) {
+            abort(403, 'Anexo não pertence a este gestor.');
+        }
+
+        DB::transaction(function () use ($gestor, $anexo) {
+            $gestor->anexos()->where('ativo', true)->update(['ativo' => false]);
+            $anexo->update(['ativo' => true]);
+
+            $payload = [];
+            if ($anexo->percentual_vendas !== null) {
+                $payload['percentual_vendas'] = $anexo->percentual_vendas;
+            }
+            if ($anexo->data_vencimento) {
+                $payload['vencimento_contrato'] = $anexo->data_vencimento;
+            }
+            if (!empty($payload)) {
+                $gestor->update($payload);
+            }
+        });
+
+        return back()->with('success', 'Contrato/aditivo ativado e percentual aplicado.');
+    }
+
+    public function vincularDistribuidores(Request $request)
+    {
+        $gestores = Gestor::orderBy('razao_social')->get(['id','razao_social']);
+
+        $busca = trim((string) $request->input('busca'));
+        $gestorFiltro = $request->integer('gestor');
+
+        $query = Distribuidor::query()
+            ->with(['gestor:id,razao_social'])
+            ->orderBy('razao_social');
+
+        if ($busca !== '') {
+            // Postgres: ILIKE; (se MySQL, troque por LIKE)
+            $query->where(function($q) use ($busca) {
+                $q->where('razao_social', 'ILIKE', "%{$busca}%")
+                  ->orWhere('cnpj', 'ILIKE', "%{$busca}%")
+                  ->orWhere('representante_legal', 'ILIKE', "%{$busca}%");
+            });
+        }
+
+        if ($gestorFiltro) {
+            $query->where('gestor_id', $gestorFiltro);
+        }
+
+        $distribuidores = $query->paginate(30)->withQueryString();
+
+        return view('admin.gestores.vincular', compact('gestores','distribuidores','busca','gestorFiltro'));
+    }
+
+    public function storeVinculo(Request $request)
+    {
+        $vinculos = (array) $request->input('vinculos', []);
+
+        $idsDistribuidores = collect(array_keys($vinculos))
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->values()
+            ->all();
+
+        if (empty($idsDistribuidores)) {
+            return back()->with('info', 'Nenhuma alteração enviada.');
+        }
+
+        // valida distribuidores
+        $existem = Distribuidor::whereIn('id', $idsDistribuidores)->count();
+        if ($existem !== count($idsDistribuidores)) {
+            return back()->with('error', 'Há distribuidores inválidos.')->withInput();
+        }
+
+        // valida gestores (quando enviados)
+        $idsGestores = collect($vinculos)
+            ->map(fn($v) => $v === '' ? null : (int) $v)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (!empty($idsGestores)) {
+            $validos = Gestor::whereIn('id', $idsGestores)->count();
+            if ($validos !== count($idsGestores)) {
+                return back()->with('error', 'Há gestor inválido.')->withInput();
+            }
+        }
+
+        // aplica diferenças
+        $alterados = 0;
+        $lote = Distribuidor::whereIn('id', $idsDistribuidores)->get(['id','gestor_id']);
+
+        foreach ($lote as $dist) {
+            $novoBruto = $vinculos[$dist->id] ?? '';
+            $novoId = ($novoBruto === '' ? null : (int) $novoBruto);
+
+            if ($dist->gestor_id !== $novoId) {
+                $dist->gestor_id = $novoId;
+                $dist->save();
+                $alterados++;
+            }
+        }
+
+        return back()->with(
+            $alterados ? 'success' : 'info',
+            $alterados ? "{$alterados} vínculo(s) atualizado(s)!" : 'Nada para atualizar.'
+        );
+    }
 }

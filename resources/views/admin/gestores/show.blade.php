@@ -7,7 +7,7 @@
             
             <div class="flex gap-2">
                 <form method="POST" action="{{ route('admin.gestores.destroy', $gestor) }}"
-                    onsubmit="return confirm('Tem certeza que deseja remover este gestor?');">
+                      onsubmit="return confirm('Tem certeza que deseja remover este gestor?');">
                     @csrf
                     @method('DELETE')
                     <button type="submit"
@@ -46,13 +46,13 @@
 
             <div class="col-span-12 md:col-span-6">
                 <p><span class="font-medium">UF de Atuação:</span> {{ $gestor->estado_uf ?: '—' }}</p>
-                <p><span class="font-medium">Percentual Vendas:</span> {{ number_format((float)$gestor->percentual_vendas, 2, ',', '.') }}%</p>
+                <p><span class="font-medium">Percentual Vendas (aplicado):</span> {{ number_format((float)$gestor->percentual_vendas, 2, ',', '.') }}%</p>
                 <p>
                     <span class="font-medium">Contrato Assinado:</span>
                     {{ $gestor->contrato_assinado ? 'Sim' : 'Não' }}
                 </p>
                 <p>
-                    <span class="font-medium">Vencimento Contrato:</span>
+                    <span class="font-medium">Vencimento Contrato (ativo):</span>
                     {{ optional($gestor->vencimento_contrato)->format('d/m/Y') ?: '—' }}
                 </p>
 
@@ -115,36 +115,72 @@
             @endif
         </div>
 
-        {{-- Anexos --}}
+        {{-- Contratos / Anexos --}}
         <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold mb-2">Anexos</h3>
+            <h3 class="text-lg font-semibold mb-2">Contratos / Aditivos</h3>
 
             @if($gestor->anexos->isNotEmpty())
-                <ul class="divide-y">
+                <ul class="space-y-2">
                     @foreach($gestor->anexos as $anexo)
-                        <li class="py-2 flex items-center justify-between">
-                            <div>
-                                <p>
-                                    <span class="font-medium">{{ ucfirst($anexo->tipo) }}</span>
-                                    @if($anexo->descricao) - {{ $anexo->descricao }} @endif
-                                    @if($anexo->assinado)
-                                        <span class="ml-2 inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
-                                            Assinado
-                                        </span>
+                        @php $isAtivo = (bool) $anexo->ativo; @endphp
+                        <li class="p-3 rounded border flex items-start justify-between {{ $isAtivo ? 'border-blue-300 bg-blue-50' : 'border-gray-200' }}">
+                            <div class="text-sm">
+                                <div class="mb-1">
+                                    <strong>{{ strtoupper($anexo->tipo) }}</strong>
+                                    @if($anexo->descricao)
+                                        <span class="text-gray-600">— {{ $anexo->descricao }}</span>
                                     @endif
-                                </p>
+
+                                    @if($anexo->assinado)
+                                        <span class="ml-2 px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">Assinado</span>
+                                    @endif
+
+                                    @if($isAtivo)
+                                        <span class="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">Ativo</span>
+                                    @endif
+                                </div>
+
+                                <div class="text-gray-700">
+                                    <div>
+                                        Percentual deste contrato:
+                                        <strong>
+                                            {{ is_null($anexo->percentual_vendas) ? '—' : number_format($anexo->percentual_vendas, 2, ',', '.') . '%' }}
+                                        </strong>
+                                    </div>
+
+                                    @if($anexo->data_assinatura)
+                                        <div>Assinado em: {{ \Carbon\Carbon::parse($anexo->data_assinatura)->format('d/m/Y') }}</div>
+                                    @endif
+
+                                    @if($anexo->data_vencimento)
+                                        <div>Vence em: {{ \Carbon\Carbon::parse($anexo->data_vencimento)->format('d/m/Y') }}</div>
+                                    @endif
+                                </div>
                             </div>
 
                             <div class="flex items-center gap-2">
-                                <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($anexo->arquivo) }}"
-                                target="_blank"
-                                class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
-                                    Ver PDF
-                                </a>
+                                @if($anexo->arquivo)
+                                    <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($anexo->arquivo) }}"
+                                       target="_blank"
+                                       class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                                        Ver PDF
+                                    </a>
+                                @endif
+
+                                @unless($isAtivo)
+                                    <form method="POST" action="{{ route('admin.gestores.anexos.ativar', [$gestor, $anexo]) }}">
+                                        @csrf
+                                        <button type="submit"
+                                                class="inline-flex h-8 items-center rounded-md bg-blue-600 px-3 text-xs text-white hover:bg-blue-700"
+                                                onclick="return confirm('Ativar este contrato/aditivo?');">
+                                            Ativar
+                                        </button>
+                                    </form>
+                                @endunless
 
                                 <form action="{{ route('admin.gestores.anexos.destroy', [$gestor, $anexo]) }}"
-                                    method="POST"
-                                    onsubmit="return confirm('Tem certeza que deseja excluir este anexo?');">
+                                      method="POST"
+                                      onsubmit="return confirm('Tem certeza que deseja excluir este anexo?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"

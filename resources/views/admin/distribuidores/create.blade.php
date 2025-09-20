@@ -45,7 +45,6 @@
                             <option value="{{ $uf }}" @selected(old('uf_cidades') === $uf)>{{ $uf }}</option>
                         @endforeach
                     </select>
-                    <p class="mt-1 text-xs text-gray-500">Liste e selecione as cidades desta UF.</p>
                     @error('uf_cidades') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
 
@@ -66,6 +65,9 @@
                         >
                         <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">%</span>
                     </div>
+                    <p class="mt-1 text-xs text-gray-500">
+                    Se houver um contrato/aditivo marcado como <strong>Ativo</strong>, o percentual acima será atualizado automaticamente por ele.
+                    </p>
                     @error('percentual_vendas')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                     @enderror

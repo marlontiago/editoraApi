@@ -23,9 +23,10 @@
                     {{ __('Pedidos') }}
                 </x-nav-link>
 
-                <x-nav-link href="{{ route('admin.relatorios.index') }}" :active="request()->routeIs('admin.pedidos.*')">
+             <!--   <x-nav-link href="{{ route('admin.relatorios.index') }}" :active="request()->routeIs('admin.pedidos.*')">
                     {{ __('Relatorios') }}
                 </x-nav-link>
+            -->
 
                 {{-- Dropdown para os demais --}}
                 <x-dropdown align="left" width="56">

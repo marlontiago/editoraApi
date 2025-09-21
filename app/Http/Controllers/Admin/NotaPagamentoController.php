@@ -20,6 +20,7 @@ class NotaPagamentoController extends Controller
 
         $percGestor       = (float) optional($nota->pedido->gestor)->percentual_vendas ?: 0.0;
         $percDistribuidor = (float) optional($nota->pedido->distribuidor)->percentual_vendas ?: 0.0;
+        
 
         // Agora buscamos nas tabelas dos CRUDs
         $advogados = Advogado::orderBy('nome')->get(['id','nome','percentual_vendas']);
@@ -47,13 +48,11 @@ class NotaPagamentoController extends Controller
             'data_pagamento'           => ['nullable','date'],
             'valor_pago'               => ['required','numeric','min:0.01'],
 
-            // Retenções em % (0 a 100)
+            // Retenções em % (0 a 100) — INSS e CSLL removidos
             'ret_irrf'                 => ['nullable','numeric','min:0','max:100'],
             'ret_iss'                  => ['nullable','numeric','min:0','max:100'],
-            'ret_inss'                 => ['nullable','numeric','min:0','max:100'],
             'ret_pis'                  => ['nullable','numeric','min:0','max:100'],
             'ret_cofins'               => ['nullable','numeric','min:0','max:100'],
-            'ret_csll'                 => ['nullable','numeric','min:0','max:100'],
             'ret_outros'               => ['nullable','numeric','min:0','max:100'],
 
             'adesao_ata'               => ['nullable','boolean'],
@@ -83,7 +82,6 @@ class NotaPagamentoController extends Controller
         // Se marcou adesão e não informou o % do advogado, pega do cadastro
         if ($adesaoAta && ($data['advogado_id'] ?? null) && ($data['perc_comissao_advogado'] === null)) {
             $auto = Advogado::whereKey($data['advogado_id'])->value('percentual_vendas');
-            dump($auto);
             if ($auto !== null) {
                 $data['perc_comissao_advogado'] = (float) $auto;
             }
@@ -104,13 +102,11 @@ class NotaPagamentoController extends Controller
         $p = fn($k) => (float) ($data[$k] ?? 0);
         $vIRRF   = $valorPago * ($p('ret_irrf')   / 100);
         $vISS    = $valorPago * ($p('ret_iss')    / 100);
-        $vINSS   = $valorPago * ($p('ret_inss')   / 100);
         $vPIS    = $valorPago * ($p('ret_pis')    / 100);
         $vCOFINS = $valorPago * ($p('ret_cofins') / 100);
-        $vCSLL   = $valorPago * ($p('ret_csll')   / 100);
         $vOUTROS = $valorPago * ($p('ret_outros') / 100);
 
-        $totalRet     = $vIRRF + $vISS + $vINSS + $vPIS + $vCOFINS + $vCSLL + $vOUTROS;
+        $totalRet     = $vIRRF + $vISS + $vPIS + $vCOFINS + $vOUTROS;
         $valorLiquido = max(0, $valorPago - $totalRet);
 
         // Comissões (SEMPRE sobre o líquido)
@@ -132,10 +128,8 @@ class NotaPagamentoController extends Controller
 
                 'ret_irrf'                => $data['ret_irrf']   ?? null,
                 'ret_iss'                 => $data['ret_iss']    ?? null,
-                'ret_inss'                => $data['ret_inss']   ?? null,
                 'ret_pis'                 => $data['ret_pis']    ?? null,
                 'ret_cofins'              => $data['ret_cofins'] ?? null,
-                'ret_csll'                => $data['ret_csll']   ?? null,
                 'ret_outros'              => $data['ret_outros'] ?? null,
 
                 'adesao_ata'              => (bool) ($data['adesao_ata'] ?? false),
@@ -200,22 +194,19 @@ class NotaPagamentoController extends Controller
         $percDistribuidor = (float) optional($pedido->distribuidor)->percentual_vendas ?: 0.0;
 
         $valorPago = (float) $pagamento->valor_pago;
+        // INSS e CSLL removidos
         $ret = [
             'irrf'   => (float) ($pagamento->ret_irrf   ?? 0),
             'iss'    => (float) ($pagamento->ret_iss    ?? 0),
-            'inss'   => (float) ($pagamento->ret_inss   ?? 0),
             'pis'    => (float) ($pagamento->ret_pis    ?? 0),
             'cofins' => (float) ($pagamento->ret_cofins ?? 0),
-            'csll'   => (float) ($pagamento->ret_csll   ?? 0),
             'outros' => (float) ($pagamento->ret_outros ?? 0),
         ];
         $retValores = [
             'irrf'   => $valorPago * ($ret['irrf']   / 100),
             'iss'    => $valorPago * ($ret['iss']    / 100),
-            'inss'   => $valorPago * ($ret['inss']   / 100),
             'pis'    => $valorPago * ($ret['pis']    / 100),
             'cofins' => $valorPago * ($ret['cofins'] / 100),
-            'csll'   => $valorPago * ($ret['csll']   / 100),
             'outros' => $valorPago * ($ret['outros'] / 100),
         ];
         $totalRetencoes = array_sum($retValores);

@@ -16,16 +16,25 @@
             </div>
         @endif
 
+        @php
+            $valorBruto   = (float)($nota->pedido->valor_bruto ?? 0);
+            $valorTotal   = (float)($nota->pedido->valor_total ?? 0);
+            $jaPago       = (float) $nota->pagamentos()->sum('valor_pago'); // soma dos pagamentos (base)
+            $faltaReceber = max(0, $valorTotal - $jaPago);
+        @endphp
+
         <form method="POST" action="{{ route('admin.notas.pagamentos.store', $nota) }}" class="bg-white shadow rounded-lg p-6 space-y-5" id="formPagamento">
             @csrf
 
-            <div>
-                <h1 class="text-sm font-medium text-gray-700">Valor bruto: {{ $nota->pedido->valor_bruto }}</h1>
-                <h1 class="text-sm font-medium text-gray-700">Valor com descontos: {{ $nota->pedido->valor_total }}</h1>
+            {{-- Valores principais --}}
+            <div class="space-y-1">
+                <h1 class="text-sm font-medium text-gray-700">Valor bruto: {{ number_format($valorBruto, 2, ',', '.') }}</h1>
+                <h1 class="text-sm font-medium text-gray-700">Valor com descontos: {{ number_format($valorTotal, 2, ',', '.') }}</h1>
+                <h1 class="text-sm font-medium text-red-600">Falta receber: {{ number_format($faltaReceber, 2, ',', '.') }}</h1>
             </div>
 
             {{-- Dados principais --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Data do Pagamento</label>
                     <input type="date" name="data_pagamento" value="{{ old('data_pagamento') }}" class="mt-1 w-full border rounded px-3 py-2">
@@ -37,10 +46,10 @@
                 </div>
             </div>
 
-            {{-- Retenções (em %) --}}
+            {{-- Retenções (em %) — INSS e CSLL removidos --}}
             <h3 class="text-md font-semibold mt-2">Retenções</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                @foreach (['irrf','iss','inss','pis','cofins','csll','outros'] as $k)
+                @foreach (['irrf','iss','pis','cofins','outros'] as $k)
                     <div>
                         <label class="block text-sm font-medium text-gray-700">{{ strtoupper($k) }} (%)</label>
                         <input type="number" step="0.01" min="0" max="100" name="ret_{{ $k }}" value="{{ old('ret_'.$k) }}" class="mt-1 w-full border rounded px-3 py-2">
@@ -48,7 +57,7 @@
                 @endforeach
             </div>
 
-            {{-- Adesão à ata / Advogado (da tabela advogados) --}}
+            {{-- Adesão à ata / Advogado --}}
             <div class="border-t pt-4">
                 <label class="inline-flex items-center gap-2">
                     <input type="checkbox" name="adesao_ata" value="1" id="chkAdesao" @checked(old('adesao_ata'))>
@@ -80,7 +89,7 @@
                 </div>
             </div>
 
-            {{-- Diretor Comercial (da tabela diretor_comercials) --}}
+            {{-- Diretor Comercial --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Diretor Comercial</label>
@@ -124,20 +133,12 @@
                         <span id="valRetIss">R$ 0,00</span>
                     </li>
                     <li class="flex items-center justify-between">
-                        <span>INSS (<span id="lblRetInss">0,00</span>%)</span>
-                        <span id="valRetInss">R$ 0,00</span>
-                    </li>
-                    <li class="flex items-center justify-between">
                         <span>PIS (<span id="lblRetPis">0,00</span>%)</span>
                         <span id="valRetPis">R$ 0,00</span>
                     </li>
                     <li class="flex items-center justify-between">
                         <span>COFINS (<span id="lblRetCofins">0,00</span>%)</span>
                         <span id="valRetCofins">R$ 0,00</span>
-                    </li>
-                    <li class="flex items-center justify-between">
-                        <span>CSLL (<span id="lblRetCsll">0,00</span>%)</span>
-                        <span id="valRetCsll">R$ 0,00</span>
                     </li>
                     <li class="flex items-center justify-between">
                         <span>OUTROS (<span id="lblRetOutros">0,00</span>%)</span>
@@ -155,21 +156,26 @@
                     <span id="prevLiq">R$ 0,00</span>
                 </div>
 
+                <div class="flex items-center justify-between">
+                    <strong>Faltará após este pagamento:</strong>
+                    <span id="prevFaltara">R$ 0,00</span>
+                </div>
+
                 <div class="pt-2 font-semibold">Comissões sobre o Líquido</div>
                 <div class="flex items-center justify-between">
-                    <span>Gestor ({{ number_format($percGestor ?? 0, 2, ',', '.') }}%)</span>
+                    <span>Gestor: {{ optional($nota->pedido->gestor)->razao_social ?? '—' }} ({{ number_format($percGestor ?? 0, 2, ',', '.') }}%)</span>
                     <span id="prevGest">R$ 0,00</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span>Distribuidor ({{ number_format($percDistribuidor ?? 0, 2, ',', '.') }}%)</span>
+                    <span>Distribuidor: {{ optional($nota->pedido->distribuidor)->razao_social ?? 'Sem distribuidor' }} ({{ number_format($percDistribuidor ?? 0, 2, ',', '.') }}%)</span>
                     <span id="prevDist">R$ 0,00</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span>Advogado (<span id="lblPercAdv">{{ number_format(old('perc_comissao_advogado', 0), 2, ',', '.') }}</span>%)</span>
+                    <span>Advogado: <span id="lblNomeAdv">—</span> (<span id="lblPercAdv">{{ number_format(old('perc_comissao_advogado', 0), 2, ',', '.') }}</span>%)</span>
                     <span id="prevAdv">R$ 0,00</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span>Diretor (<span id="lblPercDir">{{ number_format(old('perc_comissao_diretor', 0), 2, ',', '.') }}</span>%)</span>
+                    <span>Diretor: <span id="lblNomeDir">—</span> (<span id="lblPercDir">{{ number_format(old('perc_comissao_diretor', 0), 2, ',', '.') }}</span>%)</span>
                     <span id="prevDir">R$ 0,00</span>
                 </div>
             </div>
@@ -187,6 +193,10 @@
         const PERC_GESTOR       = Number(@json($percGestor ?? 0));
         const PERC_DISTRIBUIDOR = Number(@json($percDistribuidor ?? 0));
 
+        // Totais (para preview "faltará")
+        const VALOR_TOTAL = Number(@json($valorTotal));
+        const JA_PAGO     = Number(@json($jaPago));
+
         const form       = document.getElementById('formPagamento');
         const chkAdesao  = document.getElementById('chkAdesao');
         const boxAdesao  = document.getElementById('boxAdesao');
@@ -198,14 +208,12 @@
         const selDir = document.getElementById('diretor_id');
         const inpDir = document.getElementById('perc_comissao_diretor');
 
-        // labels (%) e valores (R$) das retenções
+        // labels (%) e valores (R$) das retenções — INSS e CSLL removidos
         const retMap = {
             irrf:   { lbl: document.getElementById('lblRetIrrf'),   val: document.getElementById('valRetIrrf') },
             iss:    { lbl: document.getElementById('lblRetIss'),    val: document.getElementById('valRetIss') },
-            inss:   { lbl: document.getElementById('lblRetInss'),   val: document.getElementById('valRetInss') },
             pis:    { lbl: document.getElementById('lblRetPis'),    val: document.getElementById('valRetPis') },
             cofins: { lbl: document.getElementById('lblRetCofins'), val: document.getElementById('valRetCofins') },
-            csll:   { lbl: document.getElementById('lblRetCsll'),   val: document.getElementById('valRetCsll') },
             outros: { lbl: document.getElementById('lblRetOutros'), val: document.getElementById('valRetOutros') },
         };
 
@@ -217,6 +225,12 @@
         const pctLabel = (n) => {
             const v = isFinite(n) ? Number(n) : 0;
             return v.toFixed(2).replace('.', ',');
+        };
+
+        const getSelectText = (selectEl) => {
+            if (!selectEl) return '';
+            const opt = selectEl.options[selectEl.selectedIndex];
+            return opt ? (opt.text || '').trim() : '';
         };
 
         function val(name) {
@@ -243,31 +257,30 @@
             // Retenções informadas em % -> converte para R$
             const pIrrf   = val('ret_irrf');
             const pIss    = val('ret_iss');
-            const pInss   = val('ret_inss');
             const pPis    = val('ret_pis');
             const pCofins = val('ret_cofins');
-            const pCsll   = val('ret_csll');
             const pOutros = val('ret_outros');
 
             const vIRRF   = valorPago * (pIrrf   / 100);
             const vISS    = valorPago * (pIss    / 100);
-            const vINSS   = valorPago * (pInss   / 100);
             const vPIS    = valorPago * (pPis    / 100);
             const vCOFINS = valorPago * (pCofins / 100);
-            const vCSLL   = valorPago * (pCsll   / 100);
             const vOUTROS = valorPago * (pOutros / 100);
 
-            const totalRet = vIRRF + vISS + vINSS + vPIS + vCOFINS + vCSLL + vOUTROS;
+            const totalRet = vIRRF + vISS + vPIS + vCOFINS + vOUTROS;
             const liquido  = Math.max(0, valorPago - totalRet);
 
             // Atualiza labels das retenções
             retMap.irrf.lbl.textContent   = pctLabel(pIrrf);   retMap.irrf.val.textContent   = money(vIRRF);
             retMap.iss.lbl.textContent    = pctLabel(pIss);    retMap.iss.val.textContent    = money(vISS);
-            retMap.inss.lbl.textContent   = pctLabel(pInss);   retMap.inss.val.textContent   = money(vINSS);
             retMap.pis.lbl.textContent    = pctLabel(pPis);    retMap.pis.val.textContent    = money(vPIS);
             retMap.cofins.lbl.textContent = pctLabel(pCofins); retMap.cofins.val.textContent = money(vCOFINS);
-            retMap.csll.lbl.textContent   = pctLabel(pCsll);   retMap.csll.val.textContent   = money(vCSLL);
             retMap.outros.lbl.textContent = pctLabel(pOutros); retMap.outros.val.textContent = money(vOUTROS);
+
+            // Preview: faltará após este pagamento (considera base "valor_pago" para quitar o total)
+            const faltara = Math.max(0, (VALOR_TOTAL - JA_PAGO) - valorPago);
+            const faltaraEl = document.getElementById('prevFaltara');
+            if (faltaraEl) faltaraEl.textContent = money(faltara);
 
             // Comissões automáticas (gestor/distribuidor)
             const gest = liquido * (PERC_GESTOR / 100);
@@ -276,11 +289,24 @@
             // Comissões variáveis (advogado/diretor) — sobre o LÍQUIDO
             let adv = 0;
             if (chkAdesao && chkAdesao.checked) {
+                // nome do advogado
+                const nomeAdv = getSelectText(selAdv) || '—';
+                const lblNomeAdv = document.getElementById('lblNomeAdv');
+                if (lblNomeAdv) lblNomeAdv.textContent = nomeAdv;
+
+                // % e valor
                 adv = liquido * (val('perc_comissao_advogado') / 100);
                 if (lblPercAdv) lblPercAdv.textContent = pctLabel(val('perc_comissao_advogado') || 0);
             } else {
+                const lblNomeAdv = document.getElementById('lblNomeAdv');
+                if (lblNomeAdv) lblNomeAdv.textContent = '—';
                 if (lblPercAdv) lblPercAdv.textContent = pctLabel(0);
             }
+
+            // Diretor: nome, %, valor
+            const nomeDir = getSelectText(selDir) || '—';
+            const lblNomeDir = document.getElementById('lblNomeDir');
+            if (lblNomeDir) lblNomeDir.textContent = nomeDir;
 
             const dir = liquido * (val('perc_comissao_diretor') / 100);
             if (lblPercDir) lblPercDir.textContent = pctLabel(val('perc_comissao_diretor') || 0);

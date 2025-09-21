@@ -16,6 +16,7 @@ class NotaPagamentoController extends Controller
     {
         // Carrega gestor/distribuidor para obter percentual_vendas
         $nota->load(['pedido.gestor', 'pedido.distribuidor']);
+        //dd($nota->toArray());
 
         $percGestor       = (float) optional($nota->pedido->gestor)->percentual_vendas ?: 0.0;
         $percDistribuidor = (float) optional($nota->pedido->distribuidor)->percentual_vendas ?: 0.0;

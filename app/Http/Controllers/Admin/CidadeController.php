@@ -67,8 +67,6 @@ class CidadeController extends Controller
     {
         $uf = strtoupper(trim($uf));
 
-        // Left join para descobrir se a cidade está vinculada a algum distribuidor
-        // Observação: se houver mais de um distribuidor na mesma cidade, agregamos.
         $rows = DB::table('cities as c')
             ->leftJoin('city_distribuidor as cd', 'cd.city_id', '=', 'c.id')
             ->leftJoin('distribuidores as d', 'd.id', '=', 'cd.distribuidor_id')
@@ -83,12 +81,17 @@ class CidadeController extends Controller
             ]);
 
         $data = $rows->map(function ($r) {
+            $ocupado = !is_null($r->distribuidor_id);
             return [
-                'id'                => $r->id,
-                'name'              => $r->name,
-                'ocupado'           => !is_null($r->distribuidor_id),
-                'distribuidor_id'   => $r->distribuidor_id,
-                'distribuidor_nome' => $r->distribuidor_nome,
+                'id'                 => $r->id,
+                'name'               => $r->name,
+                // CHAVES NO PADRÃO QUE O FRONT ESPERA:
+                'occupied'           => $ocupado,
+                'distribuidor_name'  => $ocupado ? $r->distribuidor_nome : null,
+
+                // (Opcional) mantém compatibilidade com quem já usa em PT-BR:
+                'ocupado'            => $ocupado,
+                'distribuidor_nome'  => $ocupado ? $r->distribuidor_nome : null,
             ];
         })->values();
 

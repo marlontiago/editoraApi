@@ -41,7 +41,7 @@
         .tbl tbody td { padding:8px; border-bottom:1px solid #f1f5f9; vertical-align:top; }
         .tbl tbody tr:nth-child(2n) td { background:#fafafa; }
         .tbl tfoot td { padding:8px; border-top:1px solid #e2e8f0; background:#f8fafc; }
-        .product-img { display:block; max-height:60px; max-width:60px; margin:0 auto; border-radius:6px; border:1px solid #e5e7eb; }
+        .product-img { display:block; max-height:80px; max-width:80px; margin:0 auto; border-radius:6px; border:1px solid #e5e7eb; }
         .p-meta { color:#64748b; font-size:10.5px; margin-top:2px; }
 
         /* Totals */
@@ -98,9 +98,17 @@
                     <div style="font-size:11px; line-height:1.5;">
                         <div><strong>Data:</strong> {{ \Carbon\Carbon::parse($pedido->data)->format('d/m/Y') }}</div>
                         <div><strong>Cliente:</strong> {{ $pedido->cliente->razao_social ?? $pedido->cliente->nome ?? '—' }}</div>
-                        <div class="muted" style="margin-top:4px;">
-                            Referência #{{ $pedido->id }}
-                        </div>
+                        @if($pedido->cliente)
+                            <div>
+                                <strong>Endereço:</strong>
+                                {{ $pedido->cliente->endereco ?? '' }}
+                                {{ $pedido->cliente->numero ? ', '.$pedido->cliente->numero : '' }}
+                                @if($pedido->cliente->cidade || $pedido->cliente->uf)
+                                    {{ ' • ' }}
+                                    {{ $pedido->cliente->cidade ?? '' }}{{ $pedido->cliente->uf ? '/'.$pedido->cliente->uf : '' }}
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -133,13 +141,12 @@
     <table class="tbl">
         <thead>
             <tr>
-                <th style="width:70px; text-align:center;">Imagem</th>
-                <th>Produto</th>
-                <th class="right" style="width:45px;">Qtd</th>
-                <th class="right" style="width:80px;">Preço Unit.</th>
-                <th class="right" style="width:70px;">Desc. (%)</th>
-                <th class="right" style="width:90px;">Desc. (R$)</th>
-                <th class="right" style="width:100px;">Subtotal</th>
+                <th style="width:20%; text-align:center;">Imagem</th>
+                <th style="width:35%">Produto</th>
+                <th class="right" style="width:10%;">Qtd</th>
+                <th class="right" style="width:10%;">Preço Unit.</th>
+                <th class="right" style="width:10%;">Desc.</th>
+                <th class="right" style="width:15%">Subtotal</th>
             </tr>
         </thead>
         <tbody>
@@ -167,7 +174,6 @@
                 <td class="right">{{ $qtd }}</td>
                 <td class="right">{{ $fmtMoeda($precoUnit) }}</td>
                 <td class="right">{{ number_format($percItem, 2, ',', '.') }}%</td>
-                <td class="right">{{ $fmtMoeda($descValor) }}</td>
                 <td class="right">{{ $fmtMoeda($subDesc) }}</td>
             </tr>
         @endforeach
@@ -195,7 +201,10 @@
 
 {{-- Termos --}}
 <div class="terms">
-    * Este orçamento é válido por 15 dias. Valores e disponibilidade sujeitos a alteração sem aviso prévio.
+    <h3>Observações:</h1>
+    <p> - Validade: 60 dias.</p>
+    <p> - Prazo de entrega: 30 dias após o envio da autorização de fornecimento.</p>
+    <p> - A editora LT terá a responsabilidade de promover cursos de qualificação para todos os professores e multiplicadores, com data, local e tempo determinados por este órgão, sem custo adicional</p>
 </div>
 <div class="sign">
     <p>__________________________________________</p>

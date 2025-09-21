@@ -145,14 +145,13 @@
     <table class="tbl">
         <thead>
         <tr>
-            <th>Produto</th>
-            <th class="right" style="width:60px;">Qtd</th>
-            <th class="right" style="width:80px;">Preço Unit.</th>
-            <th class="right" style="width:65px;">Desc. (%)</th>
-            <th class="right" style="width:85px;">Desc. (R$)</th>
-            <th class="right" style="width:95px;">Subtotal</th>
-            <th class="right" style="width:80px;">Peso (kg)</th>
-            <th class="right" style="width:60px;">Caixas</th>
+            <th style="width:40%">Produto</th>
+            <th class="right" style="width:15%;">Valor Unitário</th>
+            <th class="right" style="width:10%;">Qtd</th>
+            <th class="right" style="width:15%;">Bruto</th>
+            <th class="right" style="width:10%;">Desc.</th>
+            <th class="right" style="width:15%;">Líquido</th>
+            <th class="right" style="width:10%;">Caixas</th>
         </tr>
         </thead>
         <tbody>
@@ -161,11 +160,11 @@
                 $qtd        = (int)($produto->pivot->quantidade ?? 0);
                 $precoUnit  = (float)($produto->pivot->preco_unitario ?? 0);
                 $percItem   = (float)($produto->pivot->desconto_item ?? 0);
-                $subBruto   = $precoUnit * $qtd;
-                $subDesc    = (float)($produto->pivot->subtotal ?? ($precoUnit * (1 - $percItem/100) * $qtd));
-                $descValor  = max($subBruto - $subDesc, 0);
-                $pesoTotal  = (float)($produto->pivot->peso_total_produto ?? (($produto->peso ?? 0) * $qtd));
-                $caixas     = (int)($produto->pivot->caixas ?? 0);
+
+                $totalBruto   = $precoUnit * $qtd;
+                $totalLiquido = (float)($produto->pivot->subtotal ?? ($precoUnit * (1 - $percItem/100) * $qtd));
+
+                $caixas = (int)($produto->pivot->caixas ?? 0);
             @endphp
             <tr>
                 <td>
@@ -173,22 +172,25 @@
                     @if(!empty($produto->isbn) || !empty($produto->autor))
                         <div class="p-meta">
                             @if(!empty($produto->isbn)) ISBN: {{ $produto->isbn }} @endif
-                            @if(!empty($produto->autor)) @if(!empty($produto->isbn)) • @endif Autor: {{ $produto->autor }} @endif
+                            @if(!empty($produto->autor)) 
+                                @if(!empty($produto->isbn)) • @endif Autor: {{ $produto->autor }} 
+                            @endif
                         </div>
                     @endif
                 </td>
-                <td class="right">{{ $qtd }}</td>
                 <td class="right">{{ $fmtMoeda($precoUnit) }}</td>
+                <td class="right">{{ $qtd }}</td>
+                <td class="right">{{ $fmtMoeda($totalBruto) }}</td>
                 <td class="right">{{ number_format($percItem, 2, ',', '.') }}%</td>
-                <td class="right">{{ $fmtMoeda($descValor) }}</td>
-                <td class="right">{{ $fmtMoeda($subDesc) }}</td>
-                <td class="right">{{ $fmtNum($pesoTotal) }}</td>
+                <td class="right">{{ $fmtMoeda($totalLiquido) }}</td>
                 <td class="right">{{ $caixas }}</td>
             </tr>
         @endforeach
         </tbody>
     </table>
 </div>
+
+
 
 {{-- ===== Resumo (cards) ===== --}}
 <div class="mt-6">

@@ -17,7 +17,6 @@ use App\Http\Controllers\Admin\NotaPagamentoController;
 use App\Http\Controllers\Admin\AdvogadoController;
 use App\Http\Controllers\Admin\DiretorComercialController;
 use App\Http\Controllers\RelatoriosController;
-use App\Http\Controllers\Admin\PedidoObservacaoController;
 
 Route::pattern('gestor', '[0-9]+');        // garante que {gestor} seja numérico
 Route::pattern('distribuidor', '[0-9]+');  // garante que {distribuidor} seja numérico
@@ -109,7 +108,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/pedidos/{pedido}/exportar/{tipo}', [PedidoController::class, 'exportar'])->name('pedidos.exportar');
     Route::get('/pedidos/{pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
-    Route::patch('/pedidos/{pedido}/observacao', [PedidoObservacaoController::class, 'update'])->name('pedidos.observacao.update')->middleware(['auth']);
 
     // Export do dashboard
     Route::get('/dashboard/export/excel', [DashboardController::class, 'exportExcel'])->name('admin.dashboard.export.excel');

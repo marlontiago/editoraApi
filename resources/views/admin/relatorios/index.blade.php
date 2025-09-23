@@ -5,7 +5,7 @@
         </h2>
 
         @php
-            $paramsBase = request()->except('status'); 
+            $paramsBase = request()->except('status');
             function moeda_br($v) { return 'R$ ' . number_format((float)$v, 2, ',', '.'); }
             function status_badge($s) {
                 $map = [
@@ -19,7 +19,7 @@
             }
         @endphp
 
-        {{-- CARDS DO TOPO --}}
+        {{-- 1) CARDS DO TOPO --}}
         <div class="flex flex-wrap">
             <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'pago'])) }}"
                class="bg-emerald-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
@@ -40,11 +40,12 @@
             </a>
         </div>
 
-        {{-- FILTROS --}}
+        {{-- 2) FILTROS --}}
         <div class="mt-6 px-4">
             <form id="filtros" method="GET" action="{{ route('admin.relatorios.index') }}" class="flex flex-wrap items-end gap-4 mb-4 bg-white p-4 rounded-xl border shadow-sm">
                 <input type="hidden" name="status" id="status" value="{{ $statusFiltro ?? '' }}">
 
+                {{-- filtros entidade principal --}}
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Cliente</label>
                     <select class="min-w-[220px] rounded-xl border-gray-200 shadow-sm"
@@ -84,9 +85,42 @@
                     </select>
                 </div>
 
+                {{-- campos ocultos tipo/id --}}
                 <input type="hidden" name="tipo" id="tipo" value="{{ $filtroTipo ?? '' }}">
                 <input type="hidden" name="id" id="id" value="{{ $filtroId ?? '' }}">
 
+                {{-- filtros adicionais --}}
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Advogado</label>
+                    <select name="advogado_id" class="min-w-[220px] rounded-xl border-gray-200 shadow-sm">
+                        <option value="">--Todos--</option>
+                        @foreach ($advogados as $a)
+                            <option value="{{ $a->id }}" @selected((int)($advogadoId ?? 0)===$a->id)>{{ $a->nome }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Diretor</label>
+                    <select name="diretor_id" class="min-w-[220px] rounded-xl border-gray-200 shadow-sm">
+                        <option value="">--Todos--</option>
+                        @foreach ($diretores as $d)
+                            <option value="{{ $d->id }}" @selected((int)($diretorId ?? 0)===$d->id)>{{ $d->nome }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Cidade da venda</label>
+                    <select name="cidade_id" class="min-w-[220px] rounded-xl border-gray-200 shadow-sm">
+                        <option value="">--Todas (com notas)--</option>
+                        @foreach ($cidadesOptions as $c)
+                            <option value="{{ $c->id }}" @selected((int)($cidadeId ?? 0)===$c->id)>{{ $c->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- período --}}
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Data inicial</label>
                     <input type="date" name="data_inicio" value="{{ $dataInicio }}" class="rounded-xl border-gray-200 shadow-sm">
@@ -101,7 +135,7 @@
                     Aplicar filtros
                 </button>
 
-                @if($dataInicio || $dataFim || $filtroTipo || $filtroId || $statusFiltro)
+                @if($dataInicio || $dataFim || $filtroTipo || $filtroId || $statusFiltro || $advogadoId || $diretorId || $cidadeId)
                     <a href="{{ route('admin.relatorios.index') }}" class="px-3 py-2 text-sm text-blue-700 hover:underline">
                         Limpar tudo
                     </a>
@@ -109,257 +143,378 @@
             </form>
         </div>
 
-        {{-- Chips dos filtros ativos --}}
+        {{-- chips --}}
         <div class="px-4">
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2 text-xs">
                 @if($statusFiltro)
-                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700 text-xs">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
                         Status: <strong class="ml-1">{{ str_replace('_',' ', $statusFiltro) }}</strong>
                     </span>
                 @endif
                 @if($dataInicio && $dataFim)
-                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700 text-xs">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
                         Período: <strong class="ml-1">{{ \Carbon\Carbon::parse($dataInicio)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($dataFim)->format('d/m/Y') }}</strong>
                     </span>
                 @endif
                 @if($filtroTipo && $filtroId)
-                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700 text-xs">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
                         Filtro: <strong class="ml-1">{{ ucfirst($filtroTipo) }} #{{ $filtroId }}</strong>
+                    </span>
+                @endif
+                @if($advogadoId)
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
+                        Advogado: <strong class="ml-1">#{{ $advogadoId }}</strong>
+                    </span>
+                @endif
+                @if($diretorId)
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
+                        Diretor: <strong class="ml-1">#{{ $diretorId }}</strong>
+                    </span>
+                @endif
+                @if($cidadeId)
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
+                        Cidade: <strong class="ml-1">#{{ $cidadeId }}</strong>
                     </span>
                 @endif
             </div>
         </div>
 
-        {{-- CARDS-RESUMO DOS RESULTADOS --}}
+        {{-- 3) TABELA (sempre lista as notas do recorte) --}}
         <div class="mt-6 px-4">
-            @if(isset($pedidos) && $pedidos->count())
-                <div class="grid md:grid-cols-3 gap-4 mb-3">
-                    <div class="bg-white border rounded-xl p-4 shadow-sm">
-                        <div class="text-xs text-gray-500">Total líquido do período</div>
-                        <div class="text-2xl font-semibold mt-1">{{ moeda_br($resumoUsuario['valor_liquido']) }}</div>
-                    </div>
-                    <div class="bg-white border rounded-xl p-4 shadow-sm">
-                        <div class="text-xs text-gray-500">Total de comissões</div>
-                        <div class="text-2xl font-semibold mt-1">{{ moeda_br($resumoUsuario['total_comissoes']) }}</div>
-                    </div>
-                    <div class="bg-white border rounded-xl p-4 shadow-sm">
-                        <div class="text-xs text-gray-500">Pedidos no resultado</div>
-                        <div class="text-2xl font-semibold mt-1">{{ $resumoUsuario['qtd'] }}</div>
-                    </div>
-                </div>
-            @elseif( ($statusFiltro && isset($pedidoStatus)) || ($dataInicio && $dataFim && isset($pedidoStatus)) )
-                <div class="grid md:grid-cols-3 gap-4 mb-3">
-                    <div class="bg-white border rounded-xl p-4 shadow-sm">
-                        <div class="text-xs text-gray-500">Pedidos no resultado</div>
-                        <div class="text-2xl font-semibold mt-1">{{ $resumoStatus['qtd'] }}</div>
-                    </div>
-                    <div class="bg-white border rounded-xl p-4 shadow-sm">
-                        <div class="text-xs text-gray-500">Soma do valor da nota</div>
-                        <div class="text-2xl font-semibold mt-1">{{ moeda_br($resumoStatus['valor_total']) }}</div>
-                    </div>
-                    <div class="bg-white border rounded-xl p-4 shadow-sm">
-                        <div class="text-xs text-gray-500">Status</div>
-                        <div class="text-base mt-1">
-                            @if($statusFiltro){!! status_badge($statusFiltro) !!}@else<span class="text-gray-600">—</span>@endif
-                        </div>
-                    </div>
-                </div>
-            @endif
-        </div>
-
-        {{-- TABELA (usuário primeiro; se não, status/período) --}}
-        <div class="mt-2 px-4">
-            @if(isset($pedidos) && $pedidos->count())
-                <div class="flex justify-end mb-2">
+            <div class="flex justify-end mb-2">
+                @if($notas->count())
                     <a href="{{ route('admin.relatorios.index', array_merge(request()->all(), ['export' => 'pdf'])) }}"
                        class="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800">
                         Exportar PDF
                     </a>
-                </div>
+                @endif
+            </div>
+
+            @if($notas->count())
                 <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
                     <table class="min-w-full text-sm">
                         <thead class="bg-gray-50 text-gray-700 sticky top-0 z-10">
                             <tr>
-                                <th class="px-4 py-3 text-left">#</th>
+                                <th class="px-4 py-3 text-left"># Nota</th>
+                                <th class="px-4 py-3 text-left">Pedido</th>
                                 <th class="px-4 py-3 text-left">Cliente</th>
                                 <th class="px-4 py-3 text-left">Gestor</th>
                                 <th class="px-4 py-3 text-left">Distribuidor</th>
-                                <th class="px-4 py-3 text-left">Data Pagamento</th>
-                                <th class="px-4 py-3 text-right">Valor Líquido Pago</th>
+                                <th class="px-4 py-3 text-left">Cidades</th>
+                                <th class="px-4 py-3 text-left">Emitida</th>
+                                <th class="px-4 py-3 text-left">Faturada</th>
                                 <th class="px-4 py-3 text-left">Financeiro</th>
-                                <th class="px-4 py-3 text-right">Comissão</th>
+                                <th class="px-4 py-3 text-right">Valor Nota</th>
+                                <th class="px-4 py-3 text-right">Pago (Líquido)</th>
+                                <th class="px-4 py-3 text-right">Retenções</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            @foreach($pedidos as $p)
+                            @foreach($notas as $n)
                                 @php
-                                    $pgto = optional($p->notaFiscal)->pagamentos ? $p->notaFiscal->pagamentos->sortByDesc('data_pagamento')->first() : null;
+                                    $pedido  = $n->pedido;
+                                    $pgts    = $n->pagamentos ?? collect();
+                                    if (!empty($dataInicio) && !empty($dataFim)) {
+                                        $pgts = $pgts->filter(function ($pg) use ($dataInicio, $dataFim) {
+                                            $d = \Carbon\Carbon::parse($pg->data_pagamento)->toDateString();
+                                            return $d >= $dataInicio && $d <= $dataFim;
+                                        });
+                                    }
+                                    $liquido   = (float) $pgts->sum('valor_liquido');
+                                    $retencoes = 0.0;
+                                    foreach (['ret_irrf','ret_iss','ret_inss','ret_pis','ret_cofins','ret_csll','ret_outros'] as $campoRet) {
+                                        $retencoes += (float) $pgts->sum($campoRet);
+                                    }
+                                    $cidadesStr = $pedido && $pedido->cidades ? $pedido->cidades->pluck('name')->join(', ') : '—';
                                 @endphp
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-2">#{{ $p->id }}</td>
-                                    <td class="px-4 py-2">{{ $p->cliente->razao_social ?? '—' }}</td>
-                                    <td class="px-4 py-2">{{ $p->gestor->razao_social ?? '—' }}</td>
-                                    <td class="px-4 py-2">{{ $p->distribuidor->razao_social ?? '—' }}</td>
-                                    <td class="px-4 py-2">{{ $pgto && $pgto->data_pagamento ? \Carbon\Carbon::parse($pgto->data_pagamento)->format('d/m/Y') : '-'}}</td>
-                                    <td class="px-4 py-2 text-right">{{ moeda_br($p->valor_liquido_pago_total ?? 0) }}</td>
-                                    <td class="px-4 py-2">{!! $p->notaFiscal? status_badge($p->notaFiscal->status_financeiro ?? '-') : '—' !!}</td>
-                                    <td class="px-4 py-2 text-right font-medium">{{ moeda_br($p->comissao_do_filtro ?? 0) }}</td>
+                                    <td class="px-4 py-2">#{{ $n->id }}</td>
+                                    <td class="px-4 py-2">#{{ $pedido->id ?? '—' }}</td>
+                                    <td class="px-4 py-2">{{ $pedido->cliente->razao_social ?? '—' }}</td>
+                                    <td class="px-4 py-2">{{ $pedido->gestor->razao_social ?? '—' }}</td>
+                                    <td class="px-4 py-2">{{ $pedido->distribuidor->razao_social ?? '—' }}</td>
+                                    <td class="px-4 py-2">{{ $cidadesStr }}</td>
+                                    <td class="px-4 py-2">{{ $n->emitida_em ? \Carbon\Carbon::parse($n->emitida_em)->format('d/m/Y') : '—' }}</td>
+                                    <td class="px-4 py-2">{{ $n->faturada_em ? \Carbon\Carbon::parse($n->faturada_em)->format('d/m/Y') : '—' }}</td>
+                                    <td class="px-4 py-2">{!! $n->status_financeiro ? status_badge($n->status_financeiro) : '—' !!}</td>
+                                    <td class="px-4 py-2 text-right">{{ moeda_br($n->valor_total ?? 0) }}</td>
+                                    <td class="px-4 py-2 text-right">{{ moeda_br($liquido) }}</td>
+                                    <td class="px-4 py-2 text-right">{{ moeda_br($retencoes) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                         <tfoot class="bg-gray-50">
                             <tr>
-                                <td colspan="5" class="px-4 py-3 text-right font-semibold">Totais:</td>
-                                <td class="px-4 py-3 text-right font-semibold">{{ moeda_br($resumoUsuario['valor_liquido']) }}</td>
-                                <td class="px-4 py-3"></td>
-                                <td class="px-4 py-3 text-right font-bold">{{ moeda_br($resumoUsuario['total_comissoes']) }}</td>
+                                <td colspan="9" class="px-4 py-3 text-right font-semibold">Totais:</td>
+                                <td class="px-4 py-3 text-right font-bold">{{ moeda_br($totais['total_bruto']) }}</td>
+                                <td class="px-4 py-3 text-right font-bold">{{ moeda_br($totais['total_liquido_pago']) }}</td>
+                                <td class="px-4 py-3 text-right font-bold">{{ moeda_br($totais['total_retencoes']) }}</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
-            @elseif( ($statusFiltro && isset($pedidoStatus)) || ($dataInicio && $dataFim && isset($pedidoStatus)) )
-                @if($pedidoStatus->count())
-                    <div class="flex items-center gap-3 mb-3">
-                        @if($statusFiltro)
-                            <a class="text-blue-700 hover:underline text-sm"
-                               href="{{ route('admin.relatorios.index', request()->except('status')) }}">
-                                Limpar status
-                            </a>
-                        @endif
-                        <div class="ml-auto">
-                            <a href="{{ route('admin.relatorios.index', array_merge(request()->all(), ['export' => 'pdf'])) }}"
-                               class="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800">
-                                Exportar PDF
-                            </a>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
-                        <table class="min-w-full text-sm">
-                            <thead class="bg-gray-50 text-gray-700 sticky top-0 z-10">
-                                <tr>
-                                    <th class="px-4 py-3 text-left">#</th>
-                                    <th class="px-4 py-3 text-left">Cliente</th>
-                                    <th class="px-4 py-3 text-left">Gestor</th>
-                                    <th class="px-4 py-3 text-left">Distribuidor</th>
-                                    <th class="px-4 py-3 text-left">Data Pagamento</th>
-                                    <th class="px-4 py-3 text-right">Valor da Nota</th>
-                                    <th class="px-4 py-3 text-left">Financeiro</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                @foreach($pedidoStatus as $p)
-                                    @php
-                                        $pgto = optional($p->notaFiscal)->pagamentos ? $p->notaFiscal->pagamentos->sortByDesc('data_pagamento')->first() : null;
-                                    @endphp
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-2">#{{ $p->id }}</td>
-                                        <td class="px-4 py-2">{{ $p->cliente->razao_social ?? '—' }}</td>
-                                        <td class="px-4 py-2">{{ $p->gestor->razao_social ?? '—' }}</td>
-                                        <td class="px-4 py-2">{{ $p->distribuidor->razao_social ?? '—' }}</td>
-                                        <td class="px-4 py-2">{{ $pgto && $pgto->data_pagamento ? \Carbon\Carbon::parse($pgto->data_pagamento)->format('d/m/Y') : '-'}}</td>
-                                        <td class="px-4 py-2 text-right">{{ moeda_br(optional($p->notaFiscal)->valor_total ?? 0) }}</td>
-                                        <td class="px-4 py-2">{!! $p->notaFiscal? status_badge($p->notaFiscal->status_financeiro ?? '-') : '—' !!}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                            <tfoot class="bg-gray-50">
-                                <tr>
-                                    <td colspan="5" class="px-4 py-3 text-right font-semibold">Total:</td>
-                                    <td class="px-4 py-3 text-right font-bold">{{ moeda_br($resumoStatus['valor_total']) }}</td>
-                                    <td class="px-4 py-3"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                @else
-                    <div class="text-gray-600">Nenhum registro encontrado para os filtros aplicados.</div>
-                @endif
+            @else
+                <div class="text-gray-600">Nenhuma nota encontrada para os filtros aplicados.</div>
             @endif
         </div>
 
-        {{-- COMISSÕES POR USUÁRIO --}}
-        @if( ($statusFiltro && isset($pedidoStatus)) || ($dataInicio && $dataFim && isset($pedidoStatus)) )
-            @if($pedidoStatus->count())
-                @php
-                    $comissoesPorUsuario = [];
-                    $temPeriodo = !empty($dataInicio) && !empty($dataFim);
+        {{-- 4) CARDS DE COMISSÕES (com mini-tabelas alinhadas) --}}
+        <div class="mt-8 grid md:grid-cols-2 gap-4 px-4">
+            {{-- Gestores --}}
+            <div class="bg-white border rounded-xl p-4 shadow-sm">
+                <div class="text-xs text-gray-500">Comissão Gestores — Total</div>
+                <div class="text-2xl font-semibold mt-1">{{ moeda_br($totais['comissao_gestor']) }}</div>
 
-                    foreach ($pedidoStatus as $p) {
-                        $nota = $p->notaFiscal;
-                        if (!$nota) continue;
+                @foreach($gestoresBreak as $gid => $g)
+                    <div class="mt-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="font-medium truncate">{{ $g['nome'] }}</div>
+                            <div class="text-gray-600">qtd: <strong>{{ $g['qtd'] }}</strong> — % <strong>{{ number_format($g['perc'],2,',','.') }}</strong> — <strong>{{ moeda_br($g['total']) }}</strong></div>
+                        </div>
+                        @php $itens = $gestoresDetalhe[$gid] ?? []; @endphp
+                        @if($itens)
+                            <div class="mt-2 border rounded-lg overflow-hidden">
+                                <div class="max-h-56 overflow-y-auto">
+                                    <table class="w-full text-xs table-fixed">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-2 py-1 text-left w-24">#Nota</th>
+                                                <th class="px-2 py-1 text-right w-28">Base</th>
+                                                <th class="px-2 py-1 text-right w-16">% </th>
+                                                <th class="px-2 py-1 text-right w-28">Comissão</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            @foreach($itens as $item)
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-2 py-1">#{{ $item['nota'] }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ moeda_br($item['base']) }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ number_format($item['perc'],2,',','.') }}%</td>
+                                                    <td class="px-2 py-1 text-right font-medium">{{ moeda_br($item['comissao']) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
 
-                        // Somente os pagamentos dentro do período (quando houver)
-                        if ($temPeriodo) {
-                            $valorLiquido = (float) $nota->pagamentos
-                                ->filter(function($pg) use ($dataInicio, $dataFim) {
+            {{-- Distribuidores --}}
+            <div class="bg-white border rounded-xl p-4 shadow-sm">
+                <div class="text-xs text-gray-500">Comissão Distribuidores — Total</div>
+                <div class="text-2xl font-semibold mt-1">{{ moeda_br($totais['comissao_distribuidor']) }}</div>
+
+                @foreach($distsBreak as $did => $d)
+                    <div class="mt-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="font-medium truncate">{{ $d['nome'] }}</div>
+                            <div class="text-gray-600">qtd: <strong>{{ $d['qtd'] }}</strong> — % <strong>{{ number_format($d['perc'],2,',','.') }}</strong> — <strong>{{ moeda_br($d['total']) }}</strong></div>
+                        </div>
+                        @php $itens = $distsDetalhe[$did] ?? []; @endphp
+                        @if($itens)
+                            <div class="mt-2 border rounded-lg overflow-hidden">
+                                <div class="max-h-56 overflow-y-auto">
+                                    <table class="w-full text-xs table-fixed">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-2 py-1 text-left w-24">#Nota</th>
+                                                <th class="px-2 py-1 text-right w-28">Base</th>
+                                                <th class="px-2 py-1 text-right w-16">% </th>
+                                                <th class="px-2 py-1 text-right w-28">Comissão</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            @foreach($itens as $item)
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-2 py-1">#{{ $item['nota'] }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ moeda_br($item['base']) }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ number_format($item['perc'],2,',','.') }}%</td>
+                                                    <td class="px-2 py-1 text-right font-medium">{{ moeda_br($item['comissao']) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Advogados --}}
+            <div class="bg-white border rounded-xl p-4 shadow-sm">
+                <div class="text-xs text-gray-500">Comissão Advogados — Total</div>
+                <div class="text-2xl font-semibold mt-1">{{ moeda_br($totais['comissao_advogado']) }}</div>
+
+                @foreach($advogadosBreak as $aid => $a)
+                    <div class="mt-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="font-medium truncate">{{ $a['nome'] }}</div>
+                            <div class="text-gray-600">
+                                qtd: <strong>{{ $a['qtd'] }}</strong>
+                                @if(!is_null($a['perc'])) — % <strong>{{ number_format($a['perc'],2,',','.') }}</strong>@endif
+                                — <strong>{{ moeda_br($a['total']) }}</strong>
+                            </div>
+                        </div>
+                        @php $itens = $advogadosDetalhe[$aid] ?? []; @endphp
+                        @if($itens)
+                            <div class="mt-2 border rounded-lg overflow-hidden">
+                                <div class="max-h-56 overflow-y-auto">
+                                    <table class="w-full text-xs table-fixed">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-2 py-1 text-left w-24">#Nota</th>
+                                                <th class="px-2 py-1 text-right w-28">Base</th>
+                                                <th class="px-2 py-1 text-right w-16">% </th>
+                                                <th class="px-2 py-1 text-right w-28">Comissão</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            @foreach($itens as $item)
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-2 py-1">#{{ $item['nota'] }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ moeda_br($item['base']) }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ number_format($item['perc'],2,',','.') }}%</td>
+                                                    <td class="px-2 py-1 text-right font-medium">{{ moeda_br($item['comissao']) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Diretores --}}
+            <div class="bg-white border rounded-xl p-4 shadow-sm">
+                <div class="text-xs text-gray-500">Comissão Diretores — Total</div>
+                <div class="text-2xl font-semibold mt-1">{{ moeda_br($totais['comissao_diretor']) }}</div>
+
+                @foreach($diretoresBreak as $did => $d)
+                    <div class="mt-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="font-medium truncate">{{ $d['nome'] }}</div>
+                            <div class="text-gray-600">
+                                qtd: <strong>{{ $d['qtd'] }}</strong>
+                                @if(!is_null($d['perc'])) — % <strong>{{ number_format($d['perc'],2,',','.') }}</strong>@endif
+                                — <strong>{{ moeda_br($d['total']) }}</strong>
+                            </div>
+                        </div>
+                        @php $itens = $diretoresDetalhe[$did] ?? []; @endphp
+                        @if($itens)
+                            <div class="mt-2 border rounded-lg overflow-hidden">
+                                <div class="max-h-56 overflow-y-auto">
+                                    <table class="w-full text-xs table-fixed">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-2 py-1 text-left w-24">#Nota</th>
+                                                <th class="px-2 py-1 text-right w-28">Base</th>
+                                                <th class="px-2 py-1 text-right w-16">% </th>
+                                                <th class="px-2 py-1 text-right w-28">Comissão</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            @foreach($itens as $item)
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-2 py-1">#{{ $item['nota'] }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ moeda_br($item['base']) }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ number_format($item['perc'],2,',','.') }}%</td>
+                                                    <td class="px-2 py-1 text-right font-medium">{{ moeda_br($item['comissao']) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- 5) CARDS DE RETENÇÕES (detalhe por nota) --}}
+        <div class="mt-8 px-4">
+            <h3 class="font-semibold text-lg mb-3">Retenções por nota (detalhe)</h3>
+            @if($notas->count())
+                <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    @foreach($notas as $n)
+                        @php
+                            $pgts = $n->pagamentos ?? collect();
+                            if (!empty($dataInicio) && !empty($dataFim)) {
+                                $pgts = $pgts->filter(function ($pg) use ($dataInicio, $dataFim) {
                                     $d = \Carbon\Carbon::parse($pg->data_pagamento)->toDateString();
                                     return $d >= $dataInicio && $d <= $dataFim;
-                                })
-                                ->sum('valor_liquido');
-                        } else {
-                            $valorLiquido = (float) $nota->pagamentos->sum('valor_liquido');
-                        }
-
-                        // Gestor
-                        if ($p->gestor) {
-                            $perc = (float) ($p->gestor->percentual_vendas ?? 0);
-                            $com  = round($valorLiquido * ($perc / 100), 2);
-                            $key  = 'gestor_'.$p->gestor->id;
-                            if (!isset($comissoesPorUsuario[$key])) {
-                                $comissoesPorUsuario[$key] = [
-                                    'tipo'  => 'Gestor',
-                                    'id'    => $p->gestor->id,
-                                    'nome'  => $p->gestor->razao_social,
-                                    'perc'  => $perc,
-                                    'total' => 0.0,
-                                ];
+                                });
                             }
-                            $comissoesPorUsuario[$key]['total'] += $com;
-                        }
 
-                        // Distribuidor
-                        if ($p->distribuidor) {
-                            $perc = (float) ($p->distribuidor->percentual_vendas ?? 0);
-                            $com  = round($valorLiquido * ($perc / 100), 2);
-                            $key  = 'distribuidor_'.$p->distribuidor->id;
-                            if (!isset($comissoesPorUsuario[$key])) {
-                                $comissoesPorUsuario[$key] = [
-                                    'tipo'  => 'Distribuidor',
-                                    'id'    => $p->distribuidor->id,
-                                    'nome'  => $p->distribuidor->razao_social,
-                                    'perc'  => $perc,
-                                    'total' => 0.0,
-                                ];
+                            $map = [
+                                'IRRF' => 'ret_irrf',
+                                'ISS' => 'ret_iss',
+                                'INSS' => 'ret_inss',
+                                'PIS' => 'ret_pis',
+                                'COFINS' => 'ret_cofins',
+                                'CSLL' => 'ret_csll',
+                                'Outros' => 'ret_outros',
+                            ];
+                            $sumRet = [];
+                            $totalRet = 0.0;
+                            foreach ($map as $lbl => $col) {
+                                $v = (float) $pgts->sum($col);
+                                $sumRet[$lbl] = $v;
+                                $totalRet += $v;
                             }
-                            $comissoesPorUsuario[$key]['total'] += $com;
-                        }
-                    }
+                        @endphp
 
-                    uasort($comissoesPorUsuario, fn($a,$b) => $b['total'] <=> $a['total']);
-                @endphp
+                        <div class="bg-white border rounded-xl p-4 shadow-sm">
+                            <div class="flex items-center justify-between">
+                                <div class="font-semibold">Nota #{{ $n->id }}</div>
+                                <div class="text-sm text-gray-500">{{ $n->emitida_em ? \Carbon\Carbon::parse($n->emitida_em)->format('d/m/Y') : '—' }}</div>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                Cliente: <strong>{{ optional($n->pedido->cliente)->razao_social ?? '—' }}</strong>
+                            </div>
 
-                <div class="mt-10 px-4">
-                    <h3 class="font-semibold text-lg mb-3">Comissões por usuário (resultado atual)</h3>
-                    @if(empty($comissoesPorUsuario))
-                        <div class="text-gray-600">Sem valores de comissão no período/filters atuais.</div>
-                    @else
-                        <div class="grid md:grid-cols-3 gap-4">
-                            @foreach($comissoesPorUsuario as $u)
-                                <div class="bg-white border rounded-xl p-4 shadow-sm">
-                                    <div class="text-xs text-gray-500">{{ $u['tipo'] }}</div>
-                                    <div class="text-base font-semibold">{{ $u['nome'] }}</div>
-                                    <div class="mt-2 text-sm text-gray-600">Percentual: {{ number_format($u['perc'],2,',','.') }}%</div>
-                                    <div class="mt-1 text-2xl font-bold">{{ moeda_br($u['total']) }}</div>
-                                </div>
-                            @endforeach
+                            <div class="mt-3 border rounded-lg overflow-hidden">
+                                <table class="w-full text-xs">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-2 py-1 text-left">Retenção</th>
+                                            <th class="px-2 py-1 text-right">Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        @foreach($sumRet as $lbl => $val)
+                                            @if($val > 0)
+                                                <tr>
+                                                    <td class="px-2 py-1">{{ $lbl }}</td>
+                                                    <td class="px-2 py-1 text-right">{{ moeda_br($val) }}</td>
+                                                </tr>
+                                            @endif
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot class="bg-gray-50">
+                                        <tr>
+                                            <td class="px-2 py-1 text-right font-semibold">Total</td>
+                                            <td class="px-2 py-1 text-right font-bold">{{ moeda_br($totalRet) }}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
-                    @endif
+                    @endforeach
                 </div>
+            @else
+                <div class="text-gray-600">Sem notas no resultado atual.</div>
             @endif
-        @endif
+        </div>
     </div>
 
-    {{-- Auto-submit dos selects usando o mesmo form --}}
+    {{-- Auto-submit dos selects "exclusivos" (cliente/gestor/distribuidor) --}}
     <script>
     (function() {
         const form = document.getElementById('filtros');

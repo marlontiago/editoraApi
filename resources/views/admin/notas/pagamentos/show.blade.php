@@ -156,15 +156,25 @@
                     </thead>
                     <tbody>
                         @php
-                            $linhas = [
-                                ['IRRF',   $ret['irrf'],   $retValores['irrf']],
-                                ['ISS',    $ret['iss'],    $retValores['iss']],
-                                ['INSS',   $ret['inss'],   $retValores['inss']],
-                                ['PIS',    $ret['pis'],    $retValores['pis']],
-                                ['COFINS', $ret['cofins'], $retValores['cofins']],
-                                ['CSLL',   $ret['csll'],   $retValores['csll']],
-                                ['Outros', $ret['outros'], $retValores['outros']],
+                            // Labels bonitinhos para cada chave
+                            $labels = [
+                                'irrf'   => 'IRRF',
+                                'iss'    => 'ISS',
+                                'pis'    => 'PIS',
+                                'cofins' => 'COFINS',
+                                'outros' => 'Outros',
                             ];
+
+                            // Ordem desejada
+                            $ordem = ['irrf','iss','pis','cofins','outros'];
+
+                            // Monta linhas dinamicamente, usando 0 quando a chave não existir
+                            $linhas = [];
+                            foreach ($ordem as $k) {
+                                $perc  = (float)($ret[$k] ?? 0);
+                                $valor = (float)($retValores[$k] ?? 0);
+                                $linhas[] = [$labels[$k], $perc, $valor];
+                            }
                         @endphp
                         @foreach ($linhas as [$nome, $perc, $valor])
                             <tr class="border-t">

@@ -4,20 +4,22 @@
     <meta charset="utf-8">
     <title>Relatório Financeiro</title>
     <style>
-        @page { margin: 120px 36px 90px 36px; }
+        /* Margens padrão (header está no fluxo) */
+        @page { margin: 36px 36px 90px 36px; }
+
         body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11.5px; line-height: 1.45; color:#0f172a; }
 
-        /* Header / Footer */
-        .header { position: fixed; top: -100px; left: 0; right: 0; height: 100px; }
+        /* Header compacto (apenas na 1ª página, pois está no fluxo normal) */
+        .header { margin-bottom: 16px; }
+        .h-top { background: #0b2545; color: #e2e8f0; padding: 8px 12px; border-radius: 6px; }
+        .brand { width: 100%; }
+        .brand td { border: 0; padding: 0 6px; vertical-align: middle; }
+        .title { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; }
+        .muted { color: #cbd5e1; font-size: 10px; }
+
+        /* Footer fixo (todas as páginas) */
         .footer { position: fixed; bottom: -70px; left: 0; right: 0; height: 60px; color: #475569; font-size: 10.5px; }
         .footer .pagenum:after { content: counter(page) " / " counter(pages); }
-
-        .h-top { background: #0b2545; color: #e2e8f0; padding: 14px 18px; border-radius: 10px; }
-        .brand { width:100%; height:100%; }
-        .brand td { border:0; padding:0; }
-        .title { font-size:20px; font-weight:700; color:#fff; line-height:1; }
-        .muted { color:#cbd5e1; font-size: 11px; }
-
         .f-line { border-top: 1px solid #e2e8f0; margin: 8px 0; }
         .f-wrap td { border:0; padding:2px 0; }
 
@@ -66,7 +68,7 @@
         .mini-list li { display:flex; justify-content:space-between; gap:8px; font-size:10.5px; padding:2px 0; border-bottom:1px dashed #e5e7eb; }
         .mini-list li:last-child { border-bottom:0; }
 
-        /* Mini tabelas das comissões */
+        /* Mini tabelas */
         .mini-tbl { width:100%; border-collapse:collapse; table-layout: fixed; }
         .mini-tbl thead th { background:#f1f5f9; font-weight:700; font-size:10px; padding:4px 6px; text-align:left; }
         .mini-tbl tbody td { font-size:10px; padding:4px 6px; border-top:1px solid #f1f5f9; }
@@ -75,6 +77,12 @@
         .w-b { width:26%; }   /* Base */
         .w-p { width:16%; }   /* %    */
         .w-c { width:36%; }   /* Comissão */
+
+        /* Retenções horizontais compactas (lado a lado) */
+        .mini-ret { width:100%; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+        .mini-ret th { background:#f1f5f9; font-weight:700; font-size:10px; padding:4px 6px; text-align:center; }
+        .mini-ret td { font-size:10px; padding:6px; border-top:1px solid #f1f5f9; text-align:right; }
+        .mini-ret th, .mini-ret td { width:14.285%; } /* 7 colunas iguais */
     </style>
 </head>
 <body>
@@ -82,37 +90,33 @@
     function moeda_br_pdf($v){ return 'R$ ' . number_format((float)$v, 2, ',', '.'); }
 @endphp
 
-{{-- Header --}}
+<!-- Header compacto -->
 <div class="header">
     <div class="h-top">
-        <table class="brand" style="width:100%; height:100%;">
+        <table class="brand">
             <tr>
-                <td style="width:55%; vertical-align: middle;">
-                    <div style="display:flex; align-items:center; gap:14px; height:100%;">
-                        <span class="title">Relatório Financeiro</span>
-                    </div>
+                <td style="width:55%;">
+                    <span class="title">Relatório Financeiro</span>
                 </td>
-                <td style="width:45%; text-align:right; vertical-align: middle;">
-                    <div style="font-size:11px; line-height:1.5;">
-                        @if(!empty($dataInicio) && !empty($dataFim))
-                            <div><strong>Período:</strong> {{ \Carbon\Carbon::parse($dataInicio)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($dataFim)->format('d/m/Y') }}</div>
-                        @else
-                            <div><strong>Período:</strong> Todos</div>
-                        @endif
-                        @if(!empty($statusFiltro))<div><strong>Status:</strong> {{ strtoupper($statusFiltro) }}</div>@endif
-                        @if(!empty($filtroTipo) && !empty($filtroId))<div><strong>Filtro:</strong> {{ ucfirst($filtroTipo) }} #{{ $filtroId }}</div>@endif
-                        @if(!empty($advogadoId))<div><strong>Advogado:</strong> #{{ $advogadoId }}</div>@endif
-                        @if(!empty($diretorId))<div><strong>Diretor:</strong> #{{ $diretorId }}</div>@endif
-                        @if(!empty($cidadeId))<div><strong>Cidade:</strong> #{{ $cidadeId }}</div>@endif
-                        <div class="muted" style="margin-top:4px;">Gerado em {{ now()->format('d/m/Y H:i') }}</div>
-                    </div>
+                <td style="width:45%; text-align:right; font-size:10.5px; line-height:1.4;">
+                    @if(!empty($dataInicio) && !empty($dataFim))
+                        <div><strong>Período:</strong> {{ \Carbon\Carbon::parse($dataInicio)->format('d/m/Y') }} — {{ \Carbon\Carbon::parse($dataFim)->format('d/m/Y') }}</div>
+                    @else
+                        <div><strong>Período:</strong> Todos</div>
+                    @endif
+                    @if(!empty($statusFiltro))<div><strong>Status:</strong> {{ strtoupper($statusFiltro) }}</div>@endif
+                    @if(!empty($filtroTipo) && !empty($filtroId))<div><strong>Filtro:</strong> {{ ucfirst($filtroTipo) }} #{{ $filtroId }}</div>@endif
+                    @if(!empty($advogadoId))<div><strong>Advogado:</strong> #{{ $advogadoId }}</div>@endif
+                    @if(!empty($diretorId))<div><strong>Diretor:</strong> #{{ $diretorId }}</div>@endif
+                    @if(!empty($cidadeId))<div><strong>Cidade:</strong> #{{ $cidadeId }}</div>@endif
+                    <div class="muted">Gerado em {{ now()->format('d/m/Y H:i') }}</div>
                 </td>
             </tr>
         </table>
     </div>
 </div>
 
-{{-- Footer --}}
+<!-- Footer (fixo em todas as páginas) -->
 <div class="footer">
     <div class="f-line"></div>
     <table class="f-wrap" style="width:100%;">
@@ -127,8 +131,6 @@
         </tr>
     </table>
 </div>
-
-<br><br>
 
 <main>
     {{-- 1) Tabela de Notas --}}
@@ -186,49 +188,31 @@
         </tfoot>
     </table>
 
-    {{-- 2) Resumo de Totais --}}
-    <div class="section-title">Resumo</div>
-    <table class="cards-grid">
-        <tr>
-            <td class="pad-r" style="width:33.3%;">
-                <div class="stat">
-                    <div class="label">Total bruto (notas)</div>
-                    <div class="value emph">{{ moeda_br_pdf($totais['total_bruto'] ?? 0) }}</div>
-                </div>
-            </td>
-            <td class="pad-x" style="width:33.3%;">
-                <div class="stat">
-                    <div class="label">Total líquido pago</div>
-                    <div class="value">{{ moeda_br_pdf($totais['total_liquido_pago'] ?? 0) }}</div>
-                </div>
-            </td>
-            <td class="pad-l" style="width:33.3%;">
-                <div class="stat">
-                    <div class="label">Total descontado (retenções + comissões)</div>
-                    <div class="value">{{ moeda_br_pdf($totais['total_descontado'] ?? 0) }}</div>
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    {{-- Retenções detalhadas --}}
-    <table class="cards-grid" style="margin-top:6px;">
-        <tr>
-            <td class="pad-r" style="width:100%;">
-                <div class="stat">
-                    <div class="label" style="margin-bottom:4px;">Retenções detalhadas</div>
-                    <ul class="mini-list">
-                        <li><span>IRRF</span><strong>{{ moeda_br_pdf($totais['retencoes_por_tipo']['IRRF'] ?? 0) }}</strong></li>
-                        <li><span>ISS</span><strong>{{ moeda_br_pdf($totais['retencoes_por_tipo']['ISS'] ?? 0) }}</strong></li>
-                        <li><span>INSS</span><strong>{{ moeda_br_pdf($totais['retencoes_por_tipo']['INSS'] ?? 0) }}</strong></li>
-                        <li><span>PIS</span><strong>{{ moeda_br_pdf($totais['retencoes_por_tipo']['PIS'] ?? 0) }}</strong></li>
-                        <li><span>COFINS</span><strong>{{ moeda_br_pdf($totais['retencoes_por_tipo']['COFINS'] ?? 0) }}</strong></li>
-                        <li><span>CSLL</span><strong>{{ moeda_br_pdf($totais['retencoes_por_tipo']['CSLL'] ?? 0) }}</strong></li>
-                        <li><span>Outros</span><strong>{{ moeda_br_pdf($totais['retencoes_por_tipo']['OUTROS'] ?? 0) }}</strong></li>
-                    </ul>
-                </div>
-            </td>
-        </tr>
+    {{-- 2) Retenções detalhadas (logo abaixo da tabela, valores lado a lado) --}}
+    <div class="section-title">Retenções detalhadas</div>
+    <table class="mini-ret">
+        <thead>
+            <tr>
+                <th>IRRF</th>
+                <th>ISS</th>
+                <th>INSS</th>
+                <th>PIS</th>
+                <th>COFINS</th>
+                <th>CSLL</th>
+                <th>Outros</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ moeda_br_pdf($totais['retencoes_por_tipo']['IRRF'] ?? 0) }}</td>
+                <td>{{ moeda_br_pdf($totais['retencoes_por_tipo']['ISS'] ?? 0) }}</td>
+                <td>{{ moeda_br_pdf($totais['retencoes_por_tipo']['INSS'] ?? 0) }}</td>
+                <td>{{ moeda_br_pdf($totais['retencoes_por_tipo']['PIS'] ?? 0) }}</td>
+                <td>{{ moeda_br_pdf($totais['retencoes_por_tipo']['COFINS'] ?? 0) }}</td>
+                <td>{{ moeda_br_pdf($totais['retencoes_por_tipo']['CSLL'] ?? 0) }}</td>
+                <td>{{ moeda_br_pdf($totais['retencoes_por_tipo']['OUTROS'] ?? 0) }}</td>
+            </tr>
+        </tbody>
     </table>
 
     {{-- 3) Comissões (totais + breakdown detalhado por item) --}}
@@ -407,6 +391,31 @@
                             @endif
                         </div>
                     @endforeach
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    {{-- 4) Resumo (por último) --}}
+    <div class="section-title">Resumo</div>
+    <table class="cards-grid">
+        <tr>
+            <td class="pad-r" style="width:33.3%;">
+                <div class="stat">
+                    <div class="label">Total bruto (notas)</div>
+                    <div class="value emph">{{ moeda_br_pdf($totais['total_bruto'] ?? 0) }}</div>
+                </div>
+            </td>
+            <td class="pad-x" style="width:33.3%;">
+                <div class="stat">
+                    <div class="label">Total líquido pago</div>
+                    <div class="value">{{ moeda_br_pdf($totais['total_liquido_pago'] ?? 0) }}</div>
+                </div>
+            </td>
+            <td class="pad-l" style="width:33.3%;">
+                <div class="stat">
+                    <div class="label">Total descontado (retenções + comissões)</div>
+                    <div class="value">{{ moeda_br_pdf($totais['total_descontado'] ?? 0) }}</div>
                 </div>
             </td>
         </tr>

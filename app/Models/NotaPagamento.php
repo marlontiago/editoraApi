@@ -8,21 +8,28 @@ class NotaPagamento extends Model
 {
     protected $table = 'nota_pagamentos';
 
-    protected $fillable = [
-        'nota_fiscal_id', 'data_pagamento', 'valor_pago',
-        'ret_irrf','ret_iss','ret_inss','ret_pis','ret_cofins','ret_csll','ret_outros',
-        'adesao_ata','advogado_id','perc_comissao_advogado',
-        'diretor_id','perc_comissao_diretor',
-        'valor_liquido','comissao_advogado','comissao_diretor',
-        'observacoes',
-    ];
+    // Libera atribuição em massa para todos os campos validados no controller
+    protected $guarded = [];
 
     protected $casts = [
-        'adesao_ata'     => 'boolean',
-        'data_pagamento' => 'date',
-        // se quiser garantir precisão ao ler:
-        // 'valor_pago'     => 'decimal:2',
-        // 'valor_liquido'  => 'decimal:2',
+        'data_pagamento'        => 'date',
+        'adesao_ata'            => 'boolean',
+        'comissao_snapshot_at'  => 'datetime',
+
+        // Se quiser que o Eloquent já formate decimais na leitura, descomente:
+        // 'valor_pago'             => 'decimal:2',
+        // 'valor_liquido'          => 'decimal:2',
+        // 'ret_irrf_valor'         => 'decimal:2',
+        // 'ret_iss_valor'          => 'decimal:2',
+        // 'ret_inss_valor'         => 'decimal:2',
+        // 'ret_pis_valor'          => 'decimal:2',
+        // 'ret_cofins_valor'       => 'decimal:2',
+        // 'ret_csll_valor'         => 'decimal:2',
+        // 'ret_outros_valor'       => 'decimal:2',
+        // 'comissao_gestor'        => 'decimal:2',
+        // 'comissao_distribuidor'  => 'decimal:2',
+        // 'comissao_advogado'      => 'decimal:2',
+        // 'comissao_diretor'       => 'decimal:2',
     ];
 
     /*
@@ -35,7 +42,6 @@ class NotaPagamento extends Model
         return $this->belongsTo(NotaFiscal::class, 'nota_fiscal_id');
     }
 
-    // Pelo seu controller você usa as tabelas Advogado e DiretorComercial
     public function advogado()
     {
         return $this->belongsTo(Advogado::class, 'advogado_id');
@@ -48,48 +54,44 @@ class NotaPagamento extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Helpers / Accessors
+    | Accessors / Helpers (usando SNAPSHOTS salvos)
     |--------------------------------------------------------------------------
     */
 
     /**
-     * Retorna array com valores das retenções (em R$) calculados sobre valor_pago.
-     * Ex.: ['irrf' => 12.34, 'iss' => 0.00, ...]
+     * Retenções em R$ (snapshots gravados no momento do pagamento).
      */
     public function getRetencoesValoresAttribute(): array
     {
-        $valor = (float) ($this->valor_pago ?? 0);
-        $p = fn(string $k) => (float) ($this->{$k} ?? 0); // percentuais
-
         return [
-            'irrf'   => $valor * ($p('ret_irrf')   / 100),
-            'iss'    => $valor * ($p('ret_iss')    / 100),
-            'inss'   => $valor * ($p('ret_inss')   / 100),
-            'pis'    => $valor * ($p('ret_pis')    / 100),
-            'cofins' => $valor * ($p('ret_cofins') / 100),
-            'csll'   => $valor * ($p('ret_csll')   / 100),
-            'outros' => $valor * ($p('ret_outros') / 100),
+            'irrf'   => (float) ($this->ret_irrf_valor   ?? 0),
+            'iss'    => (float) ($this->ret_iss_valor    ?? 0),
+            'inss'   => (float) ($this->ret_inss_valor   ?? 0),
+            'pis'    => (float) ($this->ret_pis_valor    ?? 0),
+            'cofins' => (float) ($this->ret_cofins_valor ?? 0),
+            'csll'   => (float) ($this->ret_csll_valor   ?? 0),
+            'outros' => (float) ($this->ret_outros_valor ?? 0),
         ];
     }
 
     /**
-     * Soma percentual total (em %) — útil se quiser exibir “x% retido”.
+     * Soma de percentuais de retenção (%). Útil para exibir.
      */
     public function getRetencoesPercentuaisAttribute(): float
     {
         return (float) (
-            ($this->ret_irrf   ?? 0) +
-            ($this->ret_iss    ?? 0) +
-            ($this->ret_inss   ?? 0) +
-            ($this->ret_pis    ?? 0) +
-            ($this->ret_cofins ?? 0) +
-            ($this->ret_csll   ?? 0) +
-            ($this->ret_outros ?? 0)
+            ($this->ret_irrf_perc   ?? 0) +
+            ($this->ret_iss_perc    ?? 0) +
+            ($this->ret_inss_perc   ?? 0) +
+            ($this->ret_pis_perc    ?? 0) +
+            ($this->ret_cofins_perc ?? 0) +
+            ($this->ret_csll_perc   ?? 0) +
+            ($this->ret_outros_perc ?? 0)
         );
     }
 
     /**
-     * TOTAL de retenções em R$ (agora sim, dinheiro — não percentuais).
+     * Total de retenções em R$ (a partir dos snapshots).
      */
     public function getTotalRetencoesAttribute(): float
     {
@@ -97,8 +99,7 @@ class NotaPagamento extends Model
     }
 
     /**
-     * Valor líquido calculado (fallback): se não estiver preenchido no BD,
-     * calcula como valor_pago - total_retencoes.
+     * Valor líquido preferindo o snapshot salvo; se estiver null, calcula fallback.
      */
     public function getValorLiquidoAttribute($value): float
     {

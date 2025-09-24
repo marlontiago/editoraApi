@@ -42,15 +42,17 @@
 
         {{-- 2) FILTROS --}}
         <div class="mt-6 px-4">
-            <form id="filtros" method="GET" action="{{ route('admin.relatorios.index') }}" class="flex flex-wrap items-end gap-4 mb-4 bg-white p-4 rounded-xl border shadow-sm">
+            <form id="filtros" method="GET" action="{{ route('admin.relatorios.index') }}"
+                class="flex flex-wrap items-end gap-3 mb-4 bg-white p-4 rounded-xl border shadow-sm">
+
                 <input type="hidden" name="status" id="status" value="{{ $statusFiltro ?? '' }}">
 
                 {{-- filtros entidade principal --}}
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Cliente</label>
-                    <select class="min-w-[220px] rounded-xl border-gray-200 shadow-sm"
+                    <select class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm"
                             name="cliente_select" id="select-cliente" data-tipo="cliente">
-                        <option value="">--Selecione um Cliente--</option>
+                        <option value="">--Cliente--</option>
                         @foreach ($clientes as $cli)
                             <option value="{{ $cli->id }}" @selected(($filtroTipo ?? '')==='cliente' && (int)($filtroId ?? 0)===$cli->id)>
                                 {{ $cli->razao_social }}
@@ -61,9 +63,9 @@
 
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Gestor</label>
-                    <select class="min-w-[220px] rounded-xl border-gray-200 shadow-sm"
+                    <select class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm"
                             name="gestor_select" id="select-gestor" data-tipo="gestor">
-                        <option value="">--Selecione um Gestor--</option>
+                        <option value="">--Gestor--</option>
                         @foreach ($gestores as $ges)
                             <option value="{{ $ges->id }}" @selected(($filtroTipo ?? '')==='gestor' && (int)($filtroId ?? 0)===$ges->id)>
                                 {{ $ges->razao_social }}
@@ -74,9 +76,9 @@
 
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Distribuidor</label>
-                    <select class="min-w-[220px] rounded-xl border-gray-200 shadow-sm"
+                    <select class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm"
                             name="distribuidor_select" id="select-distribuidor" data-tipo="distribuidor">
-                        <option value="">--Selecione um Distribuidor--</option>
+                        <option value="">--Distribuidor--</option>
                         @foreach ($distribuidores as $dis)
                             <option value="{{ $dis->id }}" @selected(($filtroTipo ?? '')==='distribuidor' && (int)($filtroId ?? 0)===$dis->id)>
                                 {{ $dis->razao_social }}
@@ -85,14 +87,10 @@
                     </select>
                 </div>
 
-                {{-- campos ocultos tipo/id --}}
-                <input type="hidden" name="tipo" id="tipo" value="{{ $filtroTipo ?? '' }}">
-                <input type="hidden" name="id" id="id" value="{{ $filtroId ?? '' }}">
-
                 {{-- filtros adicionais --}}
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Advogado</label>
-                    <select name="advogado_id" class="min-w-[220px] rounded-xl border-gray-200 shadow-sm">
+                    <select name="advogado_id" class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm">
                         <option value="">--Todos--</option>
                         @foreach ($advogados as $a)
                             <option value="{{ $a->id }}" @selected((int)($advogadoId ?? 0)===$a->id)>{{ $a->nome }}</option>
@@ -102,7 +100,7 @@
 
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Diretor</label>
-                    <select name="diretor_id" class="min-w-[220px] rounded-xl border-gray-200 shadow-sm">
+                    <select name="diretor_id" class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm">
                         <option value="">--Todos--</option>
                         @foreach ($diretores as $d)
                             <option value="{{ $d->id }}" @selected((int)($diretorId ?? 0)===$d->id)>{{ $d->nome }}</option>
@@ -111,9 +109,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs text-gray-500 mb-1">Cidade da venda</label>
-                    <select name="cidade_id" class="min-w-[220px] rounded-xl border-gray-200 shadow-sm">
-                        <option value="">--Todas (com notas)--</option>
+                    <label class="block text-xs text-gray-500 mb-1">Cidade</label>
+                    <select name="cidade_id" class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm">
+                        <option value="">--Todas--</option>
                         @foreach ($cidadesOptions as $c)
                             <option value="{{ $c->id }}" @selected((int)($cidadeId ?? 0)===$c->id)>{{ $c->name }}</option>
                         @endforeach
@@ -123,25 +121,29 @@
                 {{-- período --}}
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Data inicial</label>
-                    <input type="date" name="data_inicio" value="{{ $dataInicio }}" class="rounded-xl border-gray-200 shadow-sm">
+                    <input type="date" name="data_inicio" value="{{ $dataInicio }}"
+                        class="w-[140px] rounded-xl border-gray-200 shadow-sm">
                 </div>
 
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Data final</label>
-                    <input type="date" name="data_fim" value="{{ $dataFim }}" class="rounded-xl border-gray-200 shadow-sm">
+                    <input type="date" name="data_fim" value="{{ $dataFim }}"
+                        class="w-[140px] rounded-xl border-gray-200 shadow-sm">
                 </div>
 
-                <button class="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800">
-                    Aplicar filtros
+                <button class="px-3 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 text-sm">
+                    Aplicar
                 </button>
 
                 @if($dataInicio || $dataFim || $filtroTipo || $filtroId || $statusFiltro || $advogadoId || $diretorId || $cidadeId)
-                    <a href="{{ route('admin.relatorios.index') }}" class="px-3 py-2 text-sm text-blue-700 hover:underline">
-                        Limpar tudo
+                    <a href="{{ route('admin.relatorios.index') }}" class="px-2 py-2 text-sm text-blue-700 hover:underline">
+                        Limpar
                     </a>
                 @endif
             </form>
         </div>
+
+
 
         {{-- chips --}}
         <div class="px-4">
@@ -221,10 +223,13 @@
                                         });
                                     }
                                     $liquido   = (float) $pgts->sum('valor_liquido');
-                                    $retencoes = 0.0;
-                                    foreach (['ret_irrf','ret_iss','ret_inss','ret_pis','ret_cofins','ret_csll','ret_outros'] as $campoRet) {
-                                        $retencoes += (float) $pgts->sum($campoRet);
-                                    }
+                                        $retencoes = 0.0;
+                                        foreach ([
+                                            'ret_irrf_valor','ret_iss_valor','ret_inss_valor',
+                                            'ret_pis_valor','ret_cofins_valor','ret_csll_valor','ret_outros_valor'
+                                        ] as $campoRet) {
+                                            $retencoes += (float) $pgts->sum($campoRet);
+                                        }
                                     $cidadesStr = $pedido && $pedido->cidades ? $pedido->cidades->pluck('name')->join(', ') : '—';
                                 @endphp
                                 <tr class="hover:bg-gray-50">
@@ -453,13 +458,13 @@
                             }
 
                             $map = [
-                                'IRRF' => 'ret_irrf',
-                                'ISS' => 'ret_iss',
-                                'INSS' => 'ret_inss',
-                                'PIS' => 'ret_pis',
-                                'COFINS' => 'ret_cofins',
-                                'CSLL' => 'ret_csll',
-                                'Outros' => 'ret_outros',
+                                'IRRF'   => 'ret_irrf_valor',
+                                'ISS'    => 'ret_iss_valor',
+                                'INSS'   => 'ret_inss_valor',
+                                'PIS'    => 'ret_pis_valor',
+                                'COFINS' => 'ret_cofins_valor',
+                                'CSLL'   => 'ret_csll_valor',
+                                'Outros' => 'ret_outros_valor',
                             ];
                             $sumRet = [];
                             $totalRet = 0.0;

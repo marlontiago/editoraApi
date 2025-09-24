@@ -6,7 +6,7 @@
             </h2>
             <div class="flex gap-2">
                 <form method="POST" action="{{ route('admin.distribuidores.destroy', $distribuidor) }}"
-                    onsubmit="return confirm('Tem certeza que deseja remover este distribuidor?');">
+                      onsubmit="return confirm('Tem certeza que deseja remover este distribuidor?');">
                     @csrf
                     @method('DELETE')
                     <button type="submit"
@@ -17,7 +17,9 @@
                 <a href="{{ route('admin.distribuidores.index') }}"
                    class="inline-flex h-9 items-center rounded-md border px-3 text-sm hover:bg-gray-50">Voltar</a>
                 <a href="{{ route('admin.distribuidores.edit', $distribuidor) }}"
-                   class="inline-flex h-9 items-center rounded-md bg-blue-600 px-3 text-sm text-white hover:bg-blue-700">Editar</a>
+                   class="inline-flex h-9 items-center rounded-md bg-blue-600 px-3 text-sm text-white hover:bg-blue-700">
+                    Editar
+                </a>
             </div>
         </div>
     </x-slot>
@@ -27,14 +29,15 @@
         {{-- Dados principais --}}
         <div class="bg-white rounded-lg shadow p-6 grid grid-cols-12 gap-4">
             <div class="col-span-12 md:col-span-6">
-                <p><span class="font-medium">Gestor:</span> {{ $distribuidor->gestor?->razao_social }}</p>
+                <p><span class="font-medium">Gestor:</span> {{ $distribuidor->gestor?->razao_social ?: '—' }}</p>
                 <p><span class="font-medium">Razão Social:</span> {{ $distribuidor->razao_social }}</p>
                 <p><span class="font-medium">CNPJ:</span> {{ $distribuidor->cnpj_formatado ?? $distribuidor->cnpj }}</p>
-                <p><span class="font-medium">Representante Legal:</span> {{ $distribuidor->representante_legal }}</p>
-                <p><span class="font-medium">CPF:</span> {{ $distribuidor->cpf }}</p>
-                <p><span class="font-medium">RG:</span> {{ $distribuidor->rg }}</p>
-                <p><span class="font-medium">Telefone:</span> {{ $distribuidor->telefone_formatado ?? $distribuidor->telefone }}</p>
-                <p><span class="font-medium">E-mail:</span>
+                <p><span class="font-medium">Representante Legal:</span> {{ $distribuidor->representante_legal ?: '—' }}</p>
+                <p><span class="font-medium">CPF:</span> {{ $distribuidor->cpf ?: '—' }}</p>
+                <p><span class="font-medium">RG:</span> {{ $distribuidor->rg ?: '—' }}</p>
+                <p><span class="font-medium">Telefone:</span> {{ $distribuidor->telefone_formatado ?? $distribuidor->telefone ?: '—' }}</p>
+                <p>
+                    <span class="font-medium">E-mail:</span>
                     @php $emailExib = $distribuidor->email_exibicao; @endphp
                     @if($emailExib && $emailExib !== 'Não informado')
                         <a href="mailto:{{ $emailExib }}" class="text-blue-600 hover:underline">{{ $emailExib }}</a>
@@ -45,12 +48,12 @@
             </div>
 
             <div class="col-span-12 md:col-span-6">
-                <p><span class="font-medium">Endereço:</span> {{ $distribuidor->endereco }}, {{ $distribuidor->numero }}</p>
-                <p><span class="font-medium">Bairro:</span> {{ $distribuidor->bairro }}</p>
-                <p><span class="font-medium">Cidade:</span> {{ $distribuidor->cidade }}</p>
-                <p><span class="font-medium">UF:</span> {{ $distribuidor->uf }}</p>
-                <p><span class="font-medium">CEP:</span> {{ $distribuidor->cep }}</p>
-                <p><span class="font-medium">Percentual Vendas:</span> {{ number_format((float)$distribuidor->percentual_vendas, 2, ',', '.') }}%</p>
+                <p><span class="font-medium">Endereço:</span> {{ $distribuidor->endereco ?: '—' }}, {{ $distribuidor->numero ?: '—' }}</p>
+                <p><span class="font-medium">Bairro:</span> {{ $distribuidor->bairro ?: '—' }}</p>
+                <p><span class="font-medium">Cidade:</span> {{ $distribuidor->cidade ?: '—' }}</p>
+                <p><span class="font-medium">UF:</span> {{ $distribuidor->uf ?: '—' }}</p>
+                <p><span class="font-medium">CEP:</span> {{ $distribuidor->cep ?: '—' }}</p>
+                <p><span class="font-medium">Percentual Vendas (aplicado):</span> {{ number_format((float)($distribuidor->percentual_vendas ?? 0), 2, ',', '.') }}%</p>
 
                 <div class="mt-3 flex flex-wrap gap-2">
                     @if($distribuidor->contrato_assinado)
@@ -67,9 +70,11 @@
                         @php
                             $ven = \Illuminate\Support\Carbon::parse($distribuidor->vencimento_contrato);
                             $hoje = now();
-                            $classe = $ven->isPast() ? 'bg-red-50 text-red-700 border-red-200'
-                                                     : ($ven->diffInDays($hoje) <= 30 ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                                                                                      : 'bg-gray-50 text-gray-700 border-gray-200');
+                            $classe = $ven->isPast()
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : ($ven->diffInDays($hoje) <= 30
+                                    ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                    : 'bg-gray-50 text-gray-700 border-gray-200');
                         @endphp
                         <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium border {{ $classe }}">
                             Vence em: {{ $ven->format('d/m/Y') }}
@@ -100,9 +105,18 @@
         {{-- Contatos --}}
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold mb-2">Contatos</h3>
-            @if($distribuidor->contatos->isNotEmpty())
+            @php
+                $temContatos = $distribuidor->relationLoaded('contatos')
+                    ? $distribuidor->contatos->isNotEmpty()
+                    : $distribuidor->contatos()->exists();
+                $contatos = $distribuidor->relationLoaded('contatos')
+                    ? $distribuidor->contatos
+                    : $distribuidor->contatos()->get();
+            @endphp
+
+            @if($temContatos)
                 <ul class="divide-y">
-                    @foreach($distribuidor->contatos as $contato)
+                    @foreach($contatos as $contato)
                         <li class="py-2">
                             <p>
                                 <span class="font-medium">{{ $contato->nome }}</span>
@@ -130,47 +144,47 @@
             @endif
         </div>
 
-        {{-- Anexos --}}
+        {{-- Contratos / Aditivos (idêntico ao layout do Gestor) --}}
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold mb-2">Contratos / Aditivos</h3>
 
             @if($distribuidor->anexos->isNotEmpty())
-                <ul class="divide-y">
+                <ul class="space-y-2">
                     @foreach($distribuidor->anexos as $anexo)
-                        <li class="py-3 flex items-center justify-between">
-                            <div>
-                                <p class="mb-1">
-                                    <span class="font-medium">{{ ucfirst($anexo->tipo) }}</span>
-                                    @if($anexo->descricao) - {{ $anexo->descricao }} @endif
+                        @php $isAtivo = (bool) $anexo->ativo; @endphp
+                        <li class="p-3 rounded border flex items-start justify-between {{ $isAtivo ? 'border-blue-300 bg-blue-50' : 'border-gray-200' }}">
+                            <div class="text-sm">
+                                <div class="mb-1">
+                                    <strong>{{ strtoupper($anexo->tipo) }}</strong>
+                                    @if($anexo->descricao)
+                                        <span class="text-gray-600">— {{ $anexo->descricao }}</span>
+                                    @endif
 
                                     @if($anexo->assinado)
-                                        <span class="ml-2 inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">
-                                            Assinado
-                                        </span>
+                                        <span class="ml-2 px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">Assinado</span>
                                     @endif
 
-                                    @if($anexo->ativo)
-                                        <span class="ml-2 inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
-                                            Ativo
-                                        </span>
+                                    @if($isAtivo)
+                                        <span class="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">Ativo</span>
                                     @endif
-                                </p>
+                                </div>
 
-                                @if(!is_null($anexo->percentual_vendas))
-                                    <p class="text-sm">Percentual deste contrato:
-                                        <strong>{{ number_format($anexo->percentual_vendas, 2, ',', '.') }}%</strong>
-                                    </p>
-                                @endif
+                                <div class="text-gray-700">
+                                    <div>
+                                        Percentual deste contrato:
+                                        <strong>
+                                            {{ is_null($anexo->percentual_vendas) ? '—' : number_format($anexo->percentual_vendas, 2, ',', '.') . '%' }}
+                                        </strong>
+                                    </div>
 
-                                <p class="text-xs text-gray-600">
                                     @if($anexo->data_assinatura)
-                                        Assinado em: {{ \Carbon\Carbon::parse($anexo->data_assinatura)->format('d/m/Y') }}
+                                        <div>Assinado em: {{ \Carbon\Carbon::parse($anexo->data_assinatura)->format('d/m/Y') }}</div>
                                     @endif
+
                                     @if($anexo->data_vencimento)
-                                        {{ $anexo->data_assinatura ? ' | ' : '' }}
-                                        Vence em: {{ \Carbon\Carbon::parse($anexo->data_vencimento)->format('d/m/Y') }}
+                                        <div>Vence em: {{ \Carbon\Carbon::parse($anexo->data_vencimento)->format('d/m/Y') }}</div>
                                     @endif
-                                </p>
+                                </div>
                             </div>
 
                             <div class="flex items-center gap-2">
@@ -182,12 +196,12 @@
                                     </a>
                                 @endif
 
-                                @unless($anexo->ativo)
-                                    <form action="{{ route('admin.distribuidores.anexos.ativar', [$distribuidor, $anexo]) }}"
-                                          method="POST">
+                                @unless($isAtivo)
+                                    <form method="POST" action="{{ route('admin.distribuidores.anexos.ativar', [$distribuidor, $anexo]) }}">
                                         @csrf
                                         <button type="submit"
-                                                class="inline-flex h-8 items-center rounded-md bg-blue-600 px-3 text-xs text-white hover:bg-blue-700">
+                                                class="inline-flex h-8 items-center rounded-md bg-blue-600 px-3 text-xs text-white hover:bg-blue-700"
+                                                onclick="return confirm('Ativar este contrato/aditivo?');">
                                             Ativar
                                         </button>
                                     </form>

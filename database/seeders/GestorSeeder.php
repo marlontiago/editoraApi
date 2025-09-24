@@ -11,40 +11,76 @@ class GestorSeeder extends Seeder
 {
     public function run(): void
     {
-        // garante o usuário do gestor
-        $user = User::firstOrCreate(
-            ['email' => 'gestor@example.com'],
-            ['name' => 'Gestor Exemplo', 'password' => Hash::make('gestor123')]
+        // ===== Gestor 1 =====
+        $user1 = User::firstOrCreate(
+            ['email' => 'gestor1@example.com'],
+            ['name' => 'Gestor 1', 'password' => Hash::make('gestor123')]
         );
-        if (method_exists($user, 'assignRole')) {
-            $user->assignRole('gestor');
+        if (method_exists($user1, 'assignRole')) {
+            $user1->assignRole('gestor');
         }
 
-        // seed do Gestor (endereço fracionado + campos contratuais atuais)
         Gestor::updateOrCreate(
-            ['user_id' => $user->id],
+            ['user_id' => $user1->id],
             [
                 'estado_uf'            => 'PR',
-                'razao_social'         => 'Gestor Exemplo LTDA',
-                'cnpj'                 => '12.345.678/0001-00',
+                'razao_social'         => 'Gestor Um LTDA',
+                'cnpj'                 => '12.345.678/0001-01',
                 'representante_legal'  => 'João Representante',
-                'cpf'                  => '123.456.789-00',
-                'rg'                   => '12.345.678-9',
-                'telefone'             => '41988887777',
-                'email'                => 'gestor@example.com',
+                'cpf'                  => '123.456.789-01',
+                'rg'                   => '12.345.678-0',
+                'telefone'             => '41988887771',
+                'email'                => 'gestor1@example.com',
 
-                // Endereço fracionado
+                // Endereço
                 'endereco'             => 'Rua dos Gerentes',
-                'numero'               => '456',
+                'numero'               => '100',
                 'complemento'          => null,
                 'bairro'               => 'Centro',
                 'cidade'               => 'Curitiba',
                 'uf'                   => 'PR',
-                'cep'                  => '80000-000',
+                'cep'                  => '80000-001',
 
-                // Contratuais (sem início/validade; vencimento direto)
+                // Contratuais
                 'percentual_vendas'    => 12.50,
                 'vencimento_contrato'  => now()->addYear(),
+                'contrato_assinado'    => true,
+            ]
+        );
+
+        // ===== Gestor 2 =====
+        $user2 = User::firstOrCreate(
+            ['email' => 'gestor2@example.com'],
+            ['name' => 'Gestor 2', 'password' => Hash::make('gestor123')]
+        );
+        if (method_exists($user2, 'assignRole')) {
+            $user2->assignRole('gestor');
+        }
+
+        Gestor::updateOrCreate(
+            ['user_id' => $user2->id],
+            [
+                'estado_uf'            => 'SP',
+                'razao_social'         => 'Gestor Dois EIRELI',
+                'cnpj'                 => '12.345.678/0001-02',
+                'representante_legal'  => 'Maria Gerente',
+                'cpf'                  => '123.456.789-02',
+                'rg'                   => '12.345.678-1',
+                'telefone'             => '11988887772',
+                'email'                => 'gestor2@example.com',
+
+                // Endereço
+                'endereco'             => 'Av. Paulista',
+                'numero'               => '1500',
+                'complemento'          => 'Conj. 1203',
+                'bairro'               => 'Bela Vista',
+                'cidade'               => 'São Paulo',
+                'uf'                   => 'SP',
+                'cep'                  => '01310-000',
+
+                // Contratuais
+                'percentual_vendas'    => 10.00,
+                'vencimento_contrato'  => now()->addMonths(18),
                 'contrato_assinado'    => true,
             ]
         );

@@ -9,7 +9,7 @@ use App\Models\Distribuidor;
 use App\Models\Gestor;
 use App\Models\NotaFiscal;
 use App\Models\Pedido;
-use App\Models\City; // <-- seu model correto é City
+use App\Models\City;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -21,8 +21,27 @@ class RelatoriosController extends Controller
         // Filtros (entrada do usuário)
         // ==========================
         $statusFiltro = $request->get('status');        // 'pago' | 'aguardando_pagamento' | 'emitida' | 'faturada'
-        $filtroTipo   = $request->get('tipo');          // 'cliente' | 'gestor' | 'distribuidor'
-        $filtroId     = (int) $request->get('id');
+
+        // NOVO: ler diretamente os selects e resolver exclusividade
+        $clienteSel = (int) $request->get('cliente_select');
+        $gestorSel  = (int) $request->get('gestor_select');
+        $distSel    = (int) $request->get('distribuidor_select');
+
+        // Prioridade: Cliente > Gestor > Distribuidor (ajuste se quiser outra)
+        if ($clienteSel) {
+            $filtroTipo = 'cliente';
+            $filtroId   = $clienteSel;
+        } elseif ($gestorSel) {
+            $filtroTipo = 'gestor';
+            $filtroId   = $gestorSel;
+        } elseif ($distSel) {
+            $filtroTipo = 'distribuidor';
+            $filtroId   = $distSel;
+        } else {
+            // retrocompatibilidade com ?tipo=&id=
+            $filtroTipo = $request->get('tipo');          // 'cliente' | 'gestor' | 'distribuidor'
+            $filtroId   = (int) $request->get('id');
+        }
 
         $advogadoId   = (int) $request->get('advogado_id');
         $diretorId    = (int) $request->get('diretor_id');
@@ -48,7 +67,6 @@ class RelatoriosController extends Controller
         $distribuidores = Distribuidor::orderBy('razao_social')->get();
         $advogados      = Advogado::orderBy('nome')->get();
         $diretores      = DiretorComercial::orderBy('nome')->get();
-        // OBS: o dropdown de cidade será montado depois, com base nas notas filtradas.
 
         // ==========================
         // Base: Notas Fiscais
@@ -59,15 +77,20 @@ class RelatoriosController extends Controller
                 'pedido.cliente:id,razao_social',
                 'pedido.gestor:id,razao_social,percentual_vendas',
                 'pedido.distribuidor:id,razao_social,percentual_vendas',
-                'pedido.cidades:id,name', // ajuste o relacionamento se necessário
-                'pagamentos:id,nota_fiscal_id,valor_liquido,data_pagamento,ret_irrf,ret_iss,ret_inss,ret_pis,ret_cofins,ret_csll,ret_outros,comissao_advogado,comissao_diretor,perc_comissao_advogado,perc_comissao_diretor,advogado_id,diretor_id',
+                'pedido.cidades:id,name',
+                // snapshots salvos em nota_pagamentos
+                'pagamentos:id,nota_fiscal_id,valor_pago,valor_liquido,data_pagamento,' .
+                    'ret_irrf_valor,ret_iss_valor,ret_inss_valor,ret_pis_valor,ret_cofins_valor,ret_csll_valor,ret_outros_valor,' .
+                    'comissao_gestor,perc_comissao_gestor,comissao_distribuidor,perc_comissao_distribuidor,' .
+                    'comissao_advogado,perc_comissao_advogado,advogado_id,' .
+                    'comissao_diretor,perc_comissao_diretor,diretor_id',
                 'pagamentos.advogado:id,nome',
                 'pagamentos.diretor:id,nome',
             ]);
 
         // Status
         if (!empty($statusFiltro)) {
-            if (in_array($statusFiltro, ['pago','aguardando_pagamento','faturada'])) {
+            if (in_array($statusFiltro, ['pago', 'aguardando_pagamento', 'faturada'])) {
                 $notasQuery->where('status_financeiro', $statusFiltro);
             } elseif ($statusFiltro === 'emitida') {
                 $notasQuery->whereNotNull('emitida_em');
@@ -86,7 +109,7 @@ class RelatoriosController extends Controller
         }
 
         // Entidade principal (cliente/gestor/distribuidor)
-        if (in_array($filtroTipo, ['cliente','gestor','distribuidor']) && $filtroId > 0) {
+        if (in_array($filtroTipo, ['cliente', 'gestor', 'distribuidor']) && $filtroId > 0) {
             $coluna = $filtroTipo === 'cliente' ? 'cliente_id'
                     : ($filtroTipo === 'gestor' ? 'gestor_id' : 'distribuidor_id');
 
@@ -127,11 +150,11 @@ class RelatoriosController extends Controller
         })->unique()->values();
 
         $cidadesOptions = $cityIds->isEmpty()
-            ? collect() // nenhum resultado → dropdown vazio (ou você pode carregar todas com nota histórica, se preferir)
-            : City::whereIn('id', $cityIds)->orderBy('name')->get(['id','name']);
+            ? collect()
+            : City::whereIn('id', $cityIds)->orderBy('name')->get(['id', 'name']);
 
         // ==========================
-        // Agregações / Totais
+        // Agregações / Totais (usando snapshots!)
         // ==========================
         $totais = [
             'qtd_notas'              => $notas->count(),
@@ -140,7 +163,7 @@ class RelatoriosController extends Controller
             'total_retencoes'        => 0.0,
             'retencoes_por_tipo'     => [
                 'IRRF'   => 0.0, 'ISS' => 0.0, 'INSS' => 0.0,
-                'PIS'    => 0.0, 'COFINS' => 0.0, 'CSLL' => 0.0, 'OUTROS' => 0.0,
+                'PIS'    => 0.0, 'COFINS' => 0.0, 'CSLL'  => 0.0, 'OUTROS' => 0.0,
             ],
             'comissao_gestor'        => 0.0,
             'comissao_distribuidor'  => 0.0,
@@ -168,28 +191,37 @@ class RelatoriosController extends Controller
             if ($periodo) {
                 $pagamentos = $pagamentos->filter(function ($pg) use ($inicio, $fim) {
                     $d = Carbon::parse($pg->data_pagamento);
-                    // betweenIncluded cobre >= inicio e <= fim
                     return $d->betweenIncluded($inicio, $fim);
                 });
             }
 
-            // líquido e retenções
+            // líquido (snapshot)
             $liquido = (float) $pagamentos->sum('valor_liquido');
             $totais['total_liquido_pago'] += $liquido;
 
-            $map = ['IRRF'=>'ret_irrf','ISS'=>'ret_iss','INSS'=>'ret_inss','PIS'=>'ret_pis','COFINS'=>'ret_cofins','CSLL'=>'ret_csll','OUTROS'=>'ret_outros'];
+            // retenções por tipo (snapshot em R$)
+            $map = [
+                'IRRF'   => 'ret_irrf_valor',
+                'ISS'    => 'ret_iss_valor',
+                'INSS'   => 'ret_inss_valor',
+                'PIS'    => 'ret_pis_valor',
+                'COFINS' => 'ret_cofins_valor',
+                'CSLL'   => 'ret_csll_valor',
+                'OUTROS' => 'ret_outros_valor',
+            ];
             foreach ($map as $label => $campo) {
                 $sub = (float) $pagamentos->sum($campo);
                 $totais['retencoes_por_tipo'][$label] += $sub;
                 $totais['total_retencoes']            += $sub;
             }
 
-            // Gestor/Distribuidor (base = líquido da nota no período)
-            $percGestor       = (float) ($pedido->gestor->percentual_vendas       ?? 0);
-            $percDistribuidor = (float) ($pedido->distribuidor->percentual_vendas ?? 0);
+            // === Gestor/Distribuidor — usar snapshots de cada pagamento ===
+            $comG = (float) $pagamentos->sum('comissao_gestor');
+            $comD = (float) $pagamentos->sum('comissao_distribuidor');
 
-            $comG = round($liquido * ($percGestor / 100), 2);
-            $comD = round($liquido * ($percDistribuidor / 100), 2);
+            // percentuais a partir dos snapshots (média dos pagamentos da nota no período)
+            $percGestorSnap  = (float) $pagamentos->avg('perc_comissao_gestor');
+            $percDistribSnap = (float) $pagamentos->avg('perc_comissao_distribuidor');
 
             $totais['comissao_gestor']       += $comG;
             $totais['comissao_distribuidor'] += $comD;
@@ -197,8 +229,9 @@ class RelatoriosController extends Controller
             if ($pedido && $pedido->gestor) {
                 $gid  = (int) $pedido->gestor->id;
                 $gnom = (string) ($pedido->gestor->razao_social ?? 'Gestor '.$gid);
+
                 if (!isset($gestoresBreak[$gid])) {
-                    $gestoresBreak[$gid] = ['nome'=>$gnom,'perc'=>$percGestor,'qtd'=>0,'total'=>0.0];
+                    $gestoresBreak[$gid] = ['nome'=>$gnom,'perc'=>$percGestorSnap,'qtd'=>0,'total'=>0.0];
                 }
                 $gestoresBreak[$gid]['qtd']   += 1;
                 $gestoresBreak[$gid]['total'] += $comG;
@@ -207,16 +240,17 @@ class RelatoriosController extends Controller
                 $gestoresDetalhe[$gid][] = [
                     'nota'     => (int) $nota->id,
                     'base'     => round($liquido, 2),
-                    'perc'     => $percGestor,
-                    'comissao' => $comG,
+                    'perc'     => $percGestorSnap,   // snapshot
+                    'comissao' => round($comG, 2),
                 ];
             }
 
             if ($pedido && $pedido->distribuidor) {
                 $did  = (int) $pedido->distribuidor->id;
                 $dnom = (string) ($pedido->distribuidor->razao_social ?? 'Distribuidor '.$did);
+
                 if (!isset($distsBreak[$did])) {
-                    $distsBreak[$did] = ['nome'=>$dnom,'perc'=>$percDistribuidor,'qtd'=>0,'total'=>0.0];
+                    $distsBreak[$did] = ['nome'=>$dnom,'perc'=>$percDistribSnap,'qtd'=>0,'total'=>0.0];
                 }
                 $distsBreak[$did]['qtd']   += 1;
                 $distsBreak[$did]['total'] += $comD;
@@ -225,12 +259,12 @@ class RelatoriosController extends Controller
                 $distsDetalhe[$did][] = [
                     'nota'     => (int) $nota->id,
                     'base'     => round($liquido, 2),
-                    'perc'     => $percDistribuidor,
-                    'comissao' => $comD,
+                    'perc'     => $percDistribSnap,  // snapshot
+                    'comissao' => round($comD, 2),
                 ];
             }
 
-            // Advogado / Diretor (por pagamento)
+            // Advogado / Diretor (por pagamento, já snapshot)
             foreach ($pagamentos as $pg) {
                 // Advogado
                 if (!empty($pg->advogado_id)) {
@@ -240,11 +274,6 @@ class RelatoriosController extends Controller
                     $base   = (float) $pg->valor_liquido;
                     $percA  = (float) ($pg->perc_comissao_advogado ?? 0);
                     $valorA = (float) ($pg->comissao_advogado ?? 0);
-                    if ($valorA <= 0 && $percA > 0) {
-                        $valorA = round($base * ($percA / 100), 2);
-                    }
-                    // % efetivo
-                    $percEfetivoA = $percA > 0 ? $percA : ($base > 0 ? round(($valorA / $base) * 100, 4) : 0.0);
 
                     $totais['comissao_advogado'] += $valorA;
 
@@ -258,7 +287,7 @@ class RelatoriosController extends Controller
                     $advogadosDetalhe[$aid][] = [
                         'nota'     => (int) $nota->id,
                         'base'     => round($base, 2),
-                        'perc'     => $percEfetivoA,
+                        'perc'     => $percA,
                         'comissao' => round($valorA, 2),
                     ];
                 }
@@ -271,10 +300,6 @@ class RelatoriosController extends Controller
                     $base   = (float) $pg->valor_liquido;
                     $percD  = (float) ($pg->perc_comissao_diretor ?? 0);
                     $valorD = (float) ($pg->comissao_diretor ?? 0);
-                    if ($valorD <= 0 && $percD > 0) {
-                        $valorD = round($base * ($percD / 100), 2);
-                    }
-                    $percEfetivoD = $percD > 0 ? $percD : ($base > 0 ? round(($valorD / $base) * 100, 4) : 0.0);
 
                     $totais['comissao_diretor'] += $valorD;
 
@@ -288,7 +313,7 @@ class RelatoriosController extends Controller
                     $diretoresDetalhe[$did2][] = [
                         'nota'     => (int) $nota->id,
                         'base'     => round($base, 2),
-                        'perc'     => $percEfetivoD,
+                        'perc'     => $percD,
                         'comissao' => round($valorD, 2),
                     ];
                 }
@@ -307,9 +332,9 @@ class RelatoriosController extends Controller
         );
 
         // Ordena breakdowns por valor desc
-        $byTotalDesc = fn($a,$b) => $b['total'] <=> $a['total'];
-        uasort($gestoresBreak, $byTotalDesc);
-        uasort($distsBreak, $byTotalDesc);
+        $byTotalDesc = fn($a, $b) => $b['total'] <=> $a['total'];
+        uasort($gestoresBreak,  $byTotalDesc);
+        uasort($distsBreak,     $byTotalDesc);
         uasort($advogadosBreak, $byTotalDesc);
         uasort($diretoresBreak, $byTotalDesc);
 
@@ -366,7 +391,7 @@ class RelatoriosController extends Controller
             'gestoresBreak','distsBreak','advogadosBreak','diretoresBreak',
             'gestoresDetalhe','distsDetalhe','advogadosDetalhe','diretoresDetalhe',
             'notasPagas','notasAPagar','notasEmitidas',
-            'cidadesOptions' // <-- dropdown de cidade com apenas cidades das notas do resultado
+            'cidadesOptions'
         ));
     }
 }

@@ -21,7 +21,7 @@ class NotaFiscal extends Model
         'emitente_snapshot', 'destinatario_snapshot', 'pedido_snapshot',
         'chave_acesso', 'protocolo', 'ambiente',
         'emitida_em', 'faturada_em',
-        'cancelada_em', 'motivo_cancelamento',
+        'cancelada_em', 'motivo_cancelamento','plugnotas_id','plugnotas_status','pdf_url','xml_url',
     ];
 
     protected $casts = [

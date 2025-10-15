@@ -20,12 +20,16 @@ return new class extends Migration {
             $table->string('representante_legal');
             $table->string('cpf', 14);
             $table->string('rg', 30)->nullable();
-            $table->string('telefone', 20)->nullable();
 
-            // E-mail não obrigatório
+            // Telefone/e-mail "legados" (mantidos p/ compat)
+            $table->string('telefone', 20)->nullable();
             $table->string('email')->nullable();
 
-            // Endereço (mesmo padrão de clientes)
+            // NOVOS: listas
+            $table->json('telefones')->nullable();
+            $table->json('emails')->nullable();
+
+            // Endereço principal
             $table->string('endereco', 255)->nullable();
             $table->string('numero', 20)->nullable();
             $table->string('complemento', 100)->nullable();
@@ -34,12 +38,19 @@ return new class extends Migration {
             $table->string('uf', 2)->nullable();
             $table->string('cep', 9)->nullable();
 
+            // Endereço secundário (novo)
+            $table->string('endereco2', 255)->nullable();
+            $table->string('numero2', 20)->nullable();
+            $table->string('complemento2', 100)->nullable();
+            $table->string('bairro2', 100)->nullable();
+            $table->string('cidade2', 100)->nullable();
+            $table->string('uf2', 2)->nullable();
+            $table->string('cep2', 9)->nullable();
+
             // Regras contratuais
             $table->decimal('percentual_vendas', 5, 2)->default(0);
             $table->date('vencimento_contrato')->nullable();
             $table->boolean('contrato_assinado')->default(false);
-
-            // (REMOVIDO) $table->string('contrato')->nullable();
 
             $table->timestamps();
 

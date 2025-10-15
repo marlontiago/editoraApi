@@ -39,10 +39,11 @@
                             <th class="px-4 py-3 text-right">Ações</th>
                         </tr>
                     </thead>
+
                     <tbody class="divide-y">
                         @foreach($clientes as $cliente)
                             @php
-                                // Documento (exibe CNPJ se houver, senão CPF)
+                                // Documento (CNPJ preferencial, senão CPF)
                                 $docLabel = $cliente->cnpj ? 'CNPJ' : ($cliente->cpf ? 'CPF' : null);
                                 $docValue = $cliente->cnpj ?: ($cliente->cpf ?: '—');
 
@@ -50,7 +51,7 @@
                                 $cidade = $cliente->cidade ?: '—';
                                 $uf     = $cliente->uf ? strtoupper($cliente->uf) : '—';
 
-                                // Endereço completo compacto
+                                // Endereço compacto
                                 $linha1 = trim(($cliente->endereco ?: '')
                                     . ($cliente->numero ? ', '.$cliente->numero : '')
                                     . ($cliente->complemento ? ' - '.$cliente->complemento : ''));
@@ -65,10 +66,14 @@
                             @endphp
 
                             <tr class="hover:bg-gray-50">
+                                {{-- Razão Social --}}
                                 <td class="px-4 py-3 font-medium text-gray-900">
-                                    {{ $cliente->razao_social }}
+                                    <a href="{{ route('admin.clientes.show', $cliente) }}" class="hover:underline">
+                                        {{ $cliente->razao_social }}
+                                    </a>
                                 </td>
 
+                                {{-- Documento --}}
                                 <td class="px-4 py-3">
                                     @if($docLabel)
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs bg-gray-50 text-gray-700 border-gray-200">
@@ -80,28 +85,42 @@
                                     @endif
                                 </td>
 
+                                {{-- I.E. --}}
                                 <td class="px-4 py-3">
                                     {{ $cliente->inscr_estadual ?: '—' }}
                                 </td>
 
+                                {{-- E-mail --}}
                                 <td class="px-4 py-3">
-                                    <a href="mailto:{{ $cliente->email }}" class="text-blue-700 hover:underline">
-                                        {{ $cliente->email }}
-                                    </a>
+                                    @if($cliente->email)
+                                        <a href="mailto:{{ $cliente->email }}" class="text-blue-700 hover:underline">
+                                            {{ $cliente->email }}
+                                        </a>
+                                    @else
+                                        —
+                                    @endif
                                 </td>
 
+                                {{-- Telefone (lista nova com fallback no legado) --}}
                                 <td class="px-4 py-3">
-                                    {{ $cliente->telefone ?: '—' }}
+                                    @php
+                                        $tels = $cliente->telefones_formatados; // accessor do Model (com fallback no campo legado)
+                                        $tel  = $tels[0] ?? (trim((string)$cliente->telefone_formatado) !== '' ? $cliente->telefone_formatado : null);
+                                    @endphp
+                                    {{ $tel ?? '—' }}
                                 </td>
 
+                                {{-- Cidade / UF --}}
                                 <td class="px-4 py-3">
                                     {{ $cidade }} / {{ $uf }}
                                 </td>
 
+                                {{-- CEP --}}
                                 <td class="px-4 py-3">
                                     {{ $cliente->cep ?: '—' }}
                                 </td>
 
+                                {{-- Endereço (compacto) --}}
                                 <td class="px-4 py-3">
                                     <div class="text-gray-900 truncate max-w-[28ch]" title="{{ $enderecoCompleto }}">
                                         {{ $enderecoCompleto }}
@@ -113,12 +132,19 @@
                                     @endif
                                 </td>
 
+                                {{-- Ações --}}
                                 <td class="px-4 py-3 text-right whitespace-nowrap">
-                                    <a href="{{ route('admin.clientes.edit', $cliente->id) }}"
+                                    <a href="{{ route('admin.clientes.show', $cliente) }}"
+                                       class="inline-flex items-center px-3 py-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 mr-2">
+                                        Ver
+                                    </a>
+
+                                    <a href="{{ route('admin.clientes.edit', $cliente) }}"
                                        class="inline-flex items-center px-3 py-1.5 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 mr-2">
                                         Editar
                                     </a>
-                                    <form action="{{ route('admin.clientes.destroy', $cliente->id) }}" method="POST" class="inline">
+
+                                    <form action="{{ route('admin.clientes.destroy', $cliente) }}" method="POST" class="inline">
                                         @csrf @method('DELETE')
                                         <button type="submit"
                                                 onclick="return confirm('Tem certeza que deseja excluir?')"

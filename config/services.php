@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'plugnotas' => [
+        'base_url' => env('PLUGNOTAS_BASE_URL'),
+        'api_key'  => env('PLUGNOTAS_API_KEY'),
+    ],
+
 ];

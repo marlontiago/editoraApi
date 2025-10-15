@@ -3,27 +3,36 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Anexo extends Model
 {
-    use HasFactory;
-
     protected $table = 'anexos';
 
     protected $fillable = [
-        'tipo',
-        'arquivo',
-        'descricao',
-        'data_assinatura',
-        'data_vencimento',
-        'assinado',
-        'percentual_vendas',
-        'ativo'
+        'tipo','cidade_id','arquivo','descricao',
+        'data_assinatura','data_vencimento','assinado',
+        'percentual_vendas','ativo',
     ];
 
-    public function anexavel()
+    protected $casts = [
+        'assinado' => 'bool',
+        'ativo'    => 'bool',
+    ];
+
+    public function anexavel(): MorphTo
     {
         return $this->morphTo();
     }
+
+    public function cidade(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'cidade_id');
+    }
+
+    /* Scopes úteis */
+    public function scopeAtivos($q){ return $q->where('ativo', true); }
+    public function scopeTipo($q, $tipo){ return $q->where('tipo', $tipo); }
+    public function scopeCidade($q, $cidadeId){ return $q->where('cidade_id', $cidadeId); }
 }

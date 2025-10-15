@@ -32,13 +32,19 @@
                 <tbody class="divide-y">
                 @forelse($distribuidores as $d)
                     @php
-                        $email = optional($d->user)->email;
-                        $emailExibicao = ($email && !str_contains($email, '@placeholder.local')) ? $email : 'Não informado';
+                        $emails = is_array($d->emails) ? array_values(array_filter($d->emails, fn($e)=>trim((string)$e) !== '')) : [];
+                        $emailExibicao = $emails[0] ?? (optional($d->user)->email && !str_contains(optional($d->user)->email, '@placeholder.local') ? optional($d->user)->email : 'Não informado');
                     @endphp
                     <tr>
                         <td class="px-4 py-2">{{ $d->razao_social }}</td>
                         <td class="px-4 py-2">{{ $d->cnpj }}</td>
-                        <td class="px-4 py-2">{{ $emailExibicao }}</td>
+                        <td class="px-4 py-2">
+                            @if($emailExibicao !== 'Não informado')
+                                <a href="mailto:{{ $emailExibicao }}" class="text-blue-600 hover:underline">{{ $emailExibicao }}</a>
+                            @else
+                                Não informado
+                            @endif
+                        </td>
                         <td class="px-4 py-2">{{ $d->uf ?? '—' }}</td>
                         <td class="px-4 py-2">
                             @if($d->vencimento_contrato)

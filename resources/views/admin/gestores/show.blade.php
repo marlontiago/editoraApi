@@ -1,10 +1,11 @@
+{{-- resources/views/admin/gestores/show.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="text-xl font-semibold text-gray-800">
                 Gestor: {{ $gestor->razao_social }}
             </h2>
-            
+
             <div class="flex gap-2">
                 <form method="POST" action="{{ route('admin.gestores.destroy', $gestor) }}"
                       onsubmit="return confirm('Tem certeza que deseja remover este gestor?');">
@@ -15,8 +16,10 @@
                         Remover
                     </button>
                 </form>
+
                 <a href="{{ route('admin.gestores.index') }}"
                    class="inline-flex h-9 items-center rounded-md border px-3 text-sm hover:bg-gray-50">Voltar</a>
+
                 <a href="{{ route('admin.gestores.edit', $gestor) }}"
                    class="inline-flex h-9 items-center rounded-md bg-blue-600 px-3 text-sm text-white hover:bg-blue-700">Editar</a>
             </div>
@@ -33,20 +36,60 @@
                 <p><span class="font-medium">Representante Legal:</span> {{ $gestor->representante_legal }}</p>
                 <p><span class="font-medium">CPF (representante):</span> {{ $gestor->cpf_formatado }}</p>
                 <p><span class="font-medium">RG:</span> {{ $gestor->rg_formatado }}</p>
-                <p><span class="font-medium">Telefone:</span> {{ $gestor->telefone_formatado ?: '—' }}</p>
-                <p><span class="font-medium">E-mail:</span>
-                    @php $emailExib = $gestor->email_exibicao; @endphp
-                    @if($emailExib && $emailExib !== 'Não informado')
-                        <a href="mailto:{{ $emailExib }}" class="text-blue-600 hover:underline">{{ $emailExib }}</a>
+
+                {{-- Telefones --}}
+                @php
+                    $telefones = $gestor->telefones ?: [];
+                    if (empty($telefones) && $gestor->telefone) $telefones = [$gestor->telefone]; // compat
+                @endphp
+                <p class="mt-2">
+                    <span class="font-medium">Telefones:</span>
+                    @if(!empty($telefones))
+                        {{ collect($telefones)->filter()->implode(', ') }}
                     @else
-                        Não informado
+                        —
+                    @endif
+                </p>
+
+                {{-- E-mails --}}
+                @php
+                    $emails = $gestor->emails ?: [];
+                    if (empty($emails) && $gestor->email) $emails = [$gestor->email]; // compat
+                @endphp
+                <p>
+                    <span class="font-medium">E-mails:</span>
+                    @if(!empty($emails))
+                        {!! collect($emails)->filter()->map(fn($em) => '<a class="text-blue-600 hover:underline" href="mailto:'.$em.'">'.$em.'</a>')->implode(', ') !!}
+                    @else
+                        —
                     @endif
                 </p>
             </div>
 
             <div class="col-span-12 md:col-span-6">
-                <p><span class="font-medium">UF de Atuação:</span> {{ $gestor->estado_uf ?: '—' }}</p>
-                <p><span class="font-medium">Percentual Vendas (aplicado):</span> {{ number_format((float)$gestor->percentual_vendas, 2, ',', '.') }}%</p>
+                {{-- UFs de Atuação (da relação ufs) --}}
+                @php
+                    $ufsAtuacao = $gestor->ufs->pluck('uf')->sort()->values();
+                @endphp
+                <div>
+                    <span class="font-medium">UF(s) de Atuação:</span>
+                    @if($ufsAtuacao->isEmpty())
+                        <span>—</span>
+                    @else
+                        <div class="mt-1 flex flex-wrap gap-2">
+                            @foreach($ufsAtuacao as $uf)
+                                <span class="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 border border-gray-200">
+                                    {{ $uf }}
+                                </span>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                <p class="mt-2">
+                    <span class="font-medium">Percentual Vendas (aplicado):</span>
+                    {{ number_format((float)$gestor->percentual_vendas, 2, ',', '.') }}%
+                </p>
                 <p>
                     <span class="font-medium">Contrato Assinado:</span>
                     {{ $gestor->contrato_assinado ? 'Sim' : 'Não' }}
@@ -71,7 +114,9 @@
                         @php
                             $ven = \Illuminate\Support\Carbon::parse($gestor->vencimento_contrato);
                             $hoje = now();
-                            $classe = $ven->isPast() ? 'bg-red-50 text-red-700 border-red-200' : ($ven->diffInDays($hoje) <= 30 ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-gray-50 text-gray-700 border-gray-200');
+                            $classe = $ven->isPast() ? 'bg-red-50 text-red-700 border-red-200'
+                                : ($ven->diffInDays($hoje) <= 30 ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                : 'bg-gray-50 text-gray-700 border-gray-200');
                         @endphp
                         <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium border {{ $classe }}">
                             Vence em: {{ $ven->format('d/m/Y') }}
@@ -81,38 +126,24 @@
             </div>
         </div>
 
-        {{-- Contatos --}}
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold mb-2">Contatos</h3>
-            @if($gestor->relationLoaded('contatos') ? $gestor->contatos->isNotEmpty() : $gestor->contatos()->exists())
-                @php $contatos = $gestor->relationLoaded('contatos') ? $gestor->contatos : $gestor->contatos()->get(); @endphp
-                <ul class="divide-y">
-                    @foreach($contatos as $contato)
-                        <li class="py-2">
-                            <p>
-                                <span class="font-medium">{{ $contato->nome }}</span>
-                                @if($contato->tipo) <span class="text-gray-600">({{ $contato->tipo }})</span>@endif
-                                @if($contato->preferencial)
-                                    <span class="ml-2 inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">Preferencial</span>
-                                @endif
-                            </p>
-                            <p class="text-sm text-gray-600">
-                                @if($contato->email) E-mail: {{ $contato->email }} @endif
-                                @if($contato->telefone) {{ $contato->email ? ' | ' : '' }} Tel: {{ $contato->telefone }} @endif
-                                @if($contato->whatsapp) {{ ($contato->email || $contato->telefone) ? ' | ' : '' }} Whats: {{ $contato->whatsapp }} @endif
-                            </p>
-                            @if($contato->cargo)
-                                <p class="text-sm text-gray-600">Cargo: {{ $contato->cargo }}</p>
-                            @endif
-                            @if($contato->observacoes)
-                                <p class="text-sm mt-1">{{ $contato->observacoes }}</p>
-                            @endif
-                        </li>
-                    @endforeach
-                </ul>
-            @else
-                <p class="text-gray-500">Nenhum contato informado.</p>
-            @endif
+        {{-- Endereços --}}
+        <div class="bg-white rounded-lg shadow p-6 grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-6">
+                <h3 class="text-sm font-semibold mb-2">Endereço principal</h3>
+                <p><span class="font-medium">Endereço:</span> {{ $gestor->endereco ?: '—' }}, {{ $gestor->numero ?: '—' }}</p>
+                <p><span class="font-medium">Bairro:</span> {{ $gestor->bairro ?: '—' }}</p>
+                <p><span class="font-medium">Cidade:</span> {{ $gestor->cidade ?: '—' }}</p>
+                <p><span class="font-medium">UF:</span> {{ $gestor->uf ?: '—' }}</p>
+                <p><span class="font-medium">CEP:</span> {{ $gestor->cep ?: '—' }}</p>
+            </div>
+            <div class="col-span-12 md:col-span-6">
+                <h3 class="text-sm font-semibold mb-2">Endereço secundário</h3>
+                <p><span class="font-medium">Endereço:</span> {{ $gestor->endereco2 ?: '—' }}, {{ $gestor->numero2 ?: '—' }}</p>
+                <p><span class="font-medium">Bairro:</span> {{ $gestor->bairro2 ?: '—' }}</p>
+                <p><span class="font-medium">Cidade:</span> {{ $gestor->cidade2 ?: '—' }}</p>
+                <p><span class="font-medium">UF:</span> {{ $gestor->uf2 ?: '—' }}</p>
+                <p><span class="font-medium">CEP:</span> {{ $gestor->cep2 ?: '—' }}</p>
+            </div>
         </div>
 
         {{-- Contratos / Anexos --}}
@@ -139,6 +170,20 @@
                                         <span class="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">Ativo</span>
                                     @endif
                                 </div>
+
+                                {{-- >>> AQUI: Cidade para contrato_cidade <<< --}}
+                                @if($anexo->tipo === 'contrato_cidade')
+                                    @php $cidade = $anexo->cidade ?? null; @endphp
+                                    <div class="text-gray-800 mb-1">
+                                        Cidade:
+                                        <strong>
+                                            {{ $cidade ? ($cidade->nome ?? $cidade->name ?? ('ID '.$anexo->cidade_id)) : ('ID '.$anexo->cidade_id) }}
+                                            @if($cidade && !empty($cidade->uf))
+                                                ({{ $cidade->uf }})
+                                            @endif
+                                        </strong>
+                                    </div>
+                                @endif
 
                                 <div class="text-gray-700">
                                     <div>

@@ -1,1 +1,2 @@
-<h2 class="text-2xl">Login</h2>
+
+<img src="{{ asset('images/logo.jpeg') }}" alt="Logo" class="w-36 h-36">

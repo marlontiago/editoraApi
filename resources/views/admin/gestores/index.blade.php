@@ -31,7 +31,6 @@
                         <th class="px-4 py-2">Razão Social</th>
                         <th class="px-4 py-2">CNPJ</th>
                         <th class="px-4 py-2">E-mail</th>
-                        <th class="px-4 py-2">UF</th>
                         <th class="px-4 py-2">Contrato até</th>
                         <th class="px-4 py-2">Assinado</th>
                         <th class="px-4 py-2 text-center w-32">Ações</th>
@@ -42,8 +41,7 @@
                         <tr>
                             <td class="px-4 py-2">{{ $gestor->razao_social }}</td>
                             <td class="px-4 py-2">{{ $gestor->cnpj }}</td>
-                            <td class="px-4 py-2">{{ $gestor->email_exibicao }}</td>
-                            <td class="px-4 py-2">{{ $gestor->estado_uf ?? '—' }}</td>
+                            <td class="px-4 py-2">{{ $gestor->email_exibicao }}</td>                            
                             <td class="px-4 py-2">
                                 @if($gestor->vencimento_contrato)
                                     {{ \Carbon\Carbon::parse($gestor->vencimento_contrato)->format('d/m/Y') }}

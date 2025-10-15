@@ -1,3 +1,4 @@
+{{-- resources/views/admin/gestores/edit.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-semibold text-gray-800">Editar Gestor</h2>
@@ -17,7 +18,8 @@
         @endif
 
         <form method="POST" action="{{ route('admin.gestores.update', ['gestor' => $gestor->id]) }}" enctype="multipart/form-data"
-              class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
+              class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4"
+              x-data>
             @csrf
             @method('PUT')
 
@@ -69,20 +71,59 @@
                 @error('rg') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- Telefone --}}
-            <div class="col-span-12 md:col-span-4">
-                <label for="telefone" class="block text-sm font-medium text-gray-700">Telefone</label>
-                <input type="text" id="telefone" name="telefone" value="{{ old('telefone', $gestor->telefone) }}" maxlength="20" 
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('telefone') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            {{-- TELEFONES (lista com +) --}}
+            @php
+                $telsInit = old('telefones');
+                if ($telsInit === null) {
+                    $telsInit = $gestor->telefones ?: [];
+                    if (empty($telsInit) && !empty($gestor->telefone)) $telsInit = [$gestor->telefone];
+                }
+                if (empty($telsInit)) $telsInit = [''];
+            @endphp
+            <div class="col-span-12 md:col-span-6" x-data='{ lista: @json(array_values($telsInit)) }'>
+                <label class="block text-sm font-medium text-gray-700">Telefones</label>
+                <template x-for="(tel, i) in lista" :key="i">
+                    <div class="mt-1 flex gap-2">
+                        <input type="text" maxlength="20"
+                               class="flex-1 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               :name="`telefones[${i}]`" x-model="lista[i]">
+                        <button type="button" class="inline-flex items-center rounded-md border px-3 text-sm hover:bg-gray-50"
+                                @click="lista.splice(i,1)" x-show="lista.length > 1">
+                            Remover
+                        </button>
+                    </div>
+                </template>
+                <button type="button" class="mt-2 inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50"
+                        @click="lista.push('')">+ Adicionar telefone</button>
+                @error('telefones.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- E-mail (opcional) --}}
-            <div class="col-span-12 md:col-span-8">
-                <label for="email" class="block text-sm font-medium text-gray-700">E-mail</label>
-                <input type="email" id="email" name="email" value="{{ old('email', $gestor->email) }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            {{-- EMAILS (lista com +) --}}
+            @php
+                $emailsInit = old('emails');
+                if ($emailsInit === null) {
+                    $emailsInit = $gestor->emails ?: [];
+                    if (empty($emailsInit) && !empty($gestor->email)) $emailsInit = [$gestor->email];
+                }
+                if (empty($emailsInit)) $emailsInit = [''];
+            @endphp
+            <div class="col-span-12 md:col-span-6" x-data='{ lista: @json(array_values($emailsInit)) }'>
+                <label class="block text-sm font-medium text-gray-700">E-mails</label>
+                <template x-for="(em, i) in lista" :key="i">
+                    <div class="mt-1 flex gap-2">
+                        <input type="email" maxlength="255"
+                               class="flex-1 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               :name="`emails[${i}]`" x-model="lista[i]">
+                        <button type="button" class="inline-flex items-center rounded-md border px-3 text-sm hover:bg-gray-50"
+                                @click="lista.splice(i,1)" x-show="lista.length > 1">
+                            Remover
+                        </button>
+                    </div>
+                </template>
+                <button type="button" class="mt-2 inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50"
+                        @click="lista.push('')">+ Adicionar e-mail</button>
+                <p class="mt-1 text-xs text-gray-500">O <b>primeiro e-mail</b> será usado para criar o usuário (login). Você pode alterar depois.</p>
+                @error('emails.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- Senha (opcional) --}}
@@ -94,24 +135,44 @@
                 @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- UF de atuação do Gestor --}}
+            {{-- UFs de atuação (MÚLTIPLAS) --}}
             @php
-                $ufs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-                $ufOld = old('estado_uf', $gestor->estado_uf);
+                $selecionadas = old('estados_uf', isset($gestor) ? $gestor->ufs->pluck('uf')->all() : []);
+                $ocupadas = $ufOcupadas ?? [];
             @endphp
-            <div class="col-span-12 md:col-span-3">
-                <label for="estado_uf" class="block text-sm font-medium text-gray-700">UF de Atuação</label>
-                <select id="estado_uf" name="estado_uf"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">-- Selecione --</option>
+
+            <div class="col-span-12">
+                <label class="block text-sm font-medium text-gray-700">UF(s) de Atuação</label>
+                <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     @foreach($ufs as $uf)
-                        <option value="{{ $uf }}" @selected($ufOld === $uf)>{{ $uf }}</option>
+                        @php
+                            $isOcupada = array_key_exists($uf, $ocupadas);
+                            $checked   = in_array($uf, $selecionadas);
+                        @endphp
+                        <label class="inline-flex items-center gap-2 text-sm {{ $isOcupada ? 'text-gray-400' : '' }}">
+                            <input
+                                type="checkbox"
+                                name="estados_uf[]"
+                                value="{{ $uf }}"
+                                class="rounded border-gray-300"
+                                @checked($checked)
+                                @disabled($isOcupada)
+                                @change="$store.gestor.toggleUf('{{$uf}}', $event.target.checked)"
+                            >
+                            <span>
+                                {{ $uf }}
+                                @if($isOcupada)
+                                    — ocupada por {{ $ocupadas[$uf] }}
+                                @endif
+                            </span>
+                        </label>
                     @endforeach
-                </select>
-                @error('estado_uf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                </div>
+                @error('estados_uf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('estados_uf.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- Percentual sobre vendas (campo do Gestor) --}}
+            {{-- Percentual sobre vendas --}}
             <div class="col-span-12 md:col-span-5">
                 <label for="percentual_vendas" class="block text-sm font-medium text-gray-700">Percentual sobre vendas</label>
                 <div class="mt-1 flex rounded-md shadow-sm">
@@ -121,47 +182,42 @@
                     <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">%</span>
                 </div>
                 <p class="mt-1 text-xs text-gray-500">
-                    Se houver um contrato/aditivo marcado como <strong>Ativo</strong>, o percentual acima será atualizado automaticamente por ele.
+                    Se houver um contrato/aditivo <b>Ativo</b>, o percentual será atualizado por ele.
                 </p>
                 @error('percentual_vendas') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- Endereço --}}
+            {{-- Endereço principal --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="endereco" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco" name="endereco" value="{{ old('endereco', $gestor->endereco) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('endereco') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-
             <div class="col-span-12 md:col-span-3">
                 <label for="numero" class="block text-sm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero" name="numero" value="{{ old('numero', $gestor->numero) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('numero') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-
             <div class="col-span-12 md:col-span-3">
                 <label for="complemento" class="block text-sm font-medium text-gray-700">Complemento</label>
                 <input type="text" id="complemento" name="complemento" value="{{ old('complemento', $gestor->complemento) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('complemento') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-
             <div class="col-span-12 md:col-span-4">
                 <label for="bairro" class="block text-sm font-medium text-gray-700">Bairro</label>
                 <input type="text" id="bairro" name="bairro" value="{{ old('bairro', $gestor->bairro) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('bairro') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-
             <div class="col-span-12 md:col-span-5">
                 <label for="cidade" class="block text-sm font-medium text-gray-700">Cidade</label>
                 <input type="text" id="cidade" name="cidade" value="{{ old('cidade', $gestor->cidade) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cidade') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-
             <div class="col-span-12 md:col-span-1">
                 <label for="uf" class="block text-sm font-medium text-gray-700">UF</label>
                 <select id="uf" name="uf"
@@ -173,12 +229,63 @@
                 </select>
                 @error('uf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
-
             <div class="col-span-12 md:col-span-2">
                 <label for="cep" class="block text-sm font-medium text-gray-700">CEP</label>
-                <input type="text" id="cep" name="cep" value="{{ old('cep', $gestor->cep) }}" maxlength="9" 
+                <input type="text" id="cep" name="cep" value="{{ old('cep', $gestor->cep) }}" maxlength="9"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cep') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Endereço secundário --}}
+            <div class="col-span-12">
+                <h3 class="text-sm font-semibold text-gray-700 mt-4 mb-1">Endereço secundário</h3>
+            </div>
+            <div class="col-span-12 md:col-span-6">
+                <label for="endereco2" class="block text-sm font-medium text-gray-700">Endereço</label>
+                <input type="text" id="endereco2" name="endereco2" value="{{ old('endereco2', $gestor->endereco2) }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('endereco2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-3">
+                <label for="numero2" class="block text-sm font-medium text-gray-700">Número</label>
+                <input type="text" id="numero2" name="numero2" value="{{ old('numero2', $gestor->numero2) }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('numero2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-3">
+                <label for="complemento2" class="block text-sm font-medium text-gray-700">Complemento</label>
+                <input type="text" id="complemento2" name="complemento2" value="{{ old('complemento2', $gestor->complemento2) }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('complemento2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-4">
+                <label for="bairro2" class="block text-sm font-medium text-gray-700">Bairro</label>
+                <input type="text" id="bairro2" name="bairro2" value="{{ old('bairro2', $gestor->bairro2) }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('bairro2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-5">
+                <label for="cidade2" class="block text-sm font-medium text-gray-700">Cidade</label>
+                <input type="text" id="cidade2" name="cidade2" value="{{ old('cidade2', $gestor->cidade2) }}"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('cidade2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-1">
+                <label for="uf2" class="block text-sm font-medium text-gray-700">UF</label>
+                <select id="uf2" name="uf2"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">--</option>
+                    @foreach($ufs as $uf)
+                        <option value="{{ $uf }}" @selected(old('uf2', $gestor->uf2) === $uf)>{{ $uf }}</option>
+                    @endforeach
+                </select>
+                @error('uf2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div class="col-span-12 md:col-span-2">
+                <label for="cep2" class="block text-sm font-medium text-gray-700">CEP</label>
+                <input type="text" id="cep2" name="cep2" value="{{ old('cep2', $gestor->cep2) }}" maxlength="9"
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                @error('cep2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- ================= ANEXOS (NOVOS) ================= --}}
@@ -187,14 +294,33 @@
 
                 <template x-for="(item, idx) in itens" :key="item.id">
                     <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border">
-                        <div class="col-span-12 md:col-span-3">
+                        <!-- Tipo + Cidade (dinâmico) -->
+                        <div x-data="anexoCidade()" class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Tipo</label>
                             <select :name="`contratos[${idx}][tipo]`"
+                                    x-model="tipo"
+                                    @change="onTipoChange()"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="contrato">Contrato</option>
                                 <option value="aditivo">Aditivo</option>
                                 <option value="outro">Outro</option>
+                                <option value="contrato_cidade">Contrato por cidade</option>
                             </select>
+
+                            <div x-show="tipo === 'contrato_cidade'" class="mt-2">
+                                <label class="text-xs text-gray-600">Cidade (das UFs selecionadas)</label>
+                                <select :name="`contratos[${idx}][cidade_id]`"
+                                        x-model="cidadeId"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        @click="refreshCidades()">
+                                    <option value="" x-show="!carregando && cidades.length === 0">Selecione...</option>
+                                    <option value="" x-show="carregando">Carregando...</option>
+                                    <template x-for="c in cidades" :key="c.id">
+                                        <option :value="c.id" x-text="c.text"></option>
+                                    </template>
+                                </select>
+                                <p class="mt-1 text-[11px] text-gray-500">Aplica-se apenas à cidade escolhida; tem prioridade sobre o contrato ativo.</p>
+                            </div>
                         </div>
 
                         <div class="col-span-12 md:col-span-5">
@@ -266,9 +392,11 @@
                 @error('contratos.*.percentual_vendas') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.data_assinatura') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.validade_meses') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.cidade_id') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.tipo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- LISTA DE ANEXOS EXISTENTES (sem forms aninhados) --}}
+            {{-- LISTA DE ANEXOS EXISTENTES --}}
             @if($gestor->anexos->count())
                 <div class="col-span-12">
                     <h3 class="text-sm font-semibold mb-2">Contratos / Aditivos existentes</h3>
@@ -329,105 +457,6 @@
                 </div>
             @endif
 
-            {{-- ================= CONTATOS ================= --}}
-            @php
-                $contatosInicial = old('contatos') ?? $gestor->contatos->map(fn($c) => [
-                    'id' => $c->id,
-                    'nome' => $c->nome,
-                    'email' => $c->email,
-                    'telefone' => $c->telefone,
-                    'whatsapp' => $c->whatsapp,
-                    'cargo' => $c->cargo,
-                    'tipo' => $c->tipo,
-                    'preferencial' => $c->preferencial,
-                    'observacoes' => $c->observacoes,
-                ])->toArray();
-                if (empty($contatosInicial)) {
-                    $contatosInicial = [[
-                        'id'=>null,'nome'=>'','email'=>'','telefone'=>'','whatsapp'=>'',
-                        'cargo'=>'','tipo'=>'outro','preferencial'=>false,'observacoes'=>''
-                    ]];
-                }
-            @endphp
-
-            <div x-data='@json(["itens" => $contatosInicial])' class="col-span-12">
-                <div class="flex items-center justify-between mb-2">
-                    <label class="block text-sm font-medium text-gray-700">Contatos</label>
-                    <button type="button"
-                            @click="itens.push({id:null,nome:'',email:'',telefone:'',whatsapp:'',cargo:'',tipo:'outro',preferencial:false,observacoes:''})"
-                            class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
-                        + Adicionar contato
-                    </button>
-                </div>
-
-                <template x-for="(item, idx) in itens" :key="idx">
-                    <div class="grid grid-cols-12 gap-3 p-3 mb-3 rounded-md border">
-                        <input type="hidden" :name="`contatos[${idx}][id]`" x-model="item.id">
-
-                        <div class="col-span-12 md:col-span-4">
-                            <label class="text-xs text-gray-600">Nome <span class="text-red-600">*</span></label>
-                            <input type="text" class="mt-1 block w-full rounded-md border-gray-300"
-                                   x-model="item.nome" :name="`contatos[${idx}][nome]`">
-                        </div>
-
-                        <div class="col-span-12 md:col-span-4">
-                            <label class="text-xs text-gray-600">E-mail</label>
-                            <input type="email" class="mt-1 block w-full rounded-md border-gray-300"
-                                   x-model="item.email" :name="`contatos[${idx}][email]`">
-                        </div>
-
-                        <div class="col-span-6 md:col-span-2">
-                            <label class="text-xs text-gray-600">Telefone</label>
-                            <input type="text" maxlength="30" class="mt-1 block w-full rounded-md border-gray-300"
-                                   x-model="item.telefone" :name="`contatos[${idx}][telefone]`">
-                        </div>
-
-                        <div class="col-span-6 md:col-span-2">
-                            <label class="text-xs text-gray-600">WhatsApp</label>
-                            <input type="text" maxlength="30" class="mt-1 block w-full rounded-md border-gray-300"
-                                   x-model="item.whatsapp" :name="`contatos[${idx}][whatsapp]`">
-                        </div>
-
-                        <div class="col-span-6 md:col-span-2">
-                            <label class="text-xs text-gray-600">Tipo</label>
-                            <select class="mt-1 block w-full rounded-md border-gray-300"
-                                    x-model="item.tipo" :name="`contatos[${idx}][tipo]`">
-                                <option value="principal">Principal</option>
-                                <option value="secundario">Secundário</option>
-                                <option value="financeiro">Financeiro</option>
-                                <option value="comercial">Comercial</option>
-                                <option value="outro">Outro</option>
-                            </select>
-                        </div>
-
-                        <div class="col-span-12 md:col-span-2 flex items-center gap-2 mt-6">
-                            <input type="checkbox" class="rounded border-gray-300"
-                                   x-model="item.preferencial" :name="`contatos[${idx}][preferencial]`" value="1">
-                            <span class="text-sm">Preferencial</span>
-                        </div>
-
-                        <div class="col-span-12">
-                            <label class="text-xs text-gray-600">Observações</label>
-                            <textarea rows="2" class="mt-1 block w-full rounded-md border-gray-300"
-                                      x-model="item.observacoes" :name="`contatos[${idx}][observacoes]`"></textarea>
-                        </div>
-
-                        <div class="col-span-12 md:col-span-2">
-                            <button type="button" @click="itens.splice(idx,1)" x-show="itens.length > 1"
-                                    class="inline-flex h-9 items-center mt-1 rounded-md border px-3 text-sm hover:bg-gray-50 w-full justify-center">
-                                Remover
-                            </button>
-                        </div>
-                    </div>
-                </template>
-
-                {{-- erros de validação específicos de contatos --}}
-                @error('contatos.*.nome')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
-                @error('contatos.*.email')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
-                @error('contatos')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
-            </div>
-            {{-- =============== /CONTATOS =============== --}}
-
             {{-- Ações --}}
             <div class="col-span-12 flex items-center justify-end gap-3 pt-2">
                 <a href="{{ route('admin.gestores.index') }}"
@@ -455,4 +484,67 @@
         @endif
         {{-- ============================================================================ --}}
     </div>
+
+    {{-- Alpine store + componentes auxiliares --}}
+    <script>
+        document.addEventListener('alpine:init', () => {
+            // Store compartilhado (mesma ideia do create)
+            Alpine.store('gestor', {
+                // inicia com as UFs marcadas no edit
+                ufsSelecionadas: @json($selecionadas),
+                cidadesCache: {},
+                async getCidadesOptions() {
+                    const key = this.ufsSelecionadas.slice().sort().join(',');
+                    if (!key) return [];
+                    if (this.cidadesCache[key]) return this.cidadesCache[key];
+
+                    try {
+                        const url = "{{ route('admin.utils.cidades-por-ufs') }}" + "?ufs=" + encodeURIComponent(key);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+                        const data = await res.json();
+                        this.cidadesCache[key] = Array.isArray(data) ? data : [];
+                        return this.cidadesCache[key];
+                    } catch (e) {
+                        console.error('Erro ao carregar cidades', e);
+                        return [];
+                    }
+                },
+                toggleUf(uf, checked) {
+                    const set = new Set(this.ufsSelecionadas);
+                    if (checked) set.add(uf); else set.delete(uf);
+                    this.ufsSelecionadas = Array.from(set);
+                    window.dispatchEvent(new Event('ufs-updated'));
+                }
+            });
+
+            Alpine.data('anexoCidade', () => ({
+                tipo: 'contrato',
+                cidades: [],
+                cidadeId: null,
+                carregando: false,
+
+                async refreshCidades() {
+                    if (this.tipo !== 'contrato_cidade') return;
+                    this.carregando = true;
+                    this.cidades = await Alpine.store('gestor').getCidadesOptions();
+                    if (!this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
+                        this.cidadeId = null;
+                    }
+                    this.carregando = false;
+                },
+
+                onTipoChange() {
+                    this.refreshCidades();
+                },
+
+                init() {
+                    this.refreshCidades();
+                    window.addEventListener('ufs-updated', () => this.refreshCidades());
+                    this.$watch(() => Alpine.store('gestor').ufsSelecionadas.slice().join(','), () => {
+                        this.refreshCidades();
+                    });
+                }
+            }));
+        });
+    </script>
 </x-app-layout>

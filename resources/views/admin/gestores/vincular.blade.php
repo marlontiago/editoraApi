@@ -10,7 +10,7 @@
     </x-slot>
 
     <div class="max-w-7xl mx-auto p-6 space-y-6">
-        {{-- Alerts --}}
+        {{-- ALERTAS --}}
         @foreach (['success'=>'green','info'=>'blue','error'=>'red'] as $key=>$color)
             @if (session($key))
                 <div class="rounded-md border border-{{ $color }}-300 bg-{{ $color }}-50 p-3 text-{{ $color }}-800">
@@ -19,7 +19,12 @@
             @endif
         @endforeach
 
-        {{-- Filtros --}}
+        {{-- DEBUG RÁPIDO: mostra contagem de gestores recebidos --}}
+        <div class="text-xs text-gray-500">
+            Gestores disponíveis para seleção: <b>{{ $gestores->count() }}</b>
+        </div>
+
+        {{-- FILTROS --}}
         <form method="GET" action="{{ route('admin.gestores.vincular') }}"
               class="bg-white rounded-lg border p-4 grid grid-cols-12 gap-3">
             <div class="col-span-12 md:col-span-6">
@@ -34,9 +39,13 @@
                 <select name="gestor"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">— Todos —</option>
-                    @foreach ($gestores as $g)
-                        <option value="{{ $g->id }}" @selected(($gestorFiltro ?? null) == $g->id)>{{ $g->razao_social }}</option>
-                    @endforeach
+                    @forelse ($gestores as $g)
+                        <option value="{{ $g->id }}" @selected(($gestorFiltro ?? null) == $g->id)>
+                            {{ $g->razao_social }}
+                        </option>
+                    @empty
+                        <option value="" disabled>— Nenhum gestor cadastrado —</option>
+                    @endforelse
                 </select>
             </div>
 
@@ -47,7 +56,7 @@
             </div>
         </form>
 
-        {{-- Tabela + formulário de mapeamento --}}
+        {{-- TABELA + FORM DE MAPEAMENTO --}}
         <form method="POST" action="{{ route('admin.gestores.vincular.salvar') }}" class="bg-white rounded-lg border">
             @csrf
 
@@ -84,9 +93,13 @@
                                     <select name="vinculos[{{ $d->id }}]"
                                             class="block w-full rounded-md border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                         <option value="">— Sem vínculo —</option>
-                                        @foreach ($gestores as $g)
-                                            <option value="{{ $g->id }}" @selected($d->gestor_id === $g->id)>{{ $g->razao_social }}</option>
-                                        @endforeach
+                                        @forelse ($gestores as $g)
+                                            <option value="{{ $g->id }}" @selected($d->gestor_id == $g->id)>
+                                                {{ $g->razao_social }}
+                                            </option>
+                                        @empty
+                                            <option value="" disabled>— Nenhum gestor cadastrado —</option>
+                                        @endforelse
                                     </select>
                                 </td>
                             </tr>

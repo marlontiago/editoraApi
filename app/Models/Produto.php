@@ -52,20 +52,26 @@ class Produto extends Model
             ->withTimestamps();
     }
 
-    public function getIsbnFormatadoAttribute(): string
-    {        
-        return Formatters::formatIsbn($this->isbn);
-    }
-
     public function getImagemUrlAttribute(): ?string
     {
         $path = $this->imagem;
 
-        if ($path && Storage::disk('public')->exists($path)) {
-            return asset('storage/' . $path);
+        if (! $path) {
+            return null;
         }
 
-        if ($path && file_exists(public_path($path))) {
+        // se estiver no disco "public" padrão
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->url($path); // ex: /storage/produtos/arquivo.jpg
+        }
+
+        // fallback: se o caminho já for público (ex: começa com http)
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
+        // fallback final: tenta caminho público direto (se você salva 'storage/...' no DB)
+        if (file_exists(public_path($path))) {
             return asset($path);
         }
 

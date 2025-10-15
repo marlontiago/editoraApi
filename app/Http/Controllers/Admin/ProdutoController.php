@@ -16,9 +16,24 @@ class ProdutoController extends Controller
     {
         if ($v === null) return null;
         $v = trim((string) $v);
-        if ($v === '') return null;   // <<-- importante
-        $v = str_replace('.', '', $v);   // milhar
-        $v = str_replace(',', '.', $v);  // vírgula -> ponto
+        if ($v === '') return null; // importante
+
+        // se já for um número (ex: 12.34) retorna direto (evita remoção indevida)
+        if (is_numeric($v)) {
+            return $v;
+        }
+
+        // Formato pt-BR: contém vírgula -> remover pontos de milhar e trocar vírgula por ponto
+        if (strpos($v, ',') !== false) {
+            $v = str_replace(['.', ' '], '', $v); // remove pontos e espaços (milhares)
+            $v = str_replace(',', '.', $v);       // vírgula -> ponto
+            return $v;
+        }
+
+        // Caso genérico: remover espaços e tentar trocar vírgula só por segurança
+        $v = str_replace(' ', '', $v);
+        $v = str_replace(',', '.', $v);
+
         return $v;
     }
 

@@ -17,24 +17,26 @@ use App\Http\Controllers\Admin\NotaPagamentoController;
 use App\Http\Controllers\Admin\AdvogadoController;
 use App\Http\Controllers\Admin\DiretorComercialController;
 use App\Http\Controllers\RelatoriosController;
+use App\Http\Controllers\NotaFiscalPlugNotasController;
+use App\Http\Controllers\NotaFiscalPlugBridgeController;
+use App\Models\Gestor;
 
-Route::pattern('gestor', '[0-9]+');        // garante que {gestor} seja numérico
-Route::pattern('distribuidor', '[0-9]+');  // garante que {distribuidor} seja numérico
+Route::pattern('gestor', '[0-9]+');        // {gestor} numérico
+Route::pattern('distribuidor', '[0-9]+');  // {distribuidor} numérico
 
 Route::get('/', function () {
     return view('auth.login');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// REMOVIDO: rota simples de /dashboard para evitar duplicidade
+// A versão com redirecionamento por papel fica abaixo.
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // redireciona para o dashboard correto por papel
+    // Redireciona para o dashboard correto por papel
     Route::get('/dashboard', [DashboardRedirectController::class, 'redirect'])->name('dashboard.redirect');
 });
 
@@ -50,57 +52,34 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Recursos
     Route::resource('produtos', ProdutoController::class)->except('show');
     Route::resource('usuarios', UserController::class);
-    Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente'])->except('show');
+    Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente']);
     Route::resource('advogados', AdvogadoController::class);
     Route::resource('diretor-comercials', DiretorComercialController::class)->parameters(['diretor-comercials' => 'diretor_comercial']);
 
-    // Distribuidores
-    Route::resource('distribuidores', DistribuidorController::class)
-        ->names('distribuidores')
-        ->parameters(['distribuidores' => 'distribuidor']);
-
-    Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])
-        ->name('distribuidores.por-gestor')
-        ->whereNumber('gestor');
-
+    Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor']);
+    Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('distribuidores.por-gestor')->whereNumber('gestor');
     Route::get('/cidades/por-distribuidor/{id}', [CidadeController::class, 'cidadesPorDistribuidor']);
+    Route::delete('distribuidores/{distribuidor}/anexos/{anexo}', [DistribuidorController::class, 'destroyAnexo'])->name('distribuidores.anexos.destroy')->whereNumber('distribuidor');
+    Route::post('distribuidores/{distribuidor}/anexos/{anexo}/ativar', [DistribuidorController::class, 'ativarAnexo'])->name('distribuidores.anexos.ativar')->whereNumber('distribuidor');
 
-    // Anexos de distribuidor
-    Route::delete('distribuidores/{distribuidor}/anexos/{anexo}', [DistribuidorController::class, 'destroyAnexo'])
-        ->name('distribuidores.anexos.destroy')
-        ->whereNumber('distribuidor');
-
-    // NOVA rota: ativar anexo do distribuidor (igual à de gestor)
-    Route::post('distribuidores/{distribuidor}/anexos/{anexo}/ativar', [DistribuidorController::class, 'ativarAnexo'])
-        ->name('distribuidores.anexos.ativar')
-        ->whereNumber('distribuidor');
-
-    // Gestores
-    Route::post('gestores/{gestor}/anexos/{anexo}/ativar', [GestorController::class, 'ativarAnexo'])
-        ->name('gestores.anexos.ativar');
-
+    Route::post('gestores/{gestor}/anexos/{anexo}/ativar', [GestorController::class, 'ativarAnexo'])->name('gestores.anexos.ativar');
     Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('gestores.vincular');
     Route::post('gestores/vincular', [GestorController::class, 'storeVinculo'])->name('gestores.vincular.salvar');
-
-    // resource DEPOIS
     Route::resource('gestores', GestorController::class)->parameters(['gestores' => 'gestor']);
 
-    Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])
-        ->name('gestores.cidades')
-        ->whereNumber('gestor');
+    // JSON: UFs do gestor (para filtrar selects sem recarregar a página)
+    Route::get('gestores/{gestor}/ufs', [GestorController::class, 'ufs'])->name('gestores.ufs');
+    Route::get('/utils/cidades-por-ufs', [GestorController::class, 'cidadesPorUfs'])->name('utils.cidades-por-ufs');
 
-    Route::get('/cidades/por-gestor/{gestor}', [CidadeController::class, 'cidadesPorGestor'])
-        ->name('cidades.por-gestor')
-        ->whereNumber('gestor');
+    // (Opcional) se você usa esta rota em algum lugar, o método existe no controller
+    // Route::get('gestores/{gestor}/cidades', [GestorController::class, 'cidadesPorGestor'])->name('gestores.cidades')->whereNumber('gestor');
 
-    Route::delete('gestores/{gestor}/anexos/{anexo}', [GestorController::class, 'destroyAnexo'])
-        ->name('gestores.anexos.destroy')
-        ->whereNumber('gestor');
+    Route::get('/cidades/por-gestor/{gestor}', [CidadeController::class, 'cidadesPorGestor'])->name('cidades.por-gestor')->whereNumber('gestor');
+    Route::delete('gestores/{gestor}/anexos/{anexo}', [GestorController::class, 'destroyAnexo'])->name('gestores.anexos.destroy')->whereNumber('gestor');
 
-    // Cidades
     Route::get('cidades/por-uf/{uf}', [CidadeController::class, 'porUf']);
+    Route::get('cidades/busca', [CidadeController::class, 'search'])->name('cidades.search');
 
-    // Pedidos
     Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
     Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
     Route::get('/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
@@ -125,7 +104,18 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Relatórios
     Route::get('/relatorios', [RelatoriosController::class, 'index'])->name('relatorios.index');
+
+    Route::post('notas/{nota}/plugnotas/emitir',    [NotaFiscalPlugBridgeController::class, 'emitir'])->name('notas.plug.emitir');
+    Route::get ('notas/{nota}/plugnotas/consultar', [NotaFiscalPlugBridgeController::class, 'consultar'])->name('notas.plug.consultar');
+    Route::get ('notas/{nota}/plugnotas/pdf',       [NotaFiscalPlugBridgeController::class, 'pdf'])->name('notas.plug.pdf');
+    Route::get ('notas/{nota}/plugnotas/xml',       [NotaFiscalPlugBridgeController::class, 'xml'])->name('notas.plug.xml');
 });
+
+Route::post('/notas/{nota}/emitir',   [NotaFiscalPlugNotasController::class, 'emitir'])->name('notas.emitir');
+Route::get('/notas/{nota}/consultar',[NotaFiscalPlugNotasController::class, 'consultar'])->name('notas.consultar');
+Route::get('/notas/{nota}/pdf',      [NotaFiscalPlugNotasController::class, 'pdf'])->name('notas.pdf');
+Route::get('/notas/{nota}/xml',      [NotaFiscalPlugNotasController::class, 'xml'])->name('notas.xml');
+Route::post('/webhooks/plugnotas', [\App\Http\Controllers\WebhookPlugNotasController::class, 'handle']);
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Gestor\DashboardController::class, 'index'])->name('dashboard');

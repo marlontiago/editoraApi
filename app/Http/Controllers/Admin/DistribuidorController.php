@@ -94,17 +94,22 @@ class DistribuidorController extends Controller
             'percentual_vendas'   => ['required','numeric','min:0','max:100'],
 
             // ANEXOS
-            'contratos'                       => ['nullable','array'],
-            'contratos.*.tipo'                => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro'],
-            'contratos.*.cidade_id'           => ['nullable','integer','exists:cities,id'],
-            'contratos.*.arquivo'             => ['nullable','file','mimes:pdf','max:5120'],
-            'contratos.*.descricao'           => ['nullable','string','max:255'],
-            'contratos.*.assinado'            => ['nullable','boolean'],
-            'contratos.*.percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
-            'contratos.*.ativo'               => ['nullable','boolean'],
-            'contratos.*.data_assinatura'     => ['nullable','date'],
-            'contratos.*.validade_meses'      => ['nullable','integer','min:1','max:120'],
-        ]);
+            'contratos'                     => ['nullable','array'],
+            'contratos.*.tipo'              => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro,contrato_cidade'],
+            'contratos.*.cidade_id'         => [
+                'exclude_unless:contratos.*.tipo,contrato_cidade',
+                'required_if:contratos.*.tipo,contrato_cidade',
+                'integer',
+                'exists:cities,id',
+            ],
+            'contratos.*.arquivo'           => ['nullable','file','mimes:pdf','max:5120'],
+            'contratos.*.descricao'         => ['nullable','string','max:255'],
+            'contratos.*.assinado'          => ['nullable','boolean'],
+            'contratos.*.percentual_vendas' => ['nullable','numeric','min:0','max:100'],
+            'contratos.*.ativo'             => ['nullable','boolean'],
+            'contratos.*.data_assinatura'   => ['nullable','date'],
+            'contratos.*.validade_meses'    => ['nullable','integer','min:1','max:120'],
+                    ]);
 
         // >>>>> Validação extra: TODAS as cidades devem estar nas UFs do gestor escolhido
         $gestorUfs = DB::table('gestor_ufs')
@@ -284,9 +289,15 @@ class DistribuidorController extends Controller
             ->with('success', 'Distribuidor criado com sucesso!');
     }
 
-    public function show(Distribuidor $distribuidor)
+    public function show(\App\Models\Distribuidor $distribuidor)
     {
-        $distribuidor->load(['user','gestor','cities','anexos']);
+        $distribuidor->load([
+            'user',
+            'gestor',
+            'cities',
+            'anexos.cidade', // <— AQUI
+        ]);
+
         return view('admin.distribuidores.show', compact('distribuidor'));
     }
 
@@ -357,17 +368,22 @@ class DistribuidorController extends Controller
             'percentual_vendas'   => ['required','numeric','min:0','max:100'],
 
             // anexos novos (append)
-            'contratos'                       => ['nullable','array'],
-            'contratos.*.tipo'                => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro'],
-            'contratos.*.cidade_id'           => ['nullable','integer','exists:cities,id'],
-            'contratos.*.arquivo'             => ['nullable','file','mimes:pdf','max:5120'],
-            'contratos.*.descricao'           => ['nullable','string','max:255'],
-            'contratos.*.assinado'            => ['nullable','boolean'],
-            'contratos.*.percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
-            'contratos.*.ativo'               => ['nullable','boolean'],
-            'contratos.*.data_assinatura'     => ['nullable','date'],
-            'contratos.*.validade_meses'      => ['nullable','integer','min:1','max:120'],
-        ]);
+            'contratos'                     => ['nullable','array'],
+            'contratos.*.tipo'              => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro,contrato_cidade'],
+            'contratos.*.cidade_id'         => [
+                'exclude_unless:contratos.*.tipo,contrato_cidade',
+                'required_if:contratos.*.tipo,contrato_cidade',
+                'integer',
+                'exists:cities,id',
+            ],
+            'contratos.*.arquivo'           => ['nullable','file','mimes:pdf','max:5120'],
+            'contratos.*.descricao'         => ['nullable','string','max:255'],
+            'contratos.*.assinado'          => ['nullable','boolean'],
+            'contratos.*.percentual_vendas' => ['nullable','numeric','min:0','max:100'],
+            'contratos.*.ativo'             => ['nullable','boolean'],
+            'contratos.*.data_assinatura'   => ['nullable','date'],
+            'contratos.*.validade_meses'    => ['nullable','integer','min:1','max:120'],
+                    ]);
 
         // >>>>> Validação extra: cidades x UFs do gestor
         $gestorUfs = DB::table('gestor_ufs')
@@ -594,4 +610,52 @@ class DistribuidorController extends Controller
         }
         return null;
     }
+
+    // Retorna cidades pelas UFs (ex.: ?ufs=PR,SC)
+public function cidadesPorUfs(Request $request)
+{
+    $ufs = collect(explode(',', (string)$request->query('ufs', '')))
+        ->map(fn($u) => strtoupper(trim($u)))
+        ->filter(fn($u) => preg_match('/^[A-Z]{2}$/', $u))
+        ->unique()->values();
+
+    if ($ufs->isEmpty()) return response()->json([]);
+
+    $ufCol = $this->cityUfColumn();
+    if (!$ufCol) return response()->json([]);
+
+    $cidades = DB::table('cities')
+        ->whereIn($ufCol, $ufs->all())
+        ->select('id', 'name as nome', $ufCol.' as uf')
+        ->orderBy($ufCol)->orderBy('nome')
+        ->get();
+
+    return response()->json(
+        $cidades->map(fn($c) => ['id'=>$c->id, 'text'=> "{$c->nome} ({$c->uf})", 'uf'=>$c->uf])
+    );
+}
+
+        // Retorna cidades das UFs do gestor informado (ex.: ?gestor_id=123)
+        public function cidadesPorGestor(Request $request)
+        {
+            $gestorId = (int) $request->query('gestor_id', 0);
+            if (!$gestorId) return response()->json([]);
+
+            $ufsGestor = DB::table('gestor_ufs')->where('gestor_id', $gestorId)->pluck('uf')->map(fn($u)=>strtoupper($u));
+            if ($ufsGestor->isEmpty()) return response()->json([]);
+
+            $ufCol = $this->cityUfColumn();
+            if (!$ufCol) return response()->json([]);
+
+            $cidades = DB::table('cities')
+                ->whereIn($ufCol, $ufsGestor->all())
+                ->select('id', 'name as nome', $ufCol.' as uf')
+                ->orderBy($ufCol)->orderBy('nome')
+                ->get();
+
+            return response()->json(
+                $cidades->map(fn($c) => ['id'=>$c->id, 'text'=> "{$c->nome} ({$c->uf})", 'uf'=>$c->uf])
+            );
+        }
+
 }

@@ -16,13 +16,17 @@
         @endif
 
         <form action="{{ route('admin.distribuidores.store') }}" method="POST" enctype="multipart/form-data"
-              class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4" x-data="formDist()">
+              class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4"
+              x-data="formDist()" x-init="init()">
             @csrf
 
             {{-- ===== Gestor + Percentual ===== --}}
             <div class="col-span-12 md:col-span-6">
-                <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor <span class="text-red-600">*</span></label>
-                <select name="gestor_id" id="gestor_id"
+                <label for="gestor_id" class="block text-sm font-medium text-gray-700">
+                    Gestor <span class="text-red-600">*</span>
+                </label>
+                <select name="gestor_id" id="gestor_id" x-model="gestorId"
+                        @change="onGestorChange"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                     <option value="">-- Selecione --</option>
                     @foreach($gestores as $gestor)
@@ -40,16 +44,14 @@
                             type="number"
                             id="percentual_vendas"
                             name="percentual_vendas"
-                            step="0.01"
-                            min="0"
-                            max="100"
+                            step="0.01" min="0" max="100"
                             value="{{ old('percentual_vendas') }}"
                             class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                         <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">%</span>
                     </div>
                     <p class="mt-1 text-xs text-gray-500">
-                        Se houver um contrato/aditivo marcado como <strong>Ativo</strong>, o percentual acima será atualizado automaticamente por ele.
+                        Se houver um contrato/aditivo marcado como <strong>Ativo</strong>, o percentual acima será atualizado por ele.
                     </p>
                     @error('percentual_vendas') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 </div>
@@ -61,7 +63,8 @@
                     searchUrl: @js(route('admin.cidades.search')),
                     selectedInitial: @js(collect(old('cities', []))->map(fn($id)=>['id'=>(int)$id,'name'=>'','uf'=>''])->values()),
                  })"
-                 x-init="init()">
+                 x-init="init()"
+                 @gestor-updated.window="fetchList()">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Cidades de atuação</label>
 
                 <div class="flex gap-2">
@@ -234,10 +237,8 @@
                 <select id="uf" name="uf"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">--</option>
-                    @foreach($ufs as $uf)
-                        @if($uf !== '')
-                            <option value="{{ $uf }}" @selected(old('uf') === $uf)>{{ $uf }}</option>
-                        @endif
+                    @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
+                        <option value="{{ $uf }}" @selected(old('uf') === $uf)>{{ $uf }}</option>
                     @endforeach
                 </select>
                 @error('uf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -288,10 +289,8 @@
                 <select id="uf2" name="uf2"
                         class="mt-1 block w-full rounded-md border-gray-300">
                     <option value="">--</option>
-                    @foreach($ufs as $uf)
-                        @if($uf !== '')
-                            <option value="{{ $uf }}" @selected(old('uf2') === $uf)>{{ $uf }}</option>
-                        @endif
+                    @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
+                        <option value="{{ $uf }}" @selected(old('uf2') === $uf)>{{ $uf }}</option>
                     @endforeach
                 </select>
                 @error('uf2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -308,15 +307,39 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Anexos (PDF)</label>
 
                 <template x-for="(item, idx) in itens" :key="item.id">
-                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border">
+                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border"
+                         x-data="anexoCidadeDist()" x-init="init()">
+                        <!-- Tipo + Cidade (dinâmico) -->
                         <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Tipo</label>
                             <select :name="'contratos['+idx+'][tipo]'"
+                                    x-model="tipo" @change="onTipoChange()"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="contrato">Contrato</option>
                                 <option value="aditivo">Aditivo</option>
                                 <option value="outro">Outro</option>
+                                <option value="contrato_cidade">Contrato por cidade</option>
                             </select>
+
+                            <!-- Select CIDADE (apenas quando contrato_cidade) -->
+                            <div x-show="tipo === 'contrato_cidade'" class="mt-2">
+                                <label class="text-xs text-gray-600">Cidade (das UFs do gestor)</label>
+                                <select
+                                    :name="'contratos['+idx+'][cidade_id]'"
+                                    x-model="cidadeId"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    @click="refreshCidades()"
+                                >
+                                    <option value="" x-show="!carregando && cidades.length === 0">Selecione...</option>
+                                    <option value="" x-show="carregando">Carregando...</option>
+                                    <template x-for="c in cidades" :key="c.id">
+                                        <option :value="c.id" x-text="c.text"></option>
+                                    </template>
+                                </select>
+                                <p class="mt-1 text-[11px] text-gray-500">
+                                    Percentual aplicado apenas para a cidade escolhida (tem prioridade nos cálculos).
+                                </p>
+                            </div>
                         </div>
 
                         <div class="col-span-12 md:col-span-5">
@@ -386,8 +409,10 @@
 
                 @error('contratos.*.arquivo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.percentual_vendas') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
-                @error('contratos.*.data_assinatura') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.data_assinatura') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror>
                 @error('contratos.*.validade_meses') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.cidade_id') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.tipo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- ===== Ações ===== --}}
@@ -402,18 +427,43 @@
         </form>
     </div>
 
-    {{-- JS: Alpine helpers --}}
+    {{-- JS: Alpine helpers + store compartilhado (gestor → cidades) --}}
     <script>
+        // debounce simples
         function debounce(fn, delay=400) {
             let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), delay); }
         }
 
+        // Store: cacheia cidades por gestor
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('dist', {
+                gestorId: @json(old('gestor_id', '')),
+                cidadesCacheByGestor: {},
+
+                async getCidadesOptions() {
+                    const gid = String(this.gestorId || '').trim();
+                    if (!gid) return [];
+                    if (this.cidadesCacheByGestor[gid]) return this.cidadesCacheByGestor[gid];
+
+                    try {
+                        const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gid); // só pra validar acesso; cidades vem do search
+                        // não precisamos da resposta aqui; a lista de cidades por UF já vem do search global
+                    } catch(e) {}
+
+                    return [];
+                }
+            });
+        });
+
+        // Picker de cidades (lista geral do distribuidor)
         function citiesPicker({searchUrl, selectedInitial=[]}) {
             return {
                 q: '',
                 uf: '',
                 results: [],
                 selected: [],
+                debouncedFetch: null,
+
                 init() {
                     this.selected = (selectedInitial || []).map(s => ({id: s.id, name: s.name || '…', uf: s.uf || ''}));
                     this.debouncedFetch = debounce(this.fetchList.bind(this), 350);
@@ -446,6 +496,7 @@
                             distribuidor_id: r.distribuidor_id || null,
                             distribuidor_name: r.distribuidor_name || r.distribuidor_nome || null,
                         }));
+                        // atualiza names das já selecionadas
                         const mapById = new Map(this.results.map(r => [String(r.id), r]));
                         this.selected = this.selected.map(s => {
                             const hit = mapById.get(String(s.id));
@@ -458,88 +509,151 @@
             }
         }
 
+        // Form principal do distribuidor
         function formDist() {
             return {
                 emails: @json(old('emails', [''])),
                 telefones: @json(old('telefones', [''])),
                 loginEmail: '',
+                gestorId: @json(old('gestor_id', '')),
+
+                init() {
+                    this.syncLoginEmail();
+                    if (window.Alpine) Alpine.store('dist').gestorId = this.gestorId || '';
+                    this.$nextTick(()=> window.dispatchEvent(new CustomEvent('gestor-updated')));
+
+                    // ---- Filtro de UFs por gestor (endereços + picker) ----
+                    setupUfFiltering();
+                },
+
+                onGestorChange: async () => {
+                    if (window.Alpine) Alpine.store('dist').gestorId = document.getElementById('gestor_id').value || '';
+                    window.dispatchEvent(new CustomEvent('gestor-updated'));
+                    // também atualiza as UFs permitidas nas selects
+                    if (typeof loadUfsForGestor === 'function') {
+                        loadUfsForGestor(document.getElementById('gestor_id').value);
+                    }
+                },
+
                 syncLoginEmail() { this.loginEmail = (this.emails[0] || '').trim(); },
                 removeEmail(i) { this.emails.splice(i,1); if (this.emails.length===0) this.emails.push(''); this.syncLoginEmail(); },
                 removeTelefone(i) { this.telefones.splice(i,1); if (this.telefones.length===0) this.telefones.push(''); },
-                init() { this.syncLoginEmail(); }
             }
         }
-    </script>
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const gestorSel = document.getElementById('gestor_id');
-    const uf1Sel    = document.getElementById('uf');   // UF principal
-    const uf2Sel    = document.getElementById('uf2');  // UF secundária
-    const ufCitySel = document.getElementById('ufFiltroCidades'); // UF do picker de cidades
 
-    async function loadUfsForGestor(gestorId) {
-        if (!gestorId) {
-            enableAllOptions(uf1Sel);
-            enableAllOptions(uf2Sel);
-            if (ufCitySel) enableAllOptions(ufCitySel);
-            return;
+        // Componente de cada "card" de anexo com cidade dinâmica
+        function anexoCidadeDist() {
+            return {
+                tipo: 'contrato',
+                cidades: [],
+                cidadeId: null,
+                carregando: false,
+
+                async refreshCidades() {
+                    if (this.tipo !== 'contrato_cidade') return;
+                    this.carregando = true;
+                    // (Se necessário, você pode buscar cidades por UF do gestor aqui)
+                    this.carregando = false;
+                },
+
+                onTipoChange() { this.refreshCidades(); },
+
+                init() {
+                    this.refreshCidades();
+                    window.addEventListener('gestor-updated', () => this.refreshCidades());
+                }
+            }
         }
-        const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gestorId);
-        try {
-            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const allowed = await resp.json(); // ex.: ["SP","RJ"]
+
+        // ----------------- Filtro de UFs por Gestor (endereços + picker) -----------------
+        const ufsCache = new Map(); // gestorId -> ['SP','RJ',...]
+
+        function enableAllOptions(selectEl){
+            if(!selectEl) return;
+            [...selectEl.options].forEach(opt => opt.disabled = false);
+        }
+
+        function filterSelectByAllowedUFs(selectEl, allowed){
+            if(!selectEl) return;
+            const current = selectEl.value;
+            [...selectEl.options].forEach(opt => {
+                if (opt.value === '' || opt.value === '--') { opt.disabled = false; return; }
+                opt.disabled = !allowed.includes(opt.value);
+            });
+            if (current && !allowed.includes(current)) selectEl.value = '';
+        }
+
+        function applyAllowed(allowed){
+            const uf1Sel    = document.getElementById('uf');
+            const uf2Sel    = document.getElementById('uf2');
+            const ufCitySel = document.getElementById('ufFiltroCidades');
 
             filterSelectByAllowedUFs(uf1Sel, allowed);
             filterSelectByAllowedUFs(uf2Sel, allowed);
-
             if (ufCitySel) {
-                // Mantém a opção vazia "UF..."
                 filterSelectByAllowedUFs(ufCitySel, [''].concat(allowed));
 
-                // Se o valor atual do filtro não for permitido, limpa e força o Alpine a refazer a busca.
+                // Se a UF do filtro ficou inválida, limpa e força uma nova busca do componente Alpine
                 if (ufCitySel.value && !allowed.includes(ufCitySel.value)) {
                     ufCitySel.value = '';
                     try {
-                        // tenta invocar fetchList() do componente Alpine do citiesPicker
                         const root = ufCitySel.closest('[x-data]');
                         if (root && window.Alpine) {
                             const comp = Alpine.$data(root);
                             if (comp && typeof comp.fetchList === 'function') comp.fetchList();
+                            if (comp && Array.isArray(comp.selected)) {
+                                comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
+                            }
+                        }
+                    } catch(e) {}
+                } else {
+                    // Ainda assim, saneia selecionadas fora do escopo
+                    try {
+                        const root = ufCitySel.closest('[x-data]');
+                        if (root && window.Alpine) {
+                            const comp = Alpine.$data(root);
+                            if (comp && Array.isArray(comp.selected)) {
+                                comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
+                            }
                         }
                     } catch(e) {}
                 }
             }
-        } catch (e) {
-            console.error('Erro ao carregar UFs do gestor:', e);
-            enableAllOptions(uf1Sel);
-            enableAllOptions(uf2Sel);
-            if (ufCitySel) enableAllOptions(ufCitySel);
         }
-    }
 
-    function enableAllOptions(selectEl) {
-        if (!selectEl) return;
-        [...selectEl.options].forEach(opt => opt.disabled = false);
-    }
+        async function loadUfsForGestor(gestorId){
+            const uf1Sel    = document.getElementById('uf');
+            const uf2Sel    = document.getElementById('uf2');
+            const ufCitySel = document.getElementById('ufFiltroCidades');
 
-    function filterSelectByAllowedUFs(selectEl, allowed) {
-        if (!selectEl) return;
-        const current = selectEl.value;
-        [...selectEl.options].forEach(opt => {
-            if (opt.value === '' || opt.value === '--') { opt.disabled = false; return; }
-            opt.disabled = !allowed.includes(opt.value);
-        });
-        if (current && !allowed.includes(current)) {
-            selectEl.value = '';
+            if (!gestorId) {
+                enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel);
+                return;
+            }
+            if (ufsCache.has(gestorId)) { applyAllowed(ufsCache.get(gestorId)); return; }
+
+            const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gestorId);
+            try {
+                const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const allowed = (await resp.json()).map(u => String(u).toUpperCase());
+                ufsCache.set(gestorId, allowed);
+                applyAllowed(allowed);
+            } catch (e) {
+                console.error('Erro ao carregar UFs do gestor:', e);
+                enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel);
+            }
         }
-    }
 
-    gestorSel.addEventListener('change', (e) => loadUfsForGestor(e.target.value));
+        function setupUfFiltering(){
+            const gestorSel = document.getElementById('gestor_id');
+            if (!gestorSel) return;
 
-    // carrega na primeira vez (ex.: quando volta com erros de validação)
-    if (gestorSel.value) loadUfsForGestor(gestorSel.value);
-});
-</script>
+            gestorSel.addEventListener('change', (e) => loadUfsForGestor(e.target.value));
 
+            // Primeira carga (considera old())
+            if (gestorSel.value) loadUfsForGestor(gestorSel.value);
+        }
+        // -------------------------------------------------------------------------------
+    </script>
 </x-app-layout>

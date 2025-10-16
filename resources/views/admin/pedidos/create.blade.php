@@ -396,20 +396,30 @@
     cidadeSelect.classList.add('bg-gray-50');
   }
 
-  function rebuildCidadeOptions(cidades, { allowOccupied = false } = {}) {
+  // helper para montar "Nome - UF"
+  function cidadeLabel(c, ufFallback = null) {
+    const uf = (c.state && String(c.state).trim()) || (ufFallback && String(ufFallback).trim()) || '';
+    return uf ? `${c.name} - ${uf}` : c.name;
+  }
+
+  function rebuildCidadeOptions(cidades, { allowOccupied = false, ufFallback = null } = {}) {
     cidadeSelect.innerHTML = '';
     cidadeSelect.add(new Option('-- Selecione --', ''));
+
     cidades.forEach(c => {
-      const opt = new Option(c.name, c.id);
+      const opt = new Option(cidadeLabel(c, ufFallback), c.id);
       const isOccupied = Boolean(c.ocupado);
       const distName   = c.distribuidor_nome || null;
 
       if (isOccupied && !allowOccupied) {
         opt.disabled = true;
-        opt.text = `${c.name} ${distName ? `(ocupada por ${distName})` : '(ocupada)'}`;
+        // mostra ocupação mantendo o label com UF
+        opt.text = `${cidadeLabel(c, ufFallback)} ${distName ? `(ocupada por ${distName})` : '(ocupada)'}`;
       }
+
       cidadeSelect.add(opt);
     });
+
     cidadeSelect.disabled = false;
     cidadeSelect.classList.remove('bg-gray-50');
   }
@@ -420,7 +430,8 @@
       const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const cidades = await resp.json();
-      rebuildCidadeOptions(cidades, { allowOccupied: true });
+      // aqui esperamos que venha c.state do backend; se não vier, não usamos fallback
+      rebuildCidadeOptions(cidades, { allowOccupied: true, ufFallback: null });
       if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
     } catch (e) {
       console.error(e);
@@ -435,7 +446,8 @@
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const cidades = await resp.json();
       const hasDistribuidor = Boolean(distribuidorSelect.value);
-      rebuildCidadeOptions(cidades, { allowOccupied: hasDistribuidor });
+      // se o backend ainda não mandar c.state, usamos uf como fallback no label
+      rebuildCidadeOptions(cidades, { allowOccupied: hasDistribuidor, ufFallback: uf });
       if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
     } catch (e) {
       console.error(e);
@@ -456,9 +468,8 @@
     }
   });
 
-  gestorSelect.addEventListener('change', function () {
-    // intencionalmente vazio (UF é livre)
-  });
+  // gestorSelect permanece livre; UF não fica travada
+  gestorSelect.addEventListener('change', function () {});
 
   stateSelect.addEventListener('change', async function () {
     const uf = this.value || null;
@@ -486,6 +497,7 @@
       resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
     }
   });
-  </script>
+</script>
+
 
 </x-app-layout>

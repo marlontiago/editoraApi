@@ -65,7 +65,6 @@
                  x-data="citiesPicker({
                     searchUrl: @js(route('admin.cidades.search')),
                     selectedInitial: @js(
-                        // se veio old (só ids), mandamos só ids; senão mandamos objetos completos
                         old('cities') ? $preSel->map(fn($v)=>['id'=>$v,'name'=>'','uf'=>''])->values()
                                       : $selectedFull
                     ),
@@ -80,8 +79,7 @@
                     @php
                         $ufs = ['','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
                     @endphp
-                    <select id="ufFiltroCidades" x-model="uf" @change="fetchList()"
-                            class="w-28 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <select id="ufFiltroCidades" x-model="uf" @change="fetchList()" class="w-28 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         @foreach($ufs as $uf)
                             <option value="{{ $uf }}">{{ $uf === '' ? 'UF...' : $uf }}</option>
                         @endforeach
@@ -283,7 +281,7 @@
                 @error('endereco2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
-                <label for="numero2" class="block text-sm font-medium text-gray-700">Número</label>
+                <label for="numero2" class="block textsm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero2" name="numero2" value="{{ old('numero2', $distribuidor->numero2) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('numero2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -326,26 +324,54 @@
                 @error('cep2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- ===== Novos anexos (append) ===== --}}
+            {{-- ===== Novos anexos (append) - com "Contrato por cidade" ===== --}}
             <div x-data="{ itens: [{id: Date.now()}] }" class="col-span-12">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Novos anexos (PDF)</label>
 
                 <template x-for="(item, idx) in itens" :key="item.id">
                     <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border">
-                        <div class="col-span-12 md:col-span-3">
+                        <!-- Tipo + Cidade (dinâmico) -->
+                        <div x-data="anexoCidade()" class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Tipo</label>
-                            <select :name="'contratos['+idx+'][tipo]'"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <select
+                                :name="`contratos[${idx}][tipo]`"
+                                x-model="tipo"
+                                @change="onTipoChange()"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
                                 <option value="contrato">Contrato</option>
                                 <option value="aditivo">Aditivo</option>
                                 <option value="outro">Outro</option>
+                                <option value="contrato_cidade">Contrato por cidade</option>
                             </select>
+
+                            <!-- Select de CIDADE (aparece só no tipo contrato_cidade) -->
+                            <div x-show="tipo === 'contrato_cidade'" class="mt-2">
+                                <label class="text-xs text-gray-600">Cidade (nas UFs do Gestor)</label>
+                                <select
+                                    :name="`contratos[${idx}][cidade_id]`"
+                                    x-model="cidadeId"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    @click="refreshCidades()"
+                                >
+                                    <option value="" x-show="!carregando && cidades.length === 0">Selecione...</option>
+                                    <option value="" x-show="carregando">Carregando...</option>
+                                    <template x-for="c in cidades" :key="c.id">
+                                        <option :value="c.id" x-text="c.text"></option>
+                                    </template>
+                                </select>
+                                <p class="mt-1 text-[11px] text-gray-500">
+                                    Aplica-se apenas à cidade escolhida. Este percentual terá prioridade nos cálculos.
+                                </p>
+                            </div>
                         </div>
+
                         <div class="col-span-12 md:col-span-5">
                             <label class="text-xs text-gray-600">Arquivo (PDF)</label>
                             <input type="file" accept="application/pdf" :name="'contratos['+idx+'][arquivo]'"
                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
                         </div>
+
                         <div class="col-span-12 md:col-span-2">
                             <label class="text-xs text-gray-600">Percentual</label>
                             <div class="mt-1 flex rounded-md shadow-sm">
@@ -354,7 +380,9 @@
                                        class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm">%</span>
                             </div>
+                            <p class="mt-1 text-[11px] text-gray-500">Se marcado <b>Ativo</b>, aplicará este percentual.</p>
                         </div>
+
                         <div class="col-span-12 md:col-span-2">
                             <label class="text-xs text-gray-600">Ativo?</label>
                             <div class="mt-2">
@@ -407,6 +435,8 @@
                 @error('contratos.*.percentual_vendas') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.data_assinatura') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.validade_meses') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.cidade_id') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
+                @error('contratos.*.tipo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
             {{-- ===== Ações ===== --}}
@@ -421,7 +451,7 @@
         </form>
     </div>
 
-    {{-- JS: mesmo helper do create --}}
+    {{-- JS: helpers (debounce + citiesPicker - igual ao create) --}}
     <script>
         function debounce(fn, delay=400) {
             let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), delay); }
@@ -479,93 +509,149 @@
             }
         }
     </script>
+
+    {{-- JS: filtra UFs pelo gestor escolhido + componente anexoCidade (contrato_cidade) --}}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-        const gestorSel = document.getElementById('gestor_id');
-        const uf1Sel    = document.getElementById('uf');     // UF principal
-        const uf2Sel    = document.getElementById('uf2');    // UF secundária
-        const ufCitySel = document.getElementById('ufFiltroCidades'); // UF do picker de cidades
-        const ufsCache  = new Map(); // gestorId -> ['SP','RJ',...]
+            const gestorSel = document.getElementById('gestor_id');
+            const uf1Sel    = document.getElementById('uf');     // UF principal
+            const uf2Sel    = document.getElementById('uf2');    // UF secundária
+            const ufCitySel = document.getElementById('ufFiltroCidades'); // UF do picker de cidades
+            const ufsCache  = new Map(); // gestorId -> ['SP','RJ',...]
 
-        function enableAllOptions(selectEl){
-            if(!selectEl) return;
-            [...selectEl.options].forEach(opt => opt.disabled = false);
-        }
+            function enableAllOptions(selectEl){
+                if(!selectEl) return;
+                [...selectEl.options].forEach(opt => opt.disabled = false);
+            }
 
-        function filterSelectByAllowedUFs(selectEl, allowed){
-            if(!selectEl) return;
-            const current = selectEl.value;
-            [...selectEl.options].forEach(opt => {
-            if (opt.value === '' || opt.value === '--') { opt.disabled = false; return; }
-            opt.disabled = !allowed.includes(opt.value);
-            });
-            if (current && !allowed.includes(current)) selectEl.value = '';
-        }
+            function filterSelectByAllowedUFs(selectEl, allowed){
+                if(!selectEl) return;
+                const current = selectEl.value;
+                [...selectEl.options].forEach(opt => {
+                    if (opt.value === '' || opt.value === '--') { opt.disabled = false; return; }
+                    opt.disabled = !allowed.includes(opt.value);
+                });
+                if (current && !allowed.includes(current)) selectEl.value = '';
+            }
 
-        function applyAllowed(allowed){
-            // aplica bloqueio nas UFs de endereço
-            filterSelectByAllowedUFs(uf1Sel, allowed);
-            filterSelectByAllowedUFs(uf2Sel, allowed);
+            function applyAllowed(allowed){
+                // aplica bloqueio nas UFs de endereço
+                filterSelectByAllowedUFs(uf1Sel, allowed);
+                filterSelectByAllowedUFs(uf2Sel, allowed);
 
-            // e no filtro do picker (mantém a opção vazia)
-            if (ufCitySel) {
-            filterSelectByAllowedUFs(ufCitySel, [''].concat(allowed));
+                // e no filtro do picker (mantém a opção vazia)
+                if (ufCitySel) {
+                    filterSelectByAllowedUFs(ufCitySel, [''].concat(allowed));
 
-            // Se a UF do filtro ficou inválida, limpa e força uma nova busca do componente Alpine
-            if (ufCitySel.value && !allowed.includes(ufCitySel.value)) {
-                ufCitySel.value = '';
-                try {
-                const root = ufCitySel.closest('[x-data]');
-                if (root && window.Alpine) {
-                    const comp = Alpine.$data(root);
-                    if (comp && typeof comp.fetchList === 'function') comp.fetchList();
-                    // Remove cidades selecionadas fora do escopo
-                    if (comp && Array.isArray(comp.selected)) {
-                    comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
+                    // Se a UF do filtro ficou inválida, limpa e força uma nova busca do componente Alpine
+                    if (ufCitySel.value && !allowed.includes(ufCitySel.value)) {
+                        ufCitySel.value = '';
+                        try {
+                            const root = ufCitySel.closest('[x-data]');
+                            if (root && window.Alpine) {
+                                const comp = Alpine.$data(root);
+                                if (comp && typeof comp.fetchList === 'function') comp.fetchList();
+                                // Remove cidades selecionadas fora do escopo
+                                if (comp && Array.isArray(comp.selected)) {
+                                    comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
+                                }
+                            }
+                        } catch(e) {}
+                    } else {
+                        // Mesmo se a UF do filtro for válida, ainda saneia as selecionadas
+                        try {
+                            const root = ufCitySel.closest('[x-data]');
+                            if (root && window.Alpine) {
+                                const comp = Alpine.$data(root);
+                                if (comp && Array.isArray(comp.selected)) {
+                                    comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
+                                }
+                            }
+                        } catch(e) {}
                     }
                 }
-                } catch(e) {}
-            } else {
-                // Mesmo se a UF do filtro for válida, ainda saneia as selecionadas
-                try {
-                const root = ufCitySel.closest('[x-data]');
-                if (root && window.Alpine) {
-                    const comp = Alpine.$data(root);
-                    if (comp && Array.isArray(comp.selected)) {
-                    comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
-                    }
+
+                // Notifica componentes de anexoCidade para recarregar suas cidades, se preciso
+                window.dispatchEvent(new Event('gestor-ufs-updated'));
+            }
+
+            async function loadUfsForGestor(gestorId){
+                if (!gestorId) {
+                    enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel);
+                    window.dispatchEvent(new Event('gestor-ufs-updated'));
+                    return;
                 }
-                } catch(e) {}
-            }
-            }
-        }
+                if (ufsCache.has(gestorId)) { applyAllowed(ufsCache.get(gestorId)); return; }
 
-        async function loadUfsForGestor(gestorId){
-            if (!gestorId) {
-            enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel);
-            return;
+                const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gestorId);
+                try {
+                    const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    const allowed = (await resp.json()).map(u => String(u).toUpperCase());
+                    ufsCache.set(gestorId, allowed);
+                    applyAllowed(allowed);
+                } catch (e) {
+                    console.error('Erro ao carregar UFs do gestor:', e);
+                    enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel);
+                    window.dispatchEvent(new Event('gestor-ufs-updated'));
+                }
             }
-            if (ufsCache.has(gestorId)) { applyAllowed(ufsCache.get(gestorId)); return; }
 
-            const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gestorId);
-            try {
-            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            const allowed = (await resp.json()).map(u => String(u).toUpperCase());
-            ufsCache.set(gestorId, allowed);
-            applyAllowed(allowed);
-            } catch (e) {
-            console.error('Erro ao carregar UFs do gestor:', e);
-            enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel);
-            }
-        }
+            // Reage à troca do gestor
+            gestorSel.addEventListener('change', (e) => loadUfsForGestor(e.target.value));
 
-        // Reage à troca do gestor
-        gestorSel.addEventListener('change', (e) => loadUfsForGestor(e.target.value));
-
-        // Primeira carga (considera old() ou valor do model)
-        if (gestorSel.value) loadUfsForGestor(gestorSel.value);
+            // Primeira carga (considera old() ou valor do model)
+            if (gestorSel.value) loadUfsForGestor(gestorSel.value);
         });
-        </script>
 
+        // Componente de cada card de anexo para "contrato_cidade"
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('anexoCidade', () => ({
+                tipo: 'contrato',
+                cidades: [],
+                cidadeId: null,
+                carregando: false,
+
+                async refreshCidades() {
+                    if (this.tipo !== 'contrato_cidade') return;
+                    const sel = document.getElementById('gestor_id');
+                    const gid = sel ? sel.value : '';
+                    if (!gid) { this.cidades = []; this.cidadeId = null; return; }
+
+                    try {
+                        this.carregando = true;
+                        const url = "{{ route('admin.distribuidores.cidadesPorGestor') }}" + "?gestor_id=" + encodeURIComponent(gid);
+                        const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+                        const data = await res.json();
+                        this.cidades = Array.isArray(data) ? data : [];
+                        // Se cidade atual não existir mais, limpa
+                        if (!this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
+                            this.cidadeId = null;
+                        }
+                    } catch (e) {
+                        console.error('Erro ao carregar cidades do gestor:', e);
+                        this.cidades = [];
+                    } finally {
+                        this.carregando = false;
+                    }
+                },
+
+                onTipoChange() { this.refreshCidades(); },
+
+                init() {
+                    // carrega ao iniciar
+                    this.refreshCidades();
+
+                    // Reage à troca do gestor (evento disparado acima)
+                    window.addEventListener('gestor-ufs-updated', () => this.refreshCidades());
+
+                    // Reage à troca real do select de gestor
+                    const gestorSel = document.getElementById('gestor_id');
+                    if (gestorSel) {
+                        gestorSel.addEventListener('change', () => this.refreshCidades());
+                    }
+                }
+            }));
+        });
+    </script>
 </x-app-layout>

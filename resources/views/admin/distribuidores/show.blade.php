@@ -1,3 +1,4 @@
+{{-- resources/views/admin/distribuidores/show.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
@@ -31,7 +32,7 @@
 
     <div class="max-w-6xl mx-auto p-6 space-y-6">
 
-        {{-- Dados principais (padronizado com Gestor) --}}
+        {{-- Dados principais (mesmo estilo do Gestor) --}}
         <div class="bg-white rounded-lg shadow p-6 grid grid-cols-12 gap-4">
             <div class="col-span-12 md:col-span-6">
                 <p><span class="font-medium">Gestor:</span> {{ $distribuidor->gestor?->razao_social ?: '—' }}</p>
@@ -41,7 +42,7 @@
                 <p><span class="font-medium">CPF (representante):</span> {{ $distribuidor->cpf_formatado ?? $distribuidor->cpf ?: '—' }}</p>
                 <p><span class="font-medium">RG:</span> {{ $distribuidor->rg_formatado ?? $distribuidor->rg ?: '—' }}</p>
 
-                {{-- Telefones (compat c/ legado) --}}
+                {{-- Telefones --}}
                 @php
                     $telefones = is_array($distribuidor->telefones) ? $distribuidor->telefones : [];
                 @endphp
@@ -54,7 +55,7 @@
                     @endif
                 </p>
 
-                {{-- E-mails (lista) --}}
+                {{-- E-mails --}}
                 @php
                     $emails = is_array($distribuidor->emails) ? $distribuidor->emails : [];
                 @endphp
@@ -69,7 +70,10 @@
             </div>
 
             <div class="col-span-12 md:col-span-6">
-                <p><span class="font-medium">Percentual Vendas (aplicado):</span> {{ number_format((float)($distribuidor->percentual_vendas ?? 0), 2, ',', '.') }}%</p>
+                <p class="mt-0">
+                    <span class="font-medium">Percentual Vendas (aplicado):</span>
+                    {{ number_format((float)($distribuidor->percentual_vendas ?? 0), 2, ',', '.') }}%
+                </p>
                 <p>
                     <span class="font-medium">Contrato Assinado:</span>
                     {{ $distribuidor->contrato_assinado ? 'Sim' : 'Não' }}
@@ -128,21 +132,26 @@
             </div>
         </div>
 
-        {{-- Cidades (mantido em card próprio) --}}
+        {{-- Cidades (chips, mesmo visual de UFs do Gestor) --}}
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold mb-2">Cidades de Atuação</h3>
-            @if($distribuidor->cities->isNotEmpty())
-                <ul class="list-disc pl-6">
-                    @foreach($distribuidor->cities as $city)
-                        <li>{{ $city->name }}@if($city->uf) - {{ strtoupper($city->uf) }}@endif</li>
-                    @endforeach
-                </ul>
-            @else
+            @php
+                $cities = $distribuidor->cities ?? collect();
+            @endphp
+            @if($cities->isEmpty())
                 <p class="text-gray-500">Nenhuma cidade cadastrada.</p>
+            @else
+                <div class="mt-1 flex flex-wrap gap-2">
+                    @foreach($cities as $city)
+                        <span class="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 border border-gray-200">
+                            {{ $city->name }}@if(!empty($city->uf ?? $city->state)) ({{ strtoupper($city->uf ?? $city->state) }}) @endif
+                        </span>
+                    @endforeach
+                </div>
             @endif
         </div>
 
-        {{-- Contratos / Anexos (mesmo padrão/ações do Gestor) --}}
+        {{-- Contratos / Anexos (mesmo padrão do Gestor, com suporte a contrato_cidade) --}}
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold mb-2">Contratos / Aditivos</h3>
 
@@ -166,6 +175,20 @@
                                         <span class="ml-2 px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">Ativo</span>
                                     @endif
                                 </div>
+
+                                {{-- >>> Cidade quando tipo = contrato_cidade (igual ao Gestor) <<< --}}
+                                @if($anexo->tipo === 'contrato_cidade')
+                                    @php $cidade = $anexo->cidade ?? null; @endphp
+                                    <div class="text-gray-800 mb-1">
+                                        Cidade:
+                                        <strong>
+                                            {{ $cidade ? ($cidade->nome ?? $cidade->name ?? ('ID '.$anexo->cidade_id)) : ('ID '.$anexo->cidade_id) }}
+                                            @if($cidade && !empty($cidade->uf))
+                                                ({{ $cidade->uf }})
+                                            @endif
+                                        </strong>
+                                    </div>
+                                @endif
 
                                 <div class="text-gray-700">
                                     <div>

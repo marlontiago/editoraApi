@@ -48,7 +48,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/dashboard/charts/vendas-por-distribuidor', [DashboardController::class, 'chartVendasPorDistribuidor'])->name('dashboard.charts.vendas_por_distribuidor');
     Route::get('/dashboard/charts/vendas-por-cliente', [DashboardController::class, 'chartVendasPorCliente'])->name('dashboard.charts.vendas_por_cliente');
     Route::get('/dashboard/charts/vendas-por-cidade',  [DashboardController::class, 'chartVendasPorCidade'])->name('dashboard.charts.vendas_por_cidade');
-
+    // Export do dashboard
+    Route::get('/dashboard/export/excel', [DashboardController::class, 'exportExcel'])->name('dashboard.export.excel');
+    Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('dashboard.export.pdf');
     // Recursos
     Route::resource('produtos', ProdutoController::class)->except('show');
     Route::resource('usuarios', UserController::class);
@@ -58,9 +60,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor']);
     Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('distribuidores.por-gestor')->whereNumber('gestor');
-    Route::get('/cidades/por-distribuidor/{id}', [CidadeController::class, 'cidadesPorDistribuidor']);
+    Route::get('/cidades/por-distribuidor/{distribuidor}', [CidadeController::class, 'porDistribuidor'])->name('cidades.por-distribuidor')->whereNumber('distribuidor');
     Route::delete('distribuidores/{distribuidor}/anexos/{anexo}', [DistribuidorController::class, 'destroyAnexo'])->name('distribuidores.anexos.destroy')->whereNumber('distribuidor');
     Route::post('distribuidores/{distribuidor}/anexos/{anexo}/ativar', [DistribuidorController::class, 'ativarAnexo'])->name('distribuidores.anexos.ativar')->whereNumber('distribuidor');
+    // routes/web.php (ou api.php, como preferir)
+    Route::get('distribuidores/cidades-por-ufs', [DistribuidorController::class, 'cidadesPorUfs'])->name('distribuidores.cidadesPorUfs');
+    Route::get('distribuidores/cidades-por-gestor', [DistribuidorController::class, 'cidadesPorGestor'])->name('distribuidores.cidadesPorGestor');
 
     Route::post('gestores/{gestor}/anexos/{anexo}/ativar', [GestorController::class, 'ativarAnexo'])->name('gestores.anexos.ativar');
     Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('gestores.vincular');
@@ -87,10 +92,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/pedidos/{pedido}/exportar/{tipo}', [PedidoController::class, 'exportar'])->name('pedidos.exportar');
     Route::get('/pedidos/{pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
-
-    // Export do dashboard
-    Route::get('/dashboard/export/excel', [DashboardController::class, 'exportExcel'])->name('admin.dashboard.export.excel');
-    Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('admin.dashboard.export.pdf');
 
     // Notas Fiscais & Pagamentos
     Route::post('/pedidos/{pedido}/emitir-nota', [NotaFiscalController::class, 'emitir'])->name('pedidos.emitir-nota');

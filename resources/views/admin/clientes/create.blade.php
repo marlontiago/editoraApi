@@ -41,13 +41,13 @@
             <div class="col-span-12 md:col-span-4">
                 <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ</label>
                 <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}" maxlength="18"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="00.000.000/0000-00">
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-4">
                 <label for="cpf" class="block text-sm font-medium text-gray-700">CPF</label>
                 <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}" maxlength="14"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="000.000.000-00">
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 <p class="mt-1 text-xs text-gray-500">Informe CNPJ <u>ou</u> CPF.</p>
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -85,7 +85,7 @@
                 if (empty($emailsSeed)) $emailsSeed = [''];
             @endphp
             <div class="col-span-12 md:col-span-6" x-data='{ lista: @json(array_values($emailsSeed)) }'>
-                <label class="block text-sm font-medium text-gray-700">E-mails (adicionais)</label>
+                <label class="block text-sm font-medium text-gray-700">E-mai</label>
                 <template x-for="(em, i) in lista" :key="i">
                     <div class="mt-1 flex gap-2">
                         <input type="email" maxlength="255"

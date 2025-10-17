@@ -72,9 +72,9 @@
             </div>
             <div class="col-span-12 md:col-span-4">
                 <label for="quantidade_por_caixa" class="block text-sm font-medium text-gray-700">Quantidade por Caixa <span class="text-red-600">*</span></label>
-                <input type="number" id="quantidade_por_caixa" name="quantidade_por_caixa" min="1"
+                <input type="number" id="quantidade_por_caixa" name="quantidade_por_caixa" min="0"
                        value="{{ old('quantidade_por_caixa', 1) }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500" >
                 @error('quantidade_por_caixa') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -119,7 +119,7 @@
 
             {{-- Preço e Estoque --}}
             <div class="col-span-12 md:col-span-6">
-                <label for="preco" class="block text-sm font-medium text-gray-700">Preço <span class="text-red-600">*</span></label>
+                <label for="preco" class="block text-sm font-medium text-gray-700">Preço </label>
                 <div class="mt-1 flex rounded-md shadow-sm">
                     <span class="inline-flex items-center rounded-l-md border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">R$</span>
                     <input type="number" step="0.01" id="preco" name="preco" value="{{ old('preco') }}"
@@ -128,7 +128,7 @@
                 @error('preco') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
-                <label for="quantidade_estoque" class="block text-sm font-medium text-gray-700">Estoque <span class="text-red-600">*</span></label>
+                <label for="quantidade_estoque" class="block text-sm font-medium text-gray-700">Estoque</label>
                 <input type="number" id="quantidade_estoque" name="quantidade_estoque" value="{{ old('quantidade_estoque') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                 @error('quantidade_estoque') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror

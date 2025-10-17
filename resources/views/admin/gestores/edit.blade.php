@@ -4,6 +4,9 @@
         <h2 class="text-xl font-semibold text-gray-800">Editar Gestor</h2>
     </x-slot>
 
+    {{-- Evita "piscar" de elementos controlados pelo Alpine --}}
+    <style>[x-cloak]{display:none !important}</style>
+
     <div class="max-w-6xl mx-auto p-6">
         {{-- Resumo de validação --}}
         @if ($errors->any())
@@ -293,9 +296,10 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Adicionar novos anexos (PDF)</label>
 
                 <template x-for="(item, idx) in itens" :key="item.id">
-                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border">
+                    {{-- x-data no CARD inteiro para compartilhar "tipo" com as colunas --}}
+                    <div x-data="anexoCidade()" class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border">
                         <!-- Tipo + Cidade (dinâmico) -->
-                        <div x-data="anexoCidade()" class="col-span-12 md:col-span-3">
+                        <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Tipo</label>
                             <select :name="`contratos[${idx}][tipo]`"
                                     x-model="tipo"
@@ -307,7 +311,7 @@
                                 <option value="contrato_cidade">Contrato por cidade</option>
                             </select>
 
-                            <div x-show="tipo === 'contrato_cidade'" class="mt-2">
+                            <div x-show="tipo === 'contrato_cidade'" class="mt-2" x-cloak>
                                 <label class="text-xs text-gray-600">Cidade (das UFs selecionadas)</label>
                                 <select :name="`contratos[${idx}][cidade_id]`"
                                         x-model="cidadeId"
@@ -340,11 +344,17 @@
                             <p class="mt-1 text-[11px] text-gray-500">Se marcado como <b>Ativo</b>, este percentual será aplicado ao Gestor.</p>
                         </div>
 
-                        <div class="col-span-12 md:col-span-2">
+                        {{-- Esconde e não envia "Ativo?" quando for contrato por cidade --}}
+                        <div class="col-span-12 md:col-span-2" x-show="tipo !== 'contrato_cidade'" x-cloak>
                             <label class="text-xs text-gray-600">Ativo?</label>
                             <div class="mt-2">
                                 <label class="inline-flex items-center text-sm">
-                                    <input type="checkbox" :name="`contratos[${idx}][ativo]`" value="1" class="rounded border-gray-300">
+                                    <input
+                                        type="checkbox"
+                                        :name="tipo !== 'contrato_cidade' ? `contratos[${idx}][ativo]` : null"
+                                        :disabled="tipo === 'contrato_cidade'"
+                                        value="1"
+                                        class="rounded border-gray-300">
                                     <span class="ml-2">Ativo</span>
                                 </label>
                             </div>
@@ -488,9 +498,8 @@
     {{-- Alpine store + componentes auxiliares --}}
     <script>
         document.addEventListener('alpine:init', () => {
-            // Store compartilhado (mesma ideia do create)
+            // Store compartilhado
             Alpine.store('gestor', {
-                // inicia com as UFs marcadas no edit
                 ufsSelecionadas: @json($selecionadas),
                 cidadesCache: {},
                 async getCidadesOptions() {
@@ -517,6 +526,7 @@
                 }
             });
 
+            // Componente por card
             Alpine.data('anexoCidade', () => ({
                 tipo: 'contrato',
                 cidades: [],

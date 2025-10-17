@@ -150,7 +150,7 @@
                 <h3 class="text-sm font-semibold text-gray-700">Preço & estoque</h3>
                 <div class="mt-3 grid grid-cols-12 gap-4">
                     <div class="col-span-12 md:col-span-6">
-                        <label for="preco" class="block text-sm font-medium text-gray-700">Preço <span class="text-red-600">*</span></label>
+                        <label for="preco" class="block text-sm font-medium text-gray-700">Preço</label>
                         <div class="mt-1 flex rounded-md shadow-sm">
                             <span class="inline-flex items-center rounded-l-md border border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">R$</span>
                             <input type="number" step="0.01" id="preco" name="preco"
@@ -161,7 +161,7 @@
                     </div>
 
                     <div class="col-span-12 md:col-span-6">
-                        <label for="quantidade_estoque" class="block text-sm font-medium text-gray-700">Estoque <span class="text-red-600">*</span></label>
+                        <label for="quantidade_estoque" class="block text-sm font-medium text-gray-700">Estoque </label>
                         <input type="number" id="quantidade_estoque" name="quantidade_estoque"
                                value="{{ old('quantidade_estoque', $produto->quantidade_estoque) }}"
                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >

@@ -359,11 +359,17 @@
                             <p class="mt-1 text-[11px] text-gray-500">Se marcado <b>Ativo</b>, aplicará este percentual.</p>
                         </div>
 
-                        <div class="col-span-12 md:col-span-2">
+                        {{-- Esconde/omite "Ativo?" quando o tipo for contrato_cidade --}}
+                        <div class="col-span-12 md:col-span-2" x-show="tipo !== 'contrato_cidade'" x-cloak>
                             <label class="text-xs text-gray-600">Ativo?</label>
                             <div class="mt-2">
                                 <label class="inline-flex items-center text-sm">
-                                    <input type="checkbox" :name="'contratos['+idx+'][ativo]'" value="1" class="rounded border-gray-300">
+                                    <input
+                                        type="checkbox"
+                                        :name="tipo !== 'contrato_cidade' ? 'contratos['+idx+'][ativo]' : null"
+                                        :disabled="tipo === 'contrato_cidade'"
+                                        value="1"
+                                        class="rounded border-gray-300">
                                     <span class="ml-2">Ativo</span>
                                 </label>
                             </div>
@@ -449,8 +455,7 @@
                     if (this.cidadesCacheByGestor[gid]) return this.cidadesCacheByGestor[gid];
 
                     try {
-                        const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gid); // só pra validar acesso; cidades vem do search
-                        // não precisamos da resposta aqui; a lista de cidades por UF já vem do search global
+                        const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gid); // apenas validação de acesso
                     } catch(e) {}
 
                     return [];
@@ -546,62 +551,62 @@
 
         // Componente de cada "card" de anexo com cidade dinâmica
         function anexoCidadeDist() {
-    return {
-        tipo: 'contrato',
-        cidades: [],
-        cidadeId: '',
-        carregando: false,
+            return {
+                tipo: 'contrato',
+                cidades: [],
+                cidadeId: '',
+                carregando: false,
 
-        async refreshCidades() {
-            // só carrega quando o tipo exigir cidade
-            if (this.tipo !== 'contrato_cidade') {
-                this.cidades = [];
-                this.cidadeId = '';
-                return;
-            }
+                async refreshCidades() {
+                    // só carrega quando o tipo exigir cidade
+                    if (this.tipo !== 'contrato_cidade') {
+                        this.cidades = [];
+                        this.cidadeId = '';
+                        return;
+                    }
 
-            // gestor atual vem do Alpine store do form principal
-            const gid = (window.Alpine?.store('dist')?.gestorId || '').toString().trim();
-            if (!gid) {
-                this.cidades = [];
-                this.cidadeId = '';
-                return;
-            }
+                    // gestor atual vem do Alpine store do form principal
+                    const gid = (window.Alpine?.store('dist')?.gestorId || '').toString().trim();
+                    if (!gid) {
+                        this.cidades = [];
+                        this.cidadeId = '';
+                        return;
+                    }
 
-            this.carregando = true;
-            try {
-                const url = `${ROTA_CIDADES_POR_GESTOR}?gestor_id=${encodeURIComponent(gid)}`;
-                const resp = await fetch(url, {
-                    credentials: 'same-origin',
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    this.carregando = true;
+                    try {
+                        const url = `${ROTA_CIDADES_POR_GESTOR}?gestor_id=${encodeURIComponent(gid)}`;
+                        const resp = await fetch(url, {
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
-                const rows = await resp.json(); // [{id, text, uf}]
-                this.cidades = rows;
+                        const rows = await resp.json(); // [{id, text, uf}]
+                        this.cidades = rows;
 
-                // se a cidade selecionada não pertence mais ao novo conjunto, limpa
-                if (this.cidadeId && !this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
-                    this.cidadeId = '';
+                        // se a cidade selecionada não pertence mais ao novo conjunto, limpa
+                        if (this.cidadeId && !this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
+                            this.cidadeId = '';
+                        }
+                    } catch (e) {
+                        console.error('[anexoCidadeDist] erro ao carregar cidades por gestor:', e);
+                        this.cidades = [];
+                        this.cidadeId = '';
+                    } finally {
+                        this.carregando = false;
+                    }
+                },
+
+                onTipoChange() { this.refreshCidades(); },
+
+                init() {
+                    // carga inicial (considera old()) e recarrega ao trocar gestor
+                    this.refreshCidades();
+                    window.addEventListener('gestor-updated', () => this.refreshCidades());
                 }
-            } catch (e) {
-                console.error('[anexoCidadeDist] erro ao carregar cidades por gestor:', e);
-                this.cidades = [];
-                this.cidadeId = '';
-            } finally {
-                this.carregando = false;
             }
-        },
-
-        onTipoChange() { this.refreshCidades(); },
-
-        init() {
-            // carga inicial (considera old()) e recarrega ao trocar gestor
-            this.refreshCidades();
-            window.addEventListener('gestor-updated', () => this.refreshCidades());
         }
-    }
-}
 
         // ----------------- Filtro de UFs por Gestor (endereços + picker) -----------------
         const ufsCache = new Map(); // gestorId -> ['SP','RJ',...]

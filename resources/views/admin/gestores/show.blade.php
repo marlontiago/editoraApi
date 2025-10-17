@@ -171,7 +171,7 @@
                                     @endif
                                 </div>
 
-                                {{-- >>> AQUI: Cidade para contrato_cidade <<< --}}
+                                {{-- Cidade para contrato_cidade --}}
                                 @if($anexo->tipo === 'contrato_cidade')
                                     @php $cidade = $anexo->cidade ?? null; @endphp
                                     <div class="text-gray-800 mb-1">
@@ -202,15 +202,15 @@
                                     @endif
                                 </div>
                             </div>
-                            
 
                             <div class="flex items-center gap-2">
+                                {{-- Editar (sempre visível) --}}
+                                <a href="{{ route('admin.gestores.anexos.edit', [$gestor, $anexo]) }}"
+                                   class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                                    Editar
+                                </a>
 
-                                {{-- Botão Editar (sempre visível) --}}
-                            <a href="{{ route('admin.gestores.anexos.edit', [$gestor, $anexo]) }}"
-                            class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
-                                Editar
-                            </a>
+                                {{-- Ver PDF (se existir) --}}
                                 @if($anexo->arquivo)
                                     <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($anexo->arquivo) }}"
                                        target="_blank"
@@ -219,7 +219,8 @@
                                     </a>
                                 @endif
 
-                                @unless($isAtivo)
+                                {{-- Ativar: somente se não for contrato_cidade e não estiver ativo --}}
+                                @unless($isAtivo || $anexo->tipo === 'contrato_cidade')
                                     <form method="POST" action="{{ route('admin.gestores.anexos.ativar', [$gestor, $anexo]) }}">
                                         @csrf
                                         <button type="submit"
@@ -230,6 +231,7 @@
                                     </form>
                                 @endunless
 
+                                {{-- Excluir --}}
                                 <form action="{{ route('admin.gestores.anexos.destroy', [$gestor, $anexo]) }}"
                                       method="POST"
                                       onsubmit="return confirm('Tem certeza que deseja excluir este anexo?');">

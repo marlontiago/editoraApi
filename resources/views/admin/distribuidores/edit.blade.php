@@ -329,9 +329,10 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Novos anexos (PDF)</label>
 
                 <template x-for="(item, idx) in itens" :key="item.id">
-                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border">
+                    <!-- 👇 Mover x-data para o CONTAINER do card -->
+                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border" x-data="anexoCidade()">
                         <!-- Tipo + Cidade (dinâmico) -->
-                        <div x-data="anexoCidade()" class="col-span-12 md:col-span-3">
+                        <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Tipo</label>
                             <select
                                 :name="`contratos[${idx}][tipo]`"
@@ -369,46 +370,55 @@
                         <div class="col-span-12 md:col-span-5">
                             <label class="text-xs text-gray-600">Arquivo (PDF)</label>
                             <input type="file" accept="application/pdf" :name="'contratos['+idx+'][arquivo]'"
-                                   class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
+                                class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
                         </div>
 
                         <div class="col-span-12 md:col-span-2">
                             <label class="text-xs text-gray-600">Percentual</label>
                             <div class="mt-1 flex rounded-md shadow-sm">
                                 <input type="number" step="0.01" min="0" max="100"
-                                       :name="'contratos['+idx+'][percentual_vendas]'"
-                                       class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    :name="'contratos['+idx+'][percentual_vendas]'"
+                                    class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm">%</span>
                             </div>
-                            <p class="mt-1 text-[11px] text-gray-500">Se marcado <b>Ativo</b>, aplicará este percentual.</p>
+                            <!-- dica muda conforme tipo -->
+                            <template x-if="tipo !== 'contrato_cidade'">
+                                <p class="mt-1 text-[11px] text-gray-500">Se marcado <b>Ativo</b>, aplicará este percentual.</p>
+                            </template>
+                            <template x-if="tipo === 'contrato_cidade'">
+                                <p class="mt-1 text-[11px] text-gray-500">Para <b>Contrato por cidade</b>, o percentual se aplica automaticamente à cidade escolhida.</p>
+                            </template>
                         </div>
 
-                        <div class="col-span-12 md:col-span-2">
-                            <label class="text-xs text-gray-600">Ativo?</label>
-                            <div class="mt-2">
-                                <label class="inline-flex items-center text-sm">
-                                    <input type="checkbox" :name="'contratos['+idx+'][ativo]'" value="1" class="rounded border-gray-300">
-                                    <span class="ml-2">Ativo</span>
-                                </label>
+                        <!-- "Ativo?" só para tipos diferentes de contrato_cidade -->
+                        <template x-if="tipo !== 'contrato_cidade'">
+                            <div class="col-span-12 md:col-span-2">
+                                <label class="text-xs text-gray-600">Ativo?</label>
+                                <div class="mt-2">
+                                    <label class="inline-flex items-center text-sm">
+                                        <input type="checkbox" :name="'contratos['+idx+'][ativo]'" value="1" class="rounded border-gray-300">
+                                        <span class="ml-2">Ativo</span>
+                                    </label>
+                                </div>
                             </div>
-                        </div>
+                        </template>
 
                         <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Data de Assinatura</label>
                             <input type="date" :name="'contratos['+idx+'][data_assinatura]'"
-                                   class="mt-1 block w-full rounded-md border-gray-300">
+                                class="mt-1 block w-full rounded-md border-gray-300">
                         </div>
 
                         <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Validade (meses)</label>
                             <input type="number" min="1" max="120" step="1" :name="'contratos['+idx+'][validade_meses]'"
-                                   class="mt-1 block w-full rounded-md border-gray-300">
+                                class="mt-1 block w-full rounded-md border-gray-300">
                             <p class="mt-1 text-[11px] text-gray-500">Vencimento = Assinatura + Validade.</p>
                         </div>
 
                         <div class="col-span-12">
                             <input type="text" placeholder="Descrição (opcional)" :name="'contratos['+idx+'][descricao]'"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <label class="inline-flex items-center text-sm mt-2">
                                 <input type="checkbox" :name="'contratos['+idx+'][assinado]'" value="1" class="rounded border-gray-300">
                                 <span class="ml-2">Assinado</span>
@@ -438,6 +448,7 @@
                 @error('contratos.*.cidade_id') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.tipo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
 
             {{-- ===== Ações ===== --}}
             <div class="col-span-12 flex items-center justify-end gap-3 pt-2">

@@ -211,7 +211,7 @@
                             <div class="flex items-center gap-2">
 
                                 <a href="{{ route('admin.distribuidores.anexos.edit', [$distribuidor, $anexo]) }}"
-                                class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                                   class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
                                     Editar
                                 </a>
                                 @if($anexo->arquivo)
@@ -222,7 +222,8 @@
                                     </a>
                                 @endif
 
-                                @unless($isAtivo)
+                                {{-- Mostrar "Ativar" somente se NÃO estiver ativo E NÃO for contrato_cidade --}}
+                                @if(!$isAtivo && $anexo->tipo !== 'contrato_cidade')
                                     <form method="POST" action="{{ route('admin.distribuidores.anexos.ativar', [$distribuidor, $anexo]) }}">
                                         @csrf
                                         <button type="submit"
@@ -231,7 +232,7 @@
                                             Ativar
                                         </button>
                                     </form>
-                                @endunless
+                                @endif
 
                                 <form action="{{ route('admin.distribuidores.anexos.destroy', [$distribuidor, $anexo]) }}"
                                       method="POST"

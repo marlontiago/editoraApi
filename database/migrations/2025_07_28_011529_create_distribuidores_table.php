@@ -22,10 +22,10 @@ return new class extends Migration {
                 ->nullOnDelete();
 
             // Dados principais
-            $table->string('razao_social');
-            $table->string('cnpj');
-            $table->string('representante_legal');
-            $table->string('cpf');
+            $table->string('razao_social')->nullable();
+            $table->string('cnpj')->nullable();
+            $table->string('representante_legal')->nullable();
+            $table->string('cpf')->nullable();
             $table->string('rg')->nullable();
 
             // Contatos (agora como listas JSON)
@@ -52,7 +52,7 @@ return new class extends Migration {
             $table->string('cep2', 9)->nullable();
 
             // Comercial / Contrato
-            $table->decimal('percentual_vendas', 5, 2)->default(0);
+            $table->decimal('percentual_vendas', 5, 2)->default(0)->nullable();
             $table->date('vencimento_contrato')->nullable();
             $table->boolean('contrato_assinado')->default(false);
 

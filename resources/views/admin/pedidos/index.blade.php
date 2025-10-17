@@ -127,6 +127,9 @@
                     @endforelse
                 </tbody>
             </table>
+            <div class="mt-4">
+                {{ $pedidos->withQueryString()->links() }}
+            </div>
         </div>
     </div>
 </x-app-layout>

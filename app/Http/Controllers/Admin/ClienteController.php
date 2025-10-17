@@ -24,7 +24,7 @@ class ClienteController extends Controller
     {
         $validated = $request->validate([
             'razao_social'   => ['required','string','max:255'],
-            'email'          => ['required','email','max:255','unique:clientes,email'],
+            'email'          => ['nullable','email','max:255','unique:clientes,email'],
 
             // documentos
             'cnpj'           => ['nullable','string','max:18','required_without:cpf'],

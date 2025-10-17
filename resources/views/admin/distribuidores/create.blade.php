@@ -122,27 +122,27 @@
 
             {{-- ===== Dados cadastrais ===== --}}
             <div class="col-span-12 md:col-span-6">
-                <label for="razao_social" class="block text-sm font-medium text-gray-700">Razão Social <span class="text-red-600">*</span></label>
+                <label for="razao_social" class="block text-sm font-medium text-gray-700">Razão Social </label>
                 <input type="text" id="razao_social" name="razao_social" value="{{ old('razao_social') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('razao_social') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
-                <label for="representante_legal" class="block text-sm font-medium text-gray-700">Representante Legal <span class="text-red-600">*</span></label>
+                <label for="representante_legal" class="block text-sm font-medium text-gray-700">Representante Legal </label>
                 <input type="text" id="representante_legal" name="representante_legal" value="{{ old('representante_legal') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('representante_legal') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
-                <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ <span class="text-red-600">*</span></label>
+                <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ </label>
                 <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}" maxlength="18"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
-                <label for="cpf" class="block text-sm font-medium text-gray-700">CPF <span class="text-red-600">*</span></label>
+                <label for="cpf" class="block text-sm font-medium text-gray-700">CPF </label>
                 <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}" maxlength="14"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
@@ -409,7 +409,7 @@
 
                 @error('contratos.*.arquivo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.percentual_vendas') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
-                @error('contratos.*.data_assinatura') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror>
+                @error('contratos.*.data_assinatura') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.validade_meses') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.cidade_id') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('contratos.*.tipo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -426,6 +426,9 @@
             </div>
         </form>
     </div>
+    <script>
+    const ROTA_CIDADES_POR_GESTOR = @js(route('admin.distribuidores.cidadesPorGestor'));
+    </script>
 
     {{-- JS: Alpine helpers + store compartilhado (gestor → cidades) --}}
     <script>
@@ -543,27 +546,62 @@
 
         // Componente de cada "card" de anexo com cidade dinâmica
         function anexoCidadeDist() {
-            return {
-                tipo: 'contrato',
-                cidades: [],
-                cidadeId: null,
-                carregando: false,
+    return {
+        tipo: 'contrato',
+        cidades: [],
+        cidadeId: '',
+        carregando: false,
 
-                async refreshCidades() {
-                    if (this.tipo !== 'contrato_cidade') return;
-                    this.carregando = true;
-                    // (Se necessário, você pode buscar cidades por UF do gestor aqui)
-                    this.carregando = false;
-                },
-
-                onTipoChange() { this.refreshCidades(); },
-
-                init() {
-                    this.refreshCidades();
-                    window.addEventListener('gestor-updated', () => this.refreshCidades());
-                }
+        async refreshCidades() {
+            // só carrega quando o tipo exigir cidade
+            if (this.tipo !== 'contrato_cidade') {
+                this.cidades = [];
+                this.cidadeId = '';
+                return;
             }
+
+            // gestor atual vem do Alpine store do form principal
+            const gid = (window.Alpine?.store('dist')?.gestorId || '').toString().trim();
+            if (!gid) {
+                this.cidades = [];
+                this.cidadeId = '';
+                return;
+            }
+
+            this.carregando = true;
+            try {
+                const url = `${ROTA_CIDADES_POR_GESTOR}?gestor_id=${encodeURIComponent(gid)}`;
+                const resp = await fetch(url, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+                const rows = await resp.json(); // [{id, text, uf}]
+                this.cidades = rows;
+
+                // se a cidade selecionada não pertence mais ao novo conjunto, limpa
+                if (this.cidadeId && !this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
+                    this.cidadeId = '';
+                }
+            } catch (e) {
+                console.error('[anexoCidadeDist] erro ao carregar cidades por gestor:', e);
+                this.cidades = [];
+                this.cidadeId = '';
+            } finally {
+                this.carregando = false;
+            }
+        },
+
+        onTipoChange() { this.refreshCidades(); },
+
+        init() {
+            // carga inicial (considera old()) e recarrega ao trocar gestor
+            this.refreshCidades();
+            window.addEventListener('gestor-updated', () => this.refreshCidades());
         }
+    }
+}
 
         // ----------------- Filtro de UFs por Gestor (endereços + picker) -----------------
         const ufsCache = new Map(); // gestorId -> ['SP','RJ',...]

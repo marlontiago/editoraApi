@@ -130,27 +130,27 @@
 
             {{-- ===== Dados cadastrais ===== --}}
             <div class="col-span-12 md:col-span-6">
-                <label for="razao_social" class="block text-sm font-medium text-gray-700">Razão Social <span class="text-red-600">*</span></label>
+                <label for="razao_social" class="block text-sm font-medium text-gray-700">Razão Social</label>
                 <input type="text" id="razao_social" name="razao_social" value="{{ old('razao_social', $distribuidor->razao_social) }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('razao_social') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
-                <label for="representante_legal" class="block text-sm font-medium text-gray-700">Representante Legal <span class="text-red-600">*</span></label>
+                <label for="representante_legal" class="block text-sm font-medium text-gray-700">Representante Legal </label>
                 <input type="text" id="representante_legal" name="representante_legal" value="{{ old('representante_legal', $distribuidor->representante_legal) }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('representante_legal') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
-                <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ <span class="text-red-600">*</span></label>
+                <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ </label>
                 <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj', $distribuidor->cnpj) }}" maxlength="18"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
-                <label for="cpf" class="block text-sm font-medium text-gray-700">CPF <span class="text-red-600">*</span></label>
+                <label for="cpf" class="block text-sm font-medium text-gray-700">CPF </label>
                 <input type="text" id="cpf" name="cpf" value="{{ old('cpf', $distribuidor->cpf) }}" maxlength="14"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">

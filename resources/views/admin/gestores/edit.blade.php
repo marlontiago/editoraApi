@@ -29,7 +29,7 @@
                     Razão Social <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="razao_social" name="razao_social" value="{{ old('razao_social', $gestor->razao_social) }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('razao_social') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -39,7 +39,7 @@
                     CNPJ <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj', $gestor->cnpj) }}" maxlength="18"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -49,7 +49,7 @@
                     Representante Legal <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="representante_legal" name="representante_legal" value="{{ old('representante_legal', $gestor->representante_legal) }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('representante_legal') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -59,7 +59,7 @@
                     CPF <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="cpf" name="cpf" value="{{ old('cpf', $gestor->cpf) }}" maxlength="14"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 

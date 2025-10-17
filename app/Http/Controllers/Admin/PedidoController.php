@@ -39,7 +39,7 @@ class PedidoController extends Controller
                 DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
             ]);
 
-        $pedidos = Pedido::with(['cidades', 'gestor', 'distribuidor.user', 'cliente'])->latest()->get();
+        $pedidos = Pedido::with(['cidades', 'gestor', 'distribuidor.user', 'cliente'])->latest()->paginate(10);
 
         return view('admin.pedidos.index', compact('pedidos', 'produtosComEstoqueBaixo','estoqueParaPedidosEmPotencial'));
     }

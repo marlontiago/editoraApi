@@ -16,14 +16,14 @@ return new class extends Migration {
             $table->string('estado_uf', 2)->nullable()->index();
 
             $table->string('razao_social');
-            $table->string('cnpj', 18);
-            $table->string('representante_legal');
-            $table->string('cpf', 14);
+            $table->string('cnpj', 18)->nullable();
+            $table->string('representante_legal')->nullable();
+            $table->string('cpf', 14)->nullable();
             $table->string('rg', 30)->nullable();
 
             // Telefone/e-mail "legados" (mantidos p/ compat)
             $table->string('telefone', 20)->nullable();
-            $table->string('email')->nullable();
+            $table->string('email')->nullable()->unique();
 
             // NOVOS: listas
             $table->json('telefones')->nullable();

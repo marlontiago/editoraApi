@@ -31,9 +31,9 @@
 
             {{-- E-mail principal --}}
             <div class="col-span-12 md:col-span-4">
-                <label for="email" class="block text-sm font-medium text-gray-700">E-mail (principal) <span class="text-red-600">*</span></label>
+                <label for="email" class="block text-sm font-medium text-gray-700">E-mail (principal)</label>
                 <input type="email" id="email" name="email" value="{{ old('email') }}"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -146,7 +146,7 @@
             <div class="col-span-12 md:col-span-2">
                 <label for="cep" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep" name="cep" value="{{ old('cep') }}" maxlength="9"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="00000-000">
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cep') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -198,7 +198,7 @@
             <div class="col-span-12 md:col-span-2">
                 <label for="cep2" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep2" name="cep2" value="{{ old('cep2') }}" maxlength="9"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="00000-000">
+                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cep2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 

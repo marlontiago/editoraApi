@@ -16,7 +16,7 @@ return new class extends Migration
 
             $table->string('razao_social');
             // E-mail principal do cliente (mantido e único)
-            $table->string('email')->unique();
+            $table->string('email')->nullable()->unique();
 
             // Documentos (um dos dois obrigatório na validação)
             $table->string('cnpj', 18)->nullable();

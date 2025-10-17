@@ -71,10 +71,10 @@ class GestorController extends Controller
 
         $data = $request->validate([
             // Gestor
-            'razao_social'        => ['required','string','max:255'],
-            'cnpj'                => ['required','string','max:18'],
-            'representante_legal' => ['required','string','max:255'],
-            'cpf'                 => ['required','string','max:14'],
+            'razao_social'        => ['nullable','string','max:255'],
+            'cnpj'                => ['nullable','string','max:18'],
+            'representante_legal' => ['nullable','string','max:255'],
+            'cpf'                 => ['nullable','string','max:14'],
             'rg'                  => ['nullable','string','max:30'],
 
             // listas novas
@@ -352,10 +352,10 @@ class GestorController extends Controller
         ]);
 
         $data = $request->validate([
-            'razao_social'        => ['required','string','max:255'],
-            'cnpj'                => ['required','string','max:18'],
-            'representante_legal' => ['required','string','max:255'],
-            'cpf'                 => ['required','string','max:14'],
+            'razao_social'        => ['nullable','string','max:255'],
+            'cnpj'                => ['nullable','string','max:18'],
+            'representante_legal' => ['nullable','string','max:255'],
+            'cpf'                 => ['nullable','string','max:14'],
             'rg'                  => ['nullable','string','max:30'],
 
             // listas novas

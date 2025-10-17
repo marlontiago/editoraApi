@@ -209,6 +209,11 @@
                             </div>
 
                             <div class="flex items-center gap-2">
+
+                                <a href="{{ route('admin.distribuidores.anexos.edit', [$distribuidor, $anexo]) }}"
+                                class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                                    Editar
+                                </a>
                                 @if($anexo->arquivo)
                                     <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($anexo->arquivo) }}"
                                        target="_blank"

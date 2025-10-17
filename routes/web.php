@@ -16,9 +16,11 @@ use App\Http\Controllers\Admin\NotaFiscalController;
 use App\Http\Controllers\Admin\NotaPagamentoController;
 use App\Http\Controllers\Admin\AdvogadoController;
 use App\Http\Controllers\Admin\DiretorComercialController;
+use App\Http\Controllers\Admin\DistribuidorAnexoController;
 use App\Http\Controllers\RelatoriosController;
 use App\Http\Controllers\NotaFiscalPlugNotasController;
 use App\Http\Controllers\NotaFiscalPlugBridgeController;
+use App\Http\Controllers\Admin\GestorAnexoController;
 use App\Models\Gestor;
 
 Route::pattern('gestor', '[0-9]+');        // {gestor} numérico
@@ -66,11 +68,15 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // routes/web.php (ou api.php, como preferir)
     Route::get('distribuidores/cidades-por-ufs', [DistribuidorController::class, 'cidadesPorUfs'])->name('distribuidores.cidadesPorUfs');
     Route::get('distribuidores/cidades-por-gestor', [DistribuidorController::class, 'cidadesPorGestor'])->name('distribuidores.cidadesPorGestor');
+    Route::get('distribuidores/{distribuidor}/anexos/{anexo}/edit', [DistribuidorAnexoController::class, 'edit'])->name('distribuidores.anexos.edit');
+    Route::put('distribuidores/{distribuidor}/anexos/{anexo}', [DistribuidorAnexoController::class, 'update'])->name('distribuidores.anexos.update');
 
     Route::post('gestores/{gestor}/anexos/{anexo}/ativar', [GestorController::class, 'ativarAnexo'])->name('gestores.anexos.ativar');
     Route::get('gestores/vincular', [GestorController::class, 'vincularDistribuidores'])->name('gestores.vincular');
     Route::post('gestores/vincular', [GestorController::class, 'storeVinculo'])->name('gestores.vincular.salvar');
     Route::resource('gestores', GestorController::class)->parameters(['gestores' => 'gestor']);
+    Route::get('gestores/{gestor}/anexos/{anexo}/edit', [GestorAnexoController::class, 'edit'])->name('gestores.anexos.edit');
+    Route::put('gestores/{gestor}/anexos/{anexo}', [GestorAnexoController::class, 'update'])->name('gestores.anexos.update');
 
     // JSON: UFs do gestor (para filtrar selects sem recarregar a página)
     Route::get('gestores/{gestor}/ufs', [GestorController::class, 'ufs'])->name('gestores.ufs');

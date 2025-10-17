@@ -202,8 +202,15 @@
                                     @endif
                                 </div>
                             </div>
+                            
 
                             <div class="flex items-center gap-2">
+
+                                {{-- Botão Editar (sempre visível) --}}
+                            <a href="{{ route('admin.gestores.anexos.edit', [$gestor, $anexo]) }}"
+                            class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                                Editar
+                            </a>
                                 @if($anexo->arquivo)
                                     <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($anexo->arquivo) }}"
                                        target="_blank"

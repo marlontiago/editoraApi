@@ -56,9 +56,9 @@ class DistribuidorController extends Controller
 
             // dados cadastrais
             'razao_social'        => ['required','string','max:255'],
-            'cnpj'                => ['required','string','max:18'],
-            'representante_legal' => ['required','string','max:255'],
-            'cpf'                 => ['required','string','max:14'],
+            'cnpj'                => ['nullable','string','max:18'],
+            'representante_legal' => ['nullable','string','max:255'],
+            'cpf'                 => ['nullable','string','max:14'],
             'rg'                  => ['nullable','string','max:30'],
 
             // listas
@@ -91,7 +91,7 @@ class DistribuidorController extends Controller
             'cities.*'            => ['integer','exists:cities,id'],
 
             // comerciais
-            'percentual_vendas'   => ['required','numeric','min:0','max:100'],
+            'percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
 
             // ANEXOS
             'contratos'                     => ['nullable','array'],
@@ -248,6 +248,9 @@ class DistribuidorController extends Controller
 
                     $anexo = $distribuidor->anexos()->create([
                         'tipo'              => $meta['tipo'] ?? 'contrato',
+                        'cidade_id'         => ($meta['tipo'] ?? null) === 'contrato_cidade'
+                            ? (!empty($meta['cidade_id']) ? (int)$meta['cidade_id'] : null)
+                            : null,
                         'arquivo'           => $path,
                         'descricao'         => $meta['descricao'] ?? null,
                         'assinado'          => !empty($meta['assinado']),
@@ -331,10 +334,10 @@ class DistribuidorController extends Controller
             'email'               => ['nullable','email','max:255','unique:users,email,'.$distribuidor->user_id],
             'password'            => ['nullable','string','min:8'],
 
-            'razao_social'        => ['required','string','max:255'],
-            'cnpj'                => ['required','string','max:18'],
-            'representante_legal' => ['required','string','max:255'],
-            'cpf'                 => ['required','string','max:14'],
+            'razao_social'        => ['nullable','string','max:255'],
+            'cnpj'                => ['nullable','string','max:18'],
+            'representante_legal' => ['nullable','string','max:255'],
+            'cpf'                 => ['nullable','string','max:14'],
             'rg'                  => ['nullable','string','max:30'],
 
             'emails'              => ['nullable','array'],

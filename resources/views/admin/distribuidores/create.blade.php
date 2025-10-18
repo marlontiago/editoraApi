@@ -627,16 +627,21 @@
         }
 
         function applyAllowed(allowed){
-            const uf1Sel    = document.getElementById('uf');
-            const uf2Sel    = document.getElementById('uf2');
-            const ufCitySel = document.getElementById('ufFiltroCidades');
+            // Sempre manter TODOS os estados liberados nos selects de endereço
+            const uf1Sel    = document.getElementById('uf');   // endereço principal
+            const uf2Sel    = document.getElementById('uf2');  // endereço secundário
+            const ufCitySel = document.getElementById('ufFiltroCidades'); // filtro do picker (este sim é restrito)
 
-            filterSelectByAllowedUFs(uf1Sel, allowed);
-            filterSelectByAllowedUFs(uf2Sel, allowed);
+            // Endereços: liberar tudo (sem filtro por gestor)
+            enableAllOptions(uf1Sel);
+            enableAllOptions(uf2Sel);
+
+            // Picker de Cidades de Atuação: restringir às UFs do gestor
             if (ufCitySel) {
+                // permite vazio + UFs permitidas
                 filterSelectByAllowedUFs(ufCitySel, [''].concat(allowed));
 
-                // Se a UF do filtro ficou inválida, limpa e força uma nova busca do componente Alpine
+                // Se a UF selecionada no filtro ficou inválida, limpar e forçar nova busca
                 if (ufCitySel.value && !allowed.includes(ufCitySel.value)) {
                     ufCitySel.value = '';
                     try {
@@ -644,13 +649,15 @@
                         if (root && window.Alpine) {
                             const comp = Alpine.$data(root);
                             if (comp && typeof comp.fetchList === 'function') comp.fetchList();
+
+                            // Saneia cidades já selecionadas que estejam fora das UFs permitidas
                             if (comp && Array.isArray(comp.selected)) {
                                 comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
                             }
                         }
                     } catch(e) {}
                 } else {
-                    // Ainda assim, saneia selecionadas fora do escopo
+                    // Mesmo caso acima, mas sem trocar o valor do select
                     try {
                         const root = ufCitySel.closest('[x-data]');
                         if (root && window.Alpine) {

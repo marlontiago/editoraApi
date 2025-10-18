@@ -401,7 +401,11 @@ class DashboardController extends Controller
             ->join('clientes', 'clientes.id', '=', 'pedidos.cliente_id')
             ->leftJoin('users', 'users.id', '=', 'clientes.user_id')
             ->selectRaw("
-                COALESCE(users.name, clientes.razao_social, CONCAT('Cliente #', clientes.id)) as nome,
+                COALESCE(
+                    NULLIF(TRIM(clientes.razao_social), ''),
+                    NULLIF(TRIM(users.name), ''),
+                    CONCAT('Cliente #', clientes.id)
+                ) as nome,
                 SUM(pedidos.valor_total) as total
             ")
             ->when($start, fn($qq) => $qq->where('pedidos.data', '>=', $start))
@@ -409,7 +413,14 @@ class DashboardController extends Controller
             ->when($request->filled('gestor_id'), fn($qq) => $qq->where('pedidos.gestor_id', $request->gestor_id))
             ->when($request->filled('distribuidor_id'), fn($qq) => $qq->where('pedidos.distribuidor_id', $request->distribuidor_id))
             ->when($request->filled('status'), fn($qq) => $qq->where('pedidos.status', $request->status))
-            ->groupByRaw("COALESCE(users.name, clientes.razao_social, CONCAT('Cliente #', clientes.id))")
+            // importante: agrupar pela MESMA expressão do select
+            ->groupByRaw("
+                COALESCE(
+                    NULLIF(TRIM(clientes.razao_social), ''),
+                    NULLIF(TRIM(users.name), ''),
+                    CONCAT('Cliente #', clientes.id)
+                )
+            ")
             ->orderByDesc('total')
             ->limit(20)
             ->get();
@@ -419,6 +430,7 @@ class DashboardController extends Controller
             'series' => $q->pluck('total')->map(fn($v)=>(float)$v),
         ]);
     }
+
 
     public function chartVendasPorCidade(Request $request)
     {

@@ -51,7 +51,6 @@ class ProdutoController extends Controller
     private function rules(bool $isUpdate = false): array
     {
         return [
-            // ⚠️ Removido "nome"; usar apenas "titulo"
             'titulo' => ['required','string','max:255'],
             'isbn' => ['nullable','string','digits:13'],
             'autores' => ['nullable','string','max:255'],
@@ -65,7 +64,6 @@ class ProdutoController extends Controller
             'descricao' => ['nullable','string'],
             'preco' => ['nullable','numeric','min:0'],
             'quantidade_estoque' => ['nullable','integer','min:0'],
-            // no update a imagem pode não vir; no create também é opcional
             'imagem' => ['nullable','image','mimes:png,jpg,jpeg,webp','max:2048'],
         ];
     }

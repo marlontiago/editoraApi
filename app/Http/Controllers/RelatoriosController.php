@@ -8,7 +8,6 @@ use App\Models\DiretorComercial;
 use App\Models\Distribuidor;
 use App\Models\Gestor;
 use App\Models\NotaFiscal;
-use App\Models\Pedido;
 use App\Models\City;
 use Illuminate\Http\Request;
 use Carbon\Carbon;

@@ -46,8 +46,12 @@ class DistribuidorSeeder extends Seeder
                 'representante_legal' => 'Carlos Silva',
                 'cpf'                 => '999.999.999-01',
                 'rg'                  => '10.111.222-3',
-                'telefone'            => '41999990001',
 
+                // JSON
+                'emails'              => ['distribuidor1@example.com', 'financeiro.dist1@example.com'],
+                'telefones'           => ['41999990001', '4133330001'],
+
+                // Endereço principal
                 'endereco'            => 'Rua das Flores',
                 'numero'              => '321',
                 'complemento'         => null,
@@ -55,6 +59,15 @@ class DistribuidorSeeder extends Seeder
                 'cidade'              => 'Curitiba',
                 'uf'                  => 'PR',
                 'cep'                 => '80010-000',
+
+                // Endereço secundário (exemplo)
+                'endereco2'           => 'Av. República',
+                'numero2'             => '1000',
+                'complemento2'        => 'Conj. 302',
+                'bairro2'             => 'Centro',
+                'cidade2'             => 'Ponta Grossa',
+                'uf2'                 => 'PR',
+                'cep2'                => '84010-000',
 
                 'percentual_vendas'   => 8.50,
                 'vencimento_contrato' => now()->addMonths(18),
@@ -81,7 +94,10 @@ class DistribuidorSeeder extends Seeder
                 'representante_legal' => 'Ana Souza',
                 'cpf'                 => '999.999.999-02',
                 'rg'                  => '20.333.444-5',
-                'telefone'            => '11999990002',
+
+                // JSON
+                'emails'              => ['distribuidor2@example.com'],
+                'telefones'           => ['11999990002'],
 
                 'endereco'            => 'Av. Rio Branco',
                 'numero'              => '900',
@@ -90,6 +106,15 @@ class DistribuidorSeeder extends Seeder
                 'cidade'              => 'São Paulo',
                 'uf'                  => 'SP',
                 'cep'                 => '01006-000',
+
+                // Sem endereço secundário
+                'endereco2'           => null,
+                'numero2'             => null,
+                'complemento2'        => null,
+                'bairro2'             => null,
+                'cidade2'             => null,
+                'uf2'                 => null,
+                'cep2'                => null,
 
                 'percentual_vendas'   => 7.75,
                 'vencimento_contrato' => now()->addYear()->addMonths(6),
@@ -117,7 +142,7 @@ class DistribuidorSeeder extends Seeder
                 'representante_legal'  => 'Responsável Padrão',
                 'cpf'                  => '123.456.789-99',
                 'rg'                   => '12.345.678-9',
-                'telefone'             => '41988887770',
+                'telefone'             => '41988887770', // (Gestor ainda mantém campo telefone)
                 'email'                => $email,
 
                 'endereco'             => 'Rua Exemplo',

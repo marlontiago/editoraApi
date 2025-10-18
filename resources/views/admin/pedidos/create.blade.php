@@ -128,16 +128,10 @@
 
   {{-- ===== DADOS PARA JS ===== --}}
   <script>
-    const ALL_PRODUCTS = {!! $produtos
-        ->map(function ($p) {
-          return [
-            'id'     => $p->id,
-            'titulo' => $p->titulo ?? $p->nome,
-            'preco'  => (float) ($p->preco ?? 0),
-          ];
-        })
-        ->values()
-        ->toJson() !!};
+    const ALL_PRODUCTS = {!! $produtos->toJson() !!};
+
+    // debug rápido:
+    console.log('ALL_PRODUCTS debug:', ALL_PRODUCTS);
 
     const OLD_PRODUTOS     = @json(old('produtos', []));
     const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
@@ -189,76 +183,115 @@
     }
 
     function makeProdutoRow(preset = {}) {
-      const idx = produtoIndex++;
-      const row = document.createElement('div');
-      row.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4';
-      row.innerHTML = `
-        <div class="col-span-12 md:col-span-6">
-          <label class="block text-sm font-medium text-gray-700">Produto</label>
-          <select name="produtos[${idx}][id]"
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
-        </div>
+  const idx = produtoIndex++;
+  const row = document.createElement('div');
+  row.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4 items-start';
+  row.innerHTML = `
+    <div class="col-span-12 md:col-span-6 flex items-start gap-3">
+      <div class="w-20 h-20 flex-shrink-0">
+        <img src="" alt="Imagem do produto" class="product-thumb w-20 h-20 object-cover rounded-md shadow-sm" />
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm font-medium text-gray-700">Produto</label>
+        <select name="produtos[${idx}][id]"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+      </div>
+    </div>
 
-        <div class="col-span-12 md:col-span-3">
-          <label class="block text-sm font-medium text-gray-700">Quantidade</label>
-          <input type="number" min="1" value="${preset.quantidade ?? 1}" name="produtos[${idx}][quantidade]"
-                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
+    <div class="col-span-12 md:col-span-3">
+      <label class="block text-sm font-medium text-gray-700">Quantidade</label>
+      <input type="number" min="1" value="${preset.quantidade ?? 1}" name="produtos[${idx}][quantidade]"
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+    </div>
 
-        <div class="col-span-12 md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700">Desc. item (%)</label>
-          <input type="number" min="0" max="100" step="0.01" value="${preset.desconto ?? 0}" name="produtos[${idx}][desconto]"
-                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-        </div>
+    <div class="col-span-12 md:col-span-2">
+      <label class="block text-sm font-medium text-gray-700">Desc. item (%)</label>
+      <input type="number" min="0" max="100" step="0.01" value="${preset.desconto ?? 0}" name="produtos[${idx}][desconto]"
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+    </div>
 
-        <div class="col-span-12 md:col-span-1 flex items-end">
-          <button type="button" class="remove-row inline-flex items-center rounded-md border px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700">
-            Remover
-          </button>
-        </div>
+    <div class="col-span-12 md:col-span-1 flex items-end">
+      <button type="button" class="remove-row inline-flex items-center rounded-md border px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700">
+        Remover
+      </button>
+    </div>
 
-        <div class="col-span-12">
-          <div class="mt-2 rounded-md bg-white border p-3 text-sm text-gray-700 space-x-3 calc-area">
-            <span><span class="font-medium">Preço de tabela:</span> <span class="unit-price">R$ 0,00</span></span>
-            <span>•</span>
-            <span><span class="font-medium">Preço com desconto:</span> <span class="unit-disc">R$ 0,00</span></span>
-            <span>•</span>
-            <span><span class="font-medium">Total:</span> <span class="total-tabela">R$ 0,00</span></span>
-            <span>•</span>
-            <span><span class="font-medium">Total com desconto:</span> <span class="total-desc">R$ 0,00</span></span>
-          </div>
-        </div>
-      `;
-      const sel = row.querySelector('select');
-      sel.append(buildOptions(getSelectedProductIds(), preset.id ?? null));
-      return row;
-    }
+    <div class="col-span-12">
+      <div class="mt-2 rounded-md bg-white border p-3 text-sm text-gray-700 space-x-3 calc-area">
+        <span><span class="font-medium">Preço de tabela:</span> <span class="unit-price">R$ 0,00</span></span>
+        <span>•</span>
+        <span><span class="font-medium">Preço com desconto:</span> <span class="unit-disc">R$ 0,00</span></span>
+        <span>•</span>
+        <span><span class="font-medium">Total:</span> <span class="total-tabela">R$ 0,00</span></span>
+        <span>•</span>
+        <span><span class="font-medium">Total com desconto:</span> <span class="total-desc">R$ 0,00</span></span>
+      </div>
+    </div>
+  `;
+  const sel = row.querySelector('select');
+  sel.append(buildOptions(getSelectedProductIds(), preset.id ?? null));
+  return row;
+}
+
 
     function calcRow(row) {
-      const sel = row.querySelector('select[name^="produtos["][name$="[id]"]');
-      const qEl = row.querySelector('input[name^="produtos["][name$="[quantidade]"]');
-      const dEl = row.querySelector('input[name^="produtos["][name$="[desconto]"]');
+  const sel = row.querySelector('select[name^="produtos["][name$="[id]"]');
+  const qEl = row.querySelector('input[name^="produtos["][name$="[quantidade]"]');
+  const dEl = row.querySelector('input[name^="produtos["][name$="[desconto]"]');
 
-      const unitSpan   = row.querySelector('.unit-price');
-      const unitDSpan  = row.querySelector('.unit-disc');
-      const totalSpan  = row.querySelector('.total-tabela');
-      const totalDSpan = row.querySelector('.total-desc');
+  const unitSpan   = row.querySelector('.unit-price');
+  const unitDSpan  = row.querySelector('.unit-disc');
+  const totalSpan  = row.querySelector('.total-tabela');
+  const totalDSpan = row.querySelector('.total-desc');
+  const imgEl      = row.querySelector('.product-thumb');
 
-      const pid   = sel?.value || '';
-      const prod  = getProductById(pid);
-      const qtd   = Math.max(1, parseInt(qEl?.value || '1', 10));
-      const desc  = Math.max(0, Math.min(100, parseFloat(dEl?.value || '0')));
+  const pid   = sel?.value || '';
+  const prod  = getProductById(pid);
+  const qtd   = Math.max(1, parseInt(qEl?.value || '1', 10));
+  const desc  = Math.max(0, Math.min(100, parseFloat(dEl?.value || '0')));
 
-      const unit  = prod ? Number(prod.preco || 0) : 0;
-      const unitD = unit * (1 - (desc / 100));
-      const totalTabela = unit  * qtd;
-      const totalDesc   = unitD * qtd;
+  const unit  = prod ? Number(prod.preco || 0) : 0;
+  const unitD = unit * (1 - (desc / 100));
+  const totalTabela = unit  * qtd;
+  const totalDesc   = unitD * qtd;
 
-      unitSpan.textContent   = fmtBRL.format(unit);
-      unitDSpan.textContent  = fmtBRL.format(unitD);
-      totalSpan.textContent  = fmtBRL.format(totalTabela);
-      totalDSpan.textContent = fmtBRL.format(totalDesc);
-    }
+  unitSpan.textContent   = fmtBRL.format(unit);
+  unitDSpan.textContent  = fmtBRL.format(unitD);
+  totalSpan.textContent  = fmtBRL.format(totalTabela);
+  totalDSpan.textContent = fmtBRL.format(totalDesc);
+
+  // placeholder SVG inline
+  const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">' +
+      '<rect width="100%" height="100%" fill="#E5E7EB"/>' +
+      '<text x="50%" y="50%" alignment-baseline="middle" text-anchor="middle" font-size="10" fill="#9CA3AF">Sem imagem</text>' +
+    '</svg>'
+  );
+
+  if (!prod) {
+    imgEl.src = PLACEHOLDER;
+    imgEl.alt = 'Sem produto';
+    return;
+  }
+
+  if (prod.imagem) {
+    const testImg = new Image();
+    testImg.onload = () => {
+      imgEl.src = prod.imagem;
+      imgEl.alt = prod.titulo || 'Produto';
+    };
+    testImg.onerror = () => {
+      imgEl.src = PLACEHOLDER;
+      imgEl.alt = prod.titulo || 'Sem imagem';
+      console.warn('Falha ao carregar imagem:', prod.imagem);
+    };
+    testImg.src = prod.imagem;
+  } else {
+    imgEl.src = PLACEHOLDER;
+    imgEl.alt = prod.titulo || 'Sem imagem';
+  }
+}
+
     function calcAll() {
       container.querySelectorAll('.produto').forEach(calcRow);
     }
@@ -363,20 +396,30 @@
     cidadeSelect.classList.add('bg-gray-50');
   }
 
-  function rebuildCidadeOptions(cidades, { allowOccupied = false } = {}) {
+  // helper para montar "Nome - UF"
+  function cidadeLabel(c, ufFallback = null) {
+    const uf = (c.state && String(c.state).trim()) || (ufFallback && String(ufFallback).trim()) || '';
+    return uf ? `${c.name} - ${uf}` : c.name;
+  }
+
+  function rebuildCidadeOptions(cidades, { allowOccupied = false, ufFallback = null } = {}) {
     cidadeSelect.innerHTML = '';
     cidadeSelect.add(new Option('-- Selecione --', ''));
+
     cidades.forEach(c => {
-      const opt = new Option(c.name, c.id);
+      const opt = new Option(cidadeLabel(c, ufFallback), c.id);
       const isOccupied = Boolean(c.ocupado);
       const distName   = c.distribuidor_nome || null;
 
       if (isOccupied && !allowOccupied) {
         opt.disabled = true;
-        opt.text = `${c.name} ${distName ? `(ocupada por ${distName})` : '(ocupada)'}`;
+        // mostra ocupação mantendo o label com UF
+        opt.text = `${cidadeLabel(c, ufFallback)} ${distName ? `(ocupada por ${distName})` : '(ocupada)'}`;
       }
+
       cidadeSelect.add(opt);
     });
+
     cidadeSelect.disabled = false;
     cidadeSelect.classList.remove('bg-gray-50');
   }
@@ -387,7 +430,8 @@
       const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const cidades = await resp.json();
-      rebuildCidadeOptions(cidades, { allowOccupied: true });
+      // aqui esperamos que venha c.state do backend; se não vier, não usamos fallback
+      rebuildCidadeOptions(cidades, { allowOccupied: true, ufFallback: null });
       if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
     } catch (e) {
       console.error(e);
@@ -402,7 +446,8 @@
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const cidades = await resp.json();
       const hasDistribuidor = Boolean(distribuidorSelect.value);
-      rebuildCidadeOptions(cidades, { allowOccupied: hasDistribuidor });
+      // se o backend ainda não mandar c.state, usamos uf como fallback no label
+      rebuildCidadeOptions(cidades, { allowOccupied: hasDistribuidor, ufFallback: uf });
       if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
     } catch (e) {
       console.error(e);
@@ -423,9 +468,8 @@
     }
   });
 
-  gestorSelect.addEventListener('change', function () {
-    // intencionalmente vazio (UF é livre)
-  });
+  // gestorSelect permanece livre; UF não fica travada
+  gestorSelect.addEventListener('change', function () {});
 
   stateSelect.addEventListener('change', async function () {
     const uf = this.value || null;
@@ -453,6 +497,7 @@
       resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
     }
   });
-  </script>
+</script>
+
 
 </x-app-layout>

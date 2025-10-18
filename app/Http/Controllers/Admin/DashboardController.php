@@ -16,152 +16,198 @@ use App\Exports\PedidosDashboardExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use App\Models\City;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
-    {
-        $totalProdutos = Produto::count();
-        $totalGestores = Gestor::count();
-        $totalUsuarios = User::count();
-        $produtosComEstoqueBaixo = Produto::where('quantidade_estoque', '<=', 100)->get();
-        $estoqueParaPedidosEmPotencial = DB::table('pedido_produto as pp')
-            ->join('pedidos as pe', 'pe.id', '=', 'pp.pedido_id')
-            ->join('produtos as pr', 'pr.id', '=', 'pp.produto_id')
-            ->where('pe.status', 'em_andamento')
-            ->groupBy('pp.produto_id', 'pr.titulo', 'pr.quantidade_estoque')
-            ->havingRaw('SUM(pp.quantidade) > pr.quantidade_estoque')
-            ->get([
-                'pp.produto_id',
-                DB::raw('pr.titulo as titulo'),
-                DB::raw('SUM(pp.quantidade) as qtd_em_pedidos'),
-                'pr.quantidade_estoque',
-                DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
-            ]);
-        
-         // Gestores com contrato vencendo nos próximos 30 dias
-        $gestoresVencendo = Gestor::vencendoEmAte(30)
-            ->orderBy('vencimento_contrato')
-            ->get(['id','razao_social','vencimento_contrato'])
-            ->map(function ($g) {
-                $g->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($g->vencimento_contrato), false);
-                return $g;
-            });
+{
+    // ---- paginação/ordenação seguras ----
+    $perPage = min(max((int)$request->integer('per_page', 20), 5), 100);
+    $orderBy = in_array($request->get('order_by'), ['id','data','created_at','valor_total']) ? $request->get('order_by') : 'id';
+    $dir     = $request->get('dir') === 'asc' ? 'asc' : 'desc';
 
-        // (Opcional) Gestores já vencidos
-        $gestoresVencidos = Gestor::vencidos()
-            ->orderBy('vencimento_contrato')
-            ->get(['id','razao_social','vencimento_contrato'])
-            ->map(function ($g) {
-                $g->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($g->vencimento_contrato), false);
-                return $g;
-            });
+    // ---- contadores (pode usar Cache facade) ----
+    $totalProdutos = Cache::remember('dash.total_produtos', now()->addMinutes(5), fn() => Produto::count());
+    $totalGestores = Cache::remember('dash.total_gestores', now()->addMinutes(5), fn() => Gestor::count());
+    $totalUsuarios = Cache::remember('dash.total_usuarios', now()->addMinutes(5), fn() => User::count());
 
-            // Distribuidores com contrato vencendo (≤ 30 dias)
-        $distribuidoresVencendo = Distribuidor::vencendoEmAte(30)
-            ->with('gestor:id,razao_social') // opcional, pra mostrar quem é o gestor
-            ->orderBy('vencimento_contrato')
-            ->get(['id','razao_social','vencimento_contrato','gestor_id'])
-            ->map(function ($d) {
-                $d->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($d->vencimento_contrato), false);
-                return $d;
-            });
+    // ---- listas auxiliares leves ----
+    $produtosComEstoqueBaixo = Produto::query()
+        ->where('quantidade_estoque', '<=', 100)
+        ->orderBy('quantidade_estoque')
+        ->limit(10)
+        ->get(['id','titulo','quantidade_estoque']);
 
-        // (Opcional) Distribuidores já vencidos
-        $distribuidoresVencidos = Distribuidor::vencidos()
-            ->with('gestor:id,razao_social')
-            ->orderBy('vencimento_contrato')
-            ->get(['id','razao_social','vencimento_contrato','gestor_id'])
-            ->map(function ($d) {
-                $d->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($d->vencimento_contrato), false);
-                return $d;
-            });
-
-        $gestoresList = Gestor::with('user:id,name')->orderBy('razao_social')->get();
-        $distribuidoresList = Distribuidor::with('user:id,name')->orderBy('razao_social')->get();
-        $gestoresComDistribuidores = Gestor::with([
-            'user:id,name',
-            'distribuidores.user:id,name',
-        ])->orderBy('razao_social')->get();
-
-        $request->validate([
-            'data_inicio'     => ['nullable', 'date'],
-            'data_fim'        => ['nullable', 'date', 'after_or_equal:data_inicio'],
-            'gestor_id'       => ['nullable', 'integer', 'exists:gestores,id'],
-            'distribuidor_id' => ['nullable', 'integer', 'exists:distribuidores,id'],
-            'status'          => ['nullable', 'in:em_andamento,finalizado,cancelado'],
-            'cidades'         => ['sometimes','array'],
-            'cidades.*'       => ['integer','exists:cidades,id'],
+    $estoqueParaPedidosEmPotencial = DB::table('pedido_produto as pp')
+        ->join('pedidos as pe', 'pe.id', '=', 'pp.pedido_id')
+        ->join('produtos as pr', 'pr.id', '=', 'pp.produto_id')
+        ->where('pe.status', 'em_andamento')
+        ->groupBy('pp.produto_id', 'pr.titulo', 'pr.quantidade_estoque')
+        ->havingRaw('SUM(pp.quantidade) > pr.quantidade_estoque')
+        ->orderByRaw('SUM(pp.quantidade) - pr.quantidade_estoque DESC')
+        ->limit(10)
+        ->get([
+            'pp.produto_id',
+            DB::raw('pr.titulo as titulo'),
+            DB::raw('SUM(pp.quantidade) as qtd_em_pedidos'),
+            'pr.quantidade_estoque',
+            DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
         ]);
 
-        $dataInicio     = $request->input('data_inicio');
-        $dataFim        = $request->input('data_fim');
-        $gestorId       = $request->input('gestor_id');
-        $distribuidorId = $request->input('distribuidor_id');
-        $status         = $request->input('status');
-        $cidadesIds = $request->input('cidades', []);
+    // ---- contratos vencendo/vencidos ----
+    $gestoresVencendo = Gestor::vencendoEmAte(30)
+        ->orderBy('vencimento_contrato')
+        ->limit(10)
+        ->get(['id','razao_social','vencimento_contrato'])
+        ->map(function ($g) {
+            $g->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($g->vencimento_contrato), false);
+            return $g;
+        });
 
-        $baseQuery = Pedido::with([
+    $gestoresVencidos = Gestor::vencidos()
+        ->orderBy('vencimento_contrato')
+        ->limit(10)
+        ->get(['id','razao_social','vencimento_contrato'])
+        ->map(function ($g) {
+            $g->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($g->vencimento_contrato), false);
+            return $g;
+        });
+
+    $distribuidoresVencendo = Distribuidor::vencendoEmAte(30)
+        ->with('gestor:id,razao_social')
+        ->orderBy('vencimento_contrato')
+        ->limit(10)
+        ->get(['id','razao_social','vencimento_contrato','gestor_id'])
+        ->map(function ($d) {
+            $d->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($d->vencimento_contrato), false);
+            return $d;
+        });
+
+    $distribuidoresVencidos = Distribuidor::vencidos()
+        ->with('gestor:id,razao_social')
+        ->orderBy('vencimento_contrato')
+        ->limit(10)
+        ->get(['id','razao_social','vencimento_contrato','gestor_id'])
+        ->map(function ($d) {
+            $d->dias_restantes = Carbon::today()->diffInDays(Carbon::parse($d->vencimento_contrato), false);
+            return $d;
+        });
+
+    // ---- combos da UI ----
+    $gestoresList       = Gestor::with('user:id,name')->orderBy('razao_social')->get(['id','user_id','razao_social']);
+    $distribuidoresList = Distribuidor::with('user:id,name')->orderBy('razao_social')->get(['id','user_id','razao_social']);
+    $cidadesList        = City::orderBy('name')->get(['id','name']);
+
+    // ---- validação ----
+    $request->validate([
+        'data_inicio'     => ['nullable', 'date'],
+        'data_fim'        => ['nullable', 'date', 'after_or_equal:data_inicio'],
+        'gestor_id'       => ['nullable', 'integer', 'exists:gestores,id'],
+        'distribuidor_id' => ['nullable', 'integer', 'exists:distribuidores,id'],
+        'status'          => ['nullable', 'in:em_andamento,finalizado,cancelado'],
+        'cidades'         => ['sometimes','array'],
+        'cidades.*'       => ['integer','exists:cidades,id'],
+    ]);
+
+    $dataInicio     = $request->input('data_inicio');
+    $dataFim        = $request->input('data_fim');
+    $gestorId       = $request->input('gestor_id');
+    $distribuidorId = $request->input('distribuidor_id');
+    $status         = $request->input('status');
+    $cidadesIds     = $request->input('cidades', []);
+
+    // ---- query base ----
+    $baseQuery = Pedido::query()
+        ->with([
+            'gestor:id,user_id,razao_social',
             'gestor.user:id,name',
-            'gestor.distribuidores.user:id,name',
+            'distribuidor:id,user_id,razao_social',
             'distribuidor.user:id,name',
             'cidades:id,name',
+        ])
+        ->select(['id','gestor_id','distribuidor_id','valor_total','status','data','created_at']);
+
+    // Datas com início/fim do dia
+    if ($dataInicio && $dataFim) {
+        $baseQuery->whereBetween('data', [
+            Carbon::parse($dataInicio)->startOfDay(),
+            Carbon::parse($dataFim)->endOfDay(),
         ]);
+    } elseif ($dataInicio) {
+        $baseQuery->where('data', '>=', Carbon::parse($dataInicio)->startOfDay());
+    } elseif ($dataFim) {
+        $baseQuery->where('data', '<=', Carbon::parse($dataFim)->endOfDay());
+    }
 
-        if ($dataInicio && $dataFim) {
-            $baseQuery->whereBetween('data', [
-                Carbon::parse($dataInicio)->toDateString(),
-                Carbon::parse($dataFim)->toDateString(),
-            ]);
-        } elseif ($dataInicio) {
-            $baseQuery->where('data', '>=', Carbon::parse($dataInicio)->toDateString());
-        } elseif ($dataFim) {
-            $baseQuery->where('data', '<=', Carbon::parse($dataFim)->toDateString());
-        }
+    if ($gestorId)       $baseQuery->where('gestor_id', $gestorId);
+    if ($distribuidorId) $baseQuery->where('distribuidor_id', $distribuidorId);
+    if ($status)         $baseQuery->where('status', $status);
 
-        if ($gestorId)       $baseQuery->where('gestor_id', $gestorId);
-        if ($distribuidorId) $baseQuery->where('distribuidor_id', $distribuidorId);
-        if ($status)         $baseQuery->where('status', $status);
+    if (!empty($cidadesIds)) {
+        $baseQuery->whereHas('cidades', fn($q) => $q->whereIn('cidades.id', $cidadesIds));
+    }
 
-        $totalPedidosPeriodo = (clone $baseQuery)->count();
-        $somaPeriodo         = (clone $baseQuery)->sum('valor_total');
+    // ---- agregados (subquery para evitar erro de GROUP BY) ----
+    $sub = (clone $baseQuery)
+        ->without(['gestor','distribuidor','cidades'])
+        ->select(['id','valor_total']);
 
-        $pedidos = (clone $baseQuery)
-        ->latest('id')
-        ->paginate(20)
+    // remove ORDER BY herdado para a subquery
+    $sub->getQuery()->orders = null;
+
+    $aggregates = DB::query()
+        ->fromSub($sub, 'p')
+        ->selectRaw('COUNT(*) AS total, COALESCE(SUM(valor_total),0) AS soma')
+        ->first();
+
+    $totalPedidosPeriodo = (int) ($aggregates->total ?? 0);
+    $somaPeriodo         = (float) ($aggregates->soma ?? 0.0);
+
+    // ---- paginação ----
+    $pedidos = (clone $baseQuery)
+        ->orderBy($orderBy, $dir)
+        ->paginate($perPage)
         ->appends($request->query());
 
-        $somaPagina = $pedidos->getCollection()->sum('valor_total');
-        $somaGeralTodosPedidos = Pedido::sum('valor_total');
-        $cidadesList = City::orderBy('name')->get(['id','name']);
+    $somaPagina = $pedidos->getCollection()->sum('valor_total');
 
-        return view('admin.dashboard', [
-            'pedidos'                   => $pedidos,
-            'totalGestores'             => $totalGestores,
-            'totalProdutos'             => $totalProdutos,
-            'totalUsuarios'             => $totalUsuarios,
-            'totalPedidosPeriodo'       => $totalPedidosPeriodo,
-            'somaPeriodo'               => $somaPeriodo,
-            'somaPagina'                => $somaPagina,
-            'somaGeralTodosPedidos'     => $somaGeralTodosPedidos,
-            'dataInicio'                => $dataInicio,
-            'dataFim'                   => $dataFim,
-            'gestorId'                  => $gestorId,
-            'distribuidorId'            => $distribuidorId,
-            'gestoresList'              => $gestoresList,
-            'distribuidoresList'        => $distribuidoresList,
-            'gestoresComDistribuidores' => $gestoresComDistribuidores,
-            'status'                    => $status,
-            'cidadesList'               => $cidadesList,
-            'cidadesIds'                => $cidadesIds,
-            'produtosComEstoqueBaixo'   => $produtosComEstoqueBaixo,
-            'estoqueParaPedidosEmPotencial' => $estoqueParaPedidosEmPotencial,
-            'gestoresVencendo'          => $gestoresVencendo,
-            'gestoresVencidos'          => $gestoresVencidos,
-            'distribuidoresVencendo'    => $distribuidoresVencendo,
-            'distribuidoresVencidos'    => $distribuidoresVencidos,
-        ]);
-    }
+    // ---- soma geral (fora de filtros) ----
+    $somaGeralTodosPedidos = Cache::remember('dash.soma_geral_pedidos', now()->addMinutes(5), fn() =>
+        (float) Pedido::query()->sum('valor_total')
+    );
+
+    return view('admin.dashboard', [
+        'pedidos'                       => $pedidos,
+        'totalGestores'                 => $totalGestores,
+        'totalProdutos'                 => $totalProdutos,
+        'totalUsuarios'                 => $totalUsuarios,
+        'totalPedidosPeriodo'           => $totalPedidosPeriodo,
+        'somaPeriodo'                   => $somaPeriodo,
+        'somaPagina'                    => $somaPagina,
+        'somaGeralTodosPedidos'         => $somaGeralTodosPedidos,
+        'dataInicio'                    => $dataInicio,
+        'dataFim'                       => $dataFim,
+        'gestorId'                      => $gestorId,
+        'distribuidorId'                => $distribuidorId,
+        'gestoresList'                  => $gestoresList,
+        'distribuidoresList'            => $distribuidoresList,
+        'status'                        => $status,
+        'cidadesList'                   => $cidadesList,
+        'cidadesIds'                    => $cidadesIds,
+        'produtosComEstoqueBaixo'       => $produtosComEstoqueBaixo,
+        'estoqueParaPedidosEmPotencial' => $estoqueParaPedidosEmPotencial,
+        'gestoresVencendo'              => $gestoresVencendo,
+        'gestoresVencidos'              => $gestoresVencidos,
+        'distribuidoresVencendo'        => $distribuidoresVencendo,
+        'distribuidoresVencidos'        => $distribuidoresVencidos,
+        'perPage'                       => $perPage,
+        'orderBy'                       => $orderBy,
+        'dir'                           => $dir,
+    ]);
+}
+
+
 
     private function rangeToDates(?string $ini, ?string $fim): array
     {
@@ -355,7 +401,11 @@ class DashboardController extends Controller
             ->join('clientes', 'clientes.id', '=', 'pedidos.cliente_id')
             ->leftJoin('users', 'users.id', '=', 'clientes.user_id')
             ->selectRaw("
-                COALESCE(users.name, clientes.razao_social, CONCAT('Cliente #', clientes.id)) as nome,
+                COALESCE(
+                    NULLIF(TRIM(clientes.razao_social), ''),
+                    NULLIF(TRIM(users.name), ''),
+                    CONCAT('Cliente #', clientes.id)
+                ) as nome,
                 SUM(pedidos.valor_total) as total
             ")
             ->when($start, fn($qq) => $qq->where('pedidos.data', '>=', $start))
@@ -363,7 +413,14 @@ class DashboardController extends Controller
             ->when($request->filled('gestor_id'), fn($qq) => $qq->where('pedidos.gestor_id', $request->gestor_id))
             ->when($request->filled('distribuidor_id'), fn($qq) => $qq->where('pedidos.distribuidor_id', $request->distribuidor_id))
             ->when($request->filled('status'), fn($qq) => $qq->where('pedidos.status', $request->status))
-            ->groupByRaw("COALESCE(users.name, clientes.razao_social, CONCAT('Cliente #', clientes.id))")
+            // importante: agrupar pela MESMA expressão do select
+            ->groupByRaw("
+                COALESCE(
+                    NULLIF(TRIM(clientes.razao_social), ''),
+                    NULLIF(TRIM(users.name), ''),
+                    CONCAT('Cliente #', clientes.id)
+                )
+            ")
             ->orderByDesc('total')
             ->limit(20)
             ->get();
@@ -373,6 +430,7 @@ class DashboardController extends Controller
             'series' => $q->pluck('total')->map(fn($v)=>(float)$v),
         ]);
     }
+
 
     public function chartVendasPorCidade(Request $request)
     {

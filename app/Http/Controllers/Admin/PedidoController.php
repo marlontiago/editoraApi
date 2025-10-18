@@ -15,6 +15,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use App\Models\NotaFiscal;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 
 class PedidoController extends Controller
@@ -37,7 +39,7 @@ class PedidoController extends Controller
                 DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
             ]);
 
-        $pedidos = Pedido::with(['cidades', 'gestor', 'distribuidor.user', 'cliente'])->latest()->get();
+        $pedidos = Pedido::with(['cidades', 'gestor', 'distribuidor.user', 'cliente'])->latest()->paginate(10);
 
         return view('admin.pedidos.index', compact('pedidos', 'produtosComEstoqueBaixo','estoqueParaPedidosEmPotencial'));
     }
@@ -46,13 +48,34 @@ class PedidoController extends Controller
     {
         $gestores       = Gestor::with('user')->orderBy('razao_social')->get();
         $distribuidores = Distribuidor::with('user')->orderBy('razao_social')->get();
-        $produtos       = Produto::orderBy('titulo')->get();
-        $cidades        = City::orderBy('name')->get();
-        $clientes       = Cliente::orderBy('razao_social')->get();
+
+        // trazemos somente os campos necessários e já normalizamos a URL da imagem
+        $produtosRaw = Produto::select('id', 'titulo', 'preco', 'imagem')->orderBy('titulo')->get();
+
+        $produtos = $produtosRaw->map(function ($p) {
+            return [
+                'id'     => $p->id,
+                'titulo' => $p->titulo ?? $p->nome,
+                'preco'  => (float) ($p->preco ?? 0),
+                // se houver imagem, cria URL absoluta usando asset()
+                'imagem' => $p->imagem ? asset($p->imagem) : null,
+            ];
+        })->values();
+
+        $cidades  = City::orderBy('name')->get();
+        $clientes = Cliente::orderBy('razao_social')->get();
         $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
 
-        return view('admin.pedidos.create', compact('produtos', 'cidades', 'gestores', 'distribuidores', 'clientes', 'cidadesUF'));
+        return view('admin.pedidos.create', compact(
+            'produtos',
+            'cidades',
+            'gestores',
+            'distribuidores',
+            'clientes',
+            'cidadesUF'
+        ));
     }
+
 
     public function store(Request $request)
     {

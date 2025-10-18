@@ -12,24 +12,28 @@ return new class extends Migration {
 
             // Relacionamentos
             $table->foreignId('user_id')
-                ->constrained()            // referencia 'users.id'
-                ->cascadeOnDelete();       // ao apagar user, apaga distribuidor
+                ->constrained()
+                ->cascadeOnDelete();
 
-            // ATENÇÃO: vínculo opcional com gestor (pode ficar sem vínculo)
+            // vínculo opcional com gestor
             $table->foreignId('gestor_id')
                 ->nullable()
-                ->constrained('gestores')  // referencia 'gestores.id'
-                ->nullOnDelete();          // ao apagar gestor, seta NULL no distribuidor
+                ->constrained('gestores')
+                ->nullOnDelete();
 
             // Dados principais
-            $table->string('razao_social');
-            $table->string('cnpj');
-            $table->string('representante_legal');
-            $table->string('cpf');
+            $table->string('razao_social')->nullable();
+            $table->string('cnpj')->nullable();
+            $table->string('representante_legal')->nullable();
+            $table->string('cpf')->nullable();
             $table->string('rg')->nullable();
-            $table->string('telefone', 20)->nullable();
 
-            // Endereço
+            // Contatos (agora como listas JSON)
+            // O primeiro e-mail da lista será usado para a conta do usuário
+            $table->json('emails')->nullable();     // ex: ["a@x.com","b@y.com"]
+            $table->json('telefones')->nullable();  // ex: ["41999999999","4133333333"]
+
+            // Endereço principal
             $table->string('endereco', 255)->nullable();
             $table->string('numero', 20)->nullable();
             $table->string('complemento', 100)->nullable();
@@ -38,9 +42,18 @@ return new class extends Migration {
             $table->string('uf', 2)->nullable();
             $table->string('cep', 9)->nullable();
 
+            // Endereço secundário (mesma estrutura)
+            $table->string('endereco2', 255)->nullable();
+            $table->string('numero2', 20)->nullable();
+            $table->string('complemento2', 100)->nullable();
+            $table->string('bairro2', 100)->nullable();
+            $table->string('cidade2', 100)->nullable();
+            $table->string('uf2', 2)->nullable();
+            $table->string('cep2', 9)->nullable();
+
             // Comercial / Contrato
-            $table->decimal('percentual_vendas', 5, 2)->default(0);
-            $table->date('vencimento_contrato')->nullable(); // calculado por início+validade no controller
+            $table->decimal('percentual_vendas', 5, 2)->default(0)->nullable();
+            $table->date('vencimento_contrato')->nullable();
             $table->boolean('contrato_assinado')->default(false);
 
             $table->timestamps();

@@ -4,9 +4,23 @@ use App\Http\Controllers\Admin\ProdutoController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\GestorController;
 use App\Http\Controllers\Admin\DistribuidorController;
+use App\Http\Controllers\PlugNotasSetupController;
 
 
 Route::apiResource('produtos', ProdutoController::class);
+
+// routes/api.php
+use App\Http\Controllers\NotaFiscalPlugNotasController as C;
+use App\Http\Controllers\WebhookPlugNotasController as W;
+
+Route::post('/plugnotas/notas/{nota}/emitir',    [C::class, 'emitir']);
+Route::get ('/plugnotas/notas/{nota}/consultar',[C::class, 'consultar']);
+Route::get ('/plugnotas/notas/{nota}/pdf',       [C::class, 'pdf']);
+Route::get ('/plugnotas/notas/{nota}/xml',       [C::class, 'xml']);
+Route::post('/plugnotas/setup/empresa', [PlugNotasSetupController::class, 'empresa']);
+
+// webhook (a PlugNotas chamaria isto)
+Route::post('/plugnotas/webhook', [W::class, 'handle']);
 
 Route::prefix('admin')->group(function () {
     // Gestores CRUD

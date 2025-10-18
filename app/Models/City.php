@@ -20,4 +20,11 @@ class City extends Model
     {
         return $this->belongsToMany(Distribuidor::class, 'city_distribuidor');
     }
+
+    public function getUfAttribute(): ?string
+    {
+        return isset($this->attributes['uf'])
+            ? $this->attributes['uf']
+            : ($this->attributes['state'] ?? null);
+    }
 }

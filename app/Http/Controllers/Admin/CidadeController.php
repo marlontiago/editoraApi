@@ -47,54 +47,109 @@ class CidadeController extends Controller
      * Prioridade máxima: quando há um distribuidor escolhido,
      * listar SOMENTE as cidades onde ele atua.
      */
-    public function cidadesPorDistribuidor($id)
-    {
-        $distribuidor = Distribuidor::with('cities')->findOrFail($id);
+    public function porDistribuidor(Distribuidor $distribuidor)
+{
+    // cidades do distribuidor + sempre mande "state"
+    $cidades = $distribuidor->cities()
+        ->select('cities.id','cities.name','cities.state')
+        ->get()
+        ->map(fn($c) => [
+            'id'   => $c->id,
+            'name' => $c->name,
+            'state'=> $c->state,     // <— AQUI
+            // para manter compatibilidade com seu front:
+            'ocupado'           => false,
+            'distribuidor_nome' => null,
+        ]);
 
-        return response()->json(
-            $distribuidor->cities
-                ->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])
-                ->values()
-        );
-    }
+    return response()->json($cidades);
+}
 
     /**
      * Lista cidades por UF SEM travar UF por gestor e informando “ocupação”.
-     * Se a cidade estiver “ocupada” por algum distribuidor, retorna ocupado=true
-     * e os dados do(s) distribuidor(es). Para fins de UI, agregamos em um único nome.
+     * Mantido por compatibilidade com a tela antiga (select por UF).
      */
     public function porUf(string $uf, Request $request)
+{
+    $withOcc = $request->boolean('with_occupancy');
+
+    $base = \App\Models\City::where('state', $uf)
+        ->select('id','name','state');
+
+    $cidades = $base->get()->map(function($c) use ($withOcc) {
+        $ocupado = false;
+        $distNome = null;
+
+        if ($withOcc) {
+            $row = DB::table('city_distribuidor')
+                ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
+                ->where('city_distribuidor.city_id', $c->id)
+                ->select('distribuidores.razao_social as dist_nome')
+                ->first();
+
+            $ocupado  = (bool) $row;
+            $distNome = $row->dist_nome ?? null;
+        }
+
+        return [
+            'id'                => $c->id,
+            'name'              => $c->name,
+            'state'             => $c->state, // <— AQUI
+            'ocupado'           => $ocupado,
+            'distribuidor_nome' => $distNome,
+        ];
+    });
+
+    return response()->json($cidades);
+}
+
+    /**
+     * NOVO: Busca global por cidades (qualquer UF), com flag de ocupação.
+     * GET /admin/cidades/busca?q=curi&uf=PR&with_occupancy=1&limit=20
+     * Retorna [{id,name,uf,occupied,distribuidor_id,distribuidor_name}]
+     */
+    public function search(Request $request)
     {
-        $uf = strtoupper(trim($uf));
+        $q  = trim((string) $request->query('q', ''));
+        $uf = strtoupper(trim((string) $request->query('uf', '')));
+        $withOcc = (bool) $request->boolean('with_occupancy', false);
+        $limit = min((int)$request->integer('limit', 50), 100);
 
-        $rows = DB::table('cities as c')
-            ->leftJoin('city_distribuidor as cd', 'cd.city_id', '=', 'c.id')
-            ->leftJoin('distribuidores as d', 'd.id', '=', 'cd.distribuidor_id')
-            ->whereRaw('UPPER(c.state) = ?', [$uf])
-            ->groupBy('c.id', 'c.name')
-            ->orderBy('c.name')
-            ->get([
-                'c.id',
-                'c.name',
-                DB::raw('MAX(cd.distribuidor_id) as distribuidor_id'),
-                DB::raw('MIN(d.razao_social) as distribuidor_nome'),
-            ]);
+        // se não tem UF e o termo tem < 2 chars, não busque nada (evita seq scan gigante)
+        if ($uf === '' && mb_strlen($q) < 2) {
+            return response()->json([]);
+        }
 
-        $data = $rows->map(function ($r) {
-            $ocupado = !is_null($r->distribuidor_id);
-            return [
-                'id'                 => $r->id,
-                'name'               => $r->name,
-                // CHAVES NO PADRÃO QUE O FRONT ESPERA:
-                'occupied'           => $ocupado,
-                'distribuidor_name'  => $ocupado ? $r->distribuidor_nome : null,
+        $query = DB::table('cities')->select('id','name','state');
 
-                // (Opcional) mantém compatibilidade com quem já usa em PT-BR:
-                'ocupado'            => $ocupado,
-                'distribuidor_nome'  => $ocupado ? $r->distribuidor_nome : null,
-            ];
-        })->values();
+        if ($uf !== '')  $query->where('state', $uf);
+        if ($q !== '')   $query->where('name', 'ILIKE', "%{$q}%");
 
-        return response()->json($data);
+        $rows = $query->orderBy('name')->limit($limit)->get();
+
+        // Ocupação (opcional)
+        $occupiedMap = [];
+        if ($withOcc && $rows->isNotEmpty()) {
+            $ids = $rows->pluck('id');
+            $occ = DB::table('city_distribuidor')
+                ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
+                ->whereIn('city_distribuidor.city_id', $ids)
+                ->select('city_distribuidor.city_id','distribuidores.razao_social')
+                ->get();
+            foreach ($occ as $o) $occupiedMap[$o->city_id] = $o->razao_social;
+        }
+
+        $out = $rows->map(fn($r) => [
+            'id' => $r->id,
+            'name' => $r->name,
+            'state' => $r->state,
+            'uf' => $r->state,             // compatibilidade com o que o front espera
+            'occupied' => isset($occupiedMap[$r->id]),
+            'distribuidor_name' => $occupiedMap[$r->id] ?? null,
+        ]);
+
+        return response()->json($out);
     }
+
+
 }

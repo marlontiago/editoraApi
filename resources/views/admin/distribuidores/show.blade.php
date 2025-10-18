@@ -1,9 +1,11 @@
+{{-- resources/views/admin/distribuidores/show.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="text-xl font-semibold text-gray-800">
                 Distribuidor: {{ $distribuidor->razao_social }}
             </h2>
+
             <div class="flex gap-2">
                 <form method="POST" action="{{ route('admin.distribuidores.destroy', $distribuidor) }}"
                       onsubmit="return confirm('Tem certeza que deseja remover este distribuidor?');">
@@ -14,8 +16,12 @@
                         Remover
                     </button>
                 </form>
+
                 <a href="{{ route('admin.distribuidores.index') }}"
-                   class="inline-flex h-9 items-center rounded-md border px-3 text-sm hover:bg-gray-50">Voltar</a>
+                   class="inline-flex h-9 items-center rounded-md border px-3 text-sm hover:bg-gray-50">
+                    Voltar
+                </a>
+
                 <a href="{{ route('admin.distribuidores.edit', $distribuidor) }}"
                    class="inline-flex h-9 items-center rounded-md bg-blue-600 px-3 text-sm text-white hover:bg-blue-700">
                     Editar
@@ -26,34 +32,56 @@
 
     <div class="max-w-6xl mx-auto p-6 space-y-6">
 
-        {{-- Dados principais --}}
+        {{-- Dados principais (mesmo estilo do Gestor) --}}
         <div class="bg-white rounded-lg shadow p-6 grid grid-cols-12 gap-4">
             <div class="col-span-12 md:col-span-6">
                 <p><span class="font-medium">Gestor:</span> {{ $distribuidor->gestor?->razao_social ?: '—' }}</p>
                 <p><span class="font-medium">Razão Social:</span> {{ $distribuidor->razao_social }}</p>
                 <p><span class="font-medium">CNPJ:</span> {{ $distribuidor->cnpj_formatado ?? $distribuidor->cnpj }}</p>
                 <p><span class="font-medium">Representante Legal:</span> {{ $distribuidor->representante_legal ?: '—' }}</p>
-                <p><span class="font-medium">CPF:</span> {{ $distribuidor->cpf ?: '—' }}</p>
-                <p><span class="font-medium">RG:</span> {{ $distribuidor->rg ?: '—' }}</p>
-                <p><span class="font-medium">Telefone:</span> {{ $distribuidor->telefone_formatado ?? $distribuidor->telefone ?: '—' }}</p>
-                <p>
-                    <span class="font-medium">E-mail:</span>
-                    @php $emailExib = $distribuidor->email_exibicao; @endphp
-                    @if($emailExib && $emailExib !== 'Não informado')
-                        <a href="mailto:{{ $emailExib }}" class="text-blue-600 hover:underline">{{ $emailExib }}</a>
+                <p><span class="font-medium">CPF (representante):</span> {{ $distribuidor->cpf_formatado ?? $distribuidor->cpf ?: '—' }}</p>
+                <p><span class="font-medium">RG:</span> {{ $distribuidor->rg_formatado ?? $distribuidor->rg ?: '—' }}</p>
+
+                {{-- Telefones --}}
+                @php
+                    $telefones = is_array($distribuidor->telefones) ? $distribuidor->telefones : [];
+                @endphp
+                <p class="mt-2">
+                    <span class="font-medium">Telefones:</span>
+                    @if(!empty(array_filter($telefones)))
+                        {{ collect($telefones)->filter()->implode(', ') }}
                     @else
-                        Não informado
+                        —
+                    @endif
+                </p>
+
+                {{-- E-mails --}}
+                @php
+                    $emails = is_array($distribuidor->emails) ? $distribuidor->emails : [];
+                @endphp
+                <p>
+                    <span class="font-medium">E-mails:</span>
+                    @if(!empty(array_filter($emails)))
+                        {!! collect($emails)->filter()->map(fn($em) => '<a class="text-blue-600 hover:underline" href="mailto:'.$em.'">'.$em.'</a>')->implode(', ') !!}
+                    @else
+                        —
                     @endif
                 </p>
             </div>
 
             <div class="col-span-12 md:col-span-6">
-                <p><span class="font-medium">Endereço:</span> {{ $distribuidor->endereco ?: '—' }}, {{ $distribuidor->numero ?: '—' }}</p>
-                <p><span class="font-medium">Bairro:</span> {{ $distribuidor->bairro ?: '—' }}</p>
-                <p><span class="font-medium">Cidade:</span> {{ $distribuidor->cidade ?: '—' }}</p>
-                <p><span class="font-medium">UF:</span> {{ $distribuidor->uf ?: '—' }}</p>
-                <p><span class="font-medium">CEP:</span> {{ $distribuidor->cep ?: '—' }}</p>
-                <p><span class="font-medium">Percentual Vendas (aplicado):</span> {{ number_format((float)($distribuidor->percentual_vendas ?? 0), 2, ',', '.') }}%</p>
+                <p class="mt-0">
+                    <span class="font-medium">Percentual Vendas (aplicado):</span>
+                    {{ number_format((float)($distribuidor->percentual_vendas ?? 0), 2, ',', '.') }}%
+                </p>
+                <p>
+                    <span class="font-medium">Contrato Assinado:</span>
+                    {{ $distribuidor->contrato_assinado ? 'Sim' : 'Não' }}
+                </p>
+                <p>
+                    <span class="font-medium">Vencimento Contrato (ativo):</span>
+                    {{ $distribuidor->vencimento_contrato ? \Illuminate\Support\Carbon::parse($distribuidor->vencimento_contrato)->format('d/m/Y') : '—' }}
+                </p>
 
                 <div class="mt-3 flex flex-wrap gap-2">
                     @if($distribuidor->contrato_assinado)
@@ -79,72 +107,51 @@
                         <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium border {{ $classe }}">
                             Vence em: {{ $ven->format('d/m/Y') }}
                         </span>
-                    @else
-                        <span class="inline-flex items-center rounded-md bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700 border border-gray-200">
-                            Vencimento não definido
-                        </span>
                     @endif
                 </div>
             </div>
         </div>
 
-        {{-- Cidades --}}
+        {{-- Endereços (mesmo card do Gestor) --}}
+        <div class="bg-white rounded-lg shadow p-6 grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-6">
+                <h3 class="text-sm font-semibold mb-2">Endereço principal</h3>
+                <p><span class="font-medium">Endereço:</span> {{ $distribuidor->endereco ?: '—' }}, {{ $distribuidor->numero ?: '—' }}</p>
+                <p><span class="font-medium">Bairro:</span> {{ $distribuidor->bairro ?: '—' }}</p>
+                <p><span class="font-medium">Cidade:</span> {{ $distribuidor->cidade ?: '—' }}</p>
+                <p><span class="font-medium">UF:</span> {{ $distribuidor->uf ?: '—' }}</p>
+                <p><span class="font-medium">CEP:</span> {{ $distribuidor->cep ?: '—' }}</p>
+            </div>
+            <div class="col-span-12 md:col-span-6">
+                <h3 class="text-sm font-semibold mb-2">Endereço secundário</h3>
+                <p><span class="font-medium">Endereço:</span> {{ $distribuidor->endereco2 ?: '—' }}, {{ $distribuidor->numero2 ?: '—' }}</p>
+                <p><span class="font-medium">Bairro:</span> {{ $distribuidor->bairro2 ?: '—' }}</p>
+                <p><span class="font-medium">Cidade:</span> {{ $distribuidor->cidade2 ?: '—' }}</p>
+                <p><span class="font-medium">UF:</span> {{ $distribuidor->uf2 ?: '—' }}</p>
+                <p><span class="font-medium">CEP:</span> {{ $distribuidor->cep2 ?: '—' }}</p>
+            </div>
+        </div>
+
+        {{-- Cidades (chips, mesmo visual de UFs do Gestor) --}}
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold mb-2">Cidades de Atuação</h3>
-            @if($distribuidor->cities->isNotEmpty())
-                <ul class="list-disc pl-6">
-                    @foreach($distribuidor->cities as $city)
-                        <li>{{ $city->name }} {{ $city->uf ? "({$city->uf})" : '' }}</li>
-                    @endforeach
-                </ul>
-            @else
-                <p class="text-gray-500">Nenhuma cidade cadastrada.</p>
-            @endif
-        </div>
-
-        {{-- Contatos --}}
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold mb-2">Contatos</h3>
             @php
-                $temContatos = $distribuidor->relationLoaded('contatos')
-                    ? $distribuidor->contatos->isNotEmpty()
-                    : $distribuidor->contatos()->exists();
-                $contatos = $distribuidor->relationLoaded('contatos')
-                    ? $distribuidor->contatos
-                    : $distribuidor->contatos()->get();
+                $cities = $distribuidor->cities ?? collect();
             @endphp
-
-            @if($temContatos)
-                <ul class="divide-y">
-                    @foreach($contatos as $contato)
-                        <li class="py-2">
-                            <p>
-                                <span class="font-medium">{{ $contato->nome }}</span>
-                                @if($contato->tipo) <span class="text-gray-600">({{ $contato->tipo }})</span>@endif
-                                @if($contato->preferencial)
-                                    <span class="ml-2 inline-block px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded">Preferencial</span>
-                                @endif
-                            </p>
-                            <p class="text-sm text-gray-600">
-                                @if($contato->email) E-mail: {{ $contato->email }} @endif
-                                @if($contato->telefone) {{ $contato->email ? ' | ' : '' }} Tel: {{ $contato->telefone }} @endif
-                                @if($contato->whatsapp) {{ ($contato->email || $contato->telefone) ? ' | ' : '' }} Whats: {{ $contato->whatsapp }} @endif
-                            </p>
-                            @if($contato->cargo)
-                                <p class="text-sm text-gray-600">Cargo: {{ $contato->cargo }}</p>
-                            @endif
-                            @if($contato->observacoes)
-                                <p class="text-sm mt-1">{{ $contato->observacoes }}</p>
-                            @endif
-                        </li>
-                    @endforeach
-                </ul>
+            @if($cities->isEmpty())
+                <p class="text-gray-500">Nenhuma cidade cadastrada.</p>
             @else
-                <p class="text-gray-500">Nenhum contato informado.</p>
+                <div class="mt-1 flex flex-wrap gap-2">
+                    @foreach($cities as $city)
+                        <span class="inline-flex items-center rounded-md bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 border border-gray-200">
+                            {{ $city->name }}@if(!empty($city->uf ?? $city->state)) ({{ strtoupper($city->uf ?? $city->state) }}) @endif
+                        </span>
+                    @endforeach
+                </div>
             @endif
         </div>
 
-        {{-- Contratos / Aditivos (idêntico ao layout do Gestor) --}}
+        {{-- Contratos / Anexos (mesmo padrão do Gestor, com suporte a contrato_cidade) --}}
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold mb-2">Contratos / Aditivos</h3>
 
@@ -169,6 +176,20 @@
                                     @endif
                                 </div>
 
+                                {{-- >>> Cidade quando tipo = contrato_cidade (igual ao Gestor) <<< --}}
+                                @if($anexo->tipo === 'contrato_cidade')
+                                    @php $cidade = $anexo->cidade ?? null; @endphp
+                                    <div class="text-gray-800 mb-1">
+                                        Cidade:
+                                        <strong>
+                                            {{ $cidade ? ($cidade->nome ?? $cidade->name ?? ('ID '.$anexo->cidade_id)) : ('ID '.$anexo->cidade_id) }}
+                                            @if($cidade && !empty($cidade->uf))
+                                                ({{ $cidade->uf }})
+                                            @endif
+                                        </strong>
+                                    </div>
+                                @endif
+
                                 <div class="text-gray-700">
                                     <div>
                                         Percentual deste contrato:
@@ -188,6 +209,11 @@
                             </div>
 
                             <div class="flex items-center gap-2">
+
+                                <a href="{{ route('admin.distribuidores.anexos.edit', [$distribuidor, $anexo]) }}"
+                                   class="inline-flex h-8 items-center rounded-md border px-3 text-xs hover:bg-gray-50">
+                                    Editar
+                                </a>
                                 @if($anexo->arquivo)
                                     <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($anexo->arquivo) }}"
                                        target="_blank"
@@ -196,7 +222,8 @@
                                     </a>
                                 @endif
 
-                                @unless($isAtivo)
+                                {{-- Mostrar "Ativar" somente se NÃO estiver ativo E NÃO for contrato_cidade --}}
+                                @if(!$isAtivo && $anexo->tipo !== 'contrato_cidade')
                                     <form method="POST" action="{{ route('admin.distribuidores.anexos.ativar', [$distribuidor, $anexo]) }}">
                                         @csrf
                                         <button type="submit"
@@ -205,7 +232,7 @@
                                             Ativar
                                         </button>
                                     </form>
-                                @endunless
+                                @endif
 
                                 <form action="{{ route('admin.distribuidores.anexos.destroy', [$distribuidor, $anexo]) }}"
                                       method="POST"
@@ -225,5 +252,6 @@
                 <p class="text-gray-500">Nenhum anexo enviado.</p>
             @endif
         </div>
+
     </div>
 </x-app-layout>

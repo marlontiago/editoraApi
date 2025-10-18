@@ -58,6 +58,53 @@
                     Nota Faturada
                 </span>
             @endif
+
+            <div class="flex flex-wrap gap-3">
+            <form action="{{ route('admin.notas.plug.emitir', $nota) }}" method="POST"
+                onsubmit="return confirm('Enviar esta NF para a SEFAZ (PlugNotas)?');">
+                @csrf
+                <button class="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                        {{ $nota->plugnotas_id ? 'disabled' : '' }}>
+                    Emitir NF-e (SEFAZ)
+                </button>
+            </form>
+
+            <a href="{{ route('admin.notas.plug.consultar', $nota) }}"
+            class="px-4 py-2 rounded-md bg-gray-700 text-white hover:bg-gray-800 {{ $nota->plugnotas_id ? '' : 'pointer-events-none opacity-50' }}">
+            Consultar Status
+            </a>
+
+            @php
+                $pnHasId  = !empty($nota->plugnotas_id);
+                $pnStatus = strtoupper(trim((string) $nota->plugnotas_status));
+                $pnDone   = in_array($pnStatus, ['CONCLUIDO','AUTORIZADO','AUTORIZADA','APROVADO','APROVADA']);
+                $btnClass = $pnDone ? '' : 'opacity-50 cursor-not-allowed';
+                $btnTitle = $pnDone ? '' : 'Aguardando autorização da SEFAZ...';
+            @endphp
+
+            @if($pnHasId)
+                <a href="{{ route('admin.notas.plug.pdf', $nota) }}"
+                target="_blank" title="{{ $btnTitle }}"
+                class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 {{ $btnClass }}"
+                {{ $pnDone ? '' : 'aria-disabled=true tabindex=-1' }}>
+                PDF (DANFE)
+                </a>
+
+                <a href="{{ route('admin.notas.plug.xml', $nota) }}"
+                target="_blank" title="{{ $btnTitle }}"
+                class="px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 {{ $btnClass }}"
+                {{ $pnDone ? '' : 'aria-disabled=true tabindex=-1' }}>
+                XML
+                </a>
+            @endif
+
+            @php
+                $pdfLiberado = $pnDone || !empty($nota->pdf_url);
+                $xmlLiberado = $pnDone || !empty($nota->xml_url);
+            @endphp
+
+        </div>
+
         </div>
 
         {{-- Cabeçalho --}}

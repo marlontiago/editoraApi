@@ -16,9 +16,24 @@ class ProdutoController extends Controller
     {
         if ($v === null) return null;
         $v = trim((string) $v);
-        if ($v === '') return null;   // <<-- importante
-        $v = str_replace('.', '', $v);   // milhar
-        $v = str_replace(',', '.', $v);  // vírgula -> ponto
+        if ($v === '') return null; // importante
+
+        // se já for um número (ex: 12.34) retorna direto (evita remoção indevida)
+        if (is_numeric($v)) {
+            return $v;
+        }
+
+        // Formato pt-BR: contém vírgula -> remover pontos de milhar e trocar vírgula por ponto
+        if (strpos($v, ',') !== false) {
+            $v = str_replace(['.', ' '], '', $v); // remove pontos e espaços (milhares)
+            $v = str_replace(',', '.', $v);       // vírgula -> ponto
+            return $v;
+        }
+
+        // Caso genérico: remover espaços e tentar trocar vírgula só por segurança
+        $v = str_replace(' ', '', $v);
+        $v = str_replace(',', '.', $v);
+
         return $v;
     }
 
@@ -36,21 +51,19 @@ class ProdutoController extends Controller
     private function rules(bool $isUpdate = false): array
     {
         return [
-            // ⚠️ Removido "nome"; usar apenas "titulo"
             'titulo' => ['required','string','max:255'],
             'isbn' => ['nullable','string','digits:13'],
             'autores' => ['nullable','string','max:255'],
             'edicao' => ['nullable','string','max:50'],
             'ano' => ['nullable','integer','min:1900','max:'.date('Y')],
             'numero_paginas' => ['nullable','integer','min:1'],
-            'quantidade_por_caixa' => ['required','integer','min:1'],
+            'quantidade_por_caixa' => ['nullable','integer','min:0'],
             'peso' => ['nullable','numeric','min:0'],
             'ano_escolar' => ['nullable','in:Ens Inf,Fund 1,Fund 2,EM'],
             'colecao_id' => ['nullable','exists:colecoes,id'],
             'descricao' => ['nullable','string'],
             'preco' => ['nullable','numeric','min:0'],
             'quantidade_estoque' => ['nullable','integer','min:0'],
-            // no update a imagem pode não vir; no create também é opcional
             'imagem' => ['nullable','image','mimes:png,jpg,jpeg,webp','max:2048'],
         ];
     }

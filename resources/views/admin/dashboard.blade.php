@@ -8,12 +8,12 @@
                 {{-- OBS: nomes de rota conforme seu routes (admin.admin... nas exportações) --}}
                 <a href="#"
                    data-export
-                   data-base="{{ route('admin.admin.dashboard.export.excel') }}"
+                   data-base="{{ route('admin.dashboard.export.excel') }}"
                    class="px-3 py-1.5 text-sm rounded border">Exportar Excel</a>
 
                 <a href="#"
                    data-export
-                   data-base="{{ route('admin.admin.dashboard.export.pdf') }}"
+                   data-base="{{ route('admin.dashboard.export.pdf') }}"
                    class="px-3 py-1.5 text-sm rounded border">Exportar PDF</a>
             </div>
         </div>
@@ -240,12 +240,12 @@
                         <span class="sm:hidden inline-flex gap-2">
                             <a href="#"
                                data-export
-                               data-base="{{ route('admin.admin.dashboard.export.excel') }}"
+                               data-base="{{ route('admin.dashboard.export.excel') }}"
                                class="px-3 py-1.5 rounded border text-sm">Excel</a>
 
                             <a href="#"
                                data-export
-                               data-base="{{ route('admin.admin.dashboard.export.pdf') }}"
+                               data-base="{{ route('admin.dashboard.export.pdf') }}"
                                class="px-3 py-1.5 rounded border text-sm">PDF</a>
                         </span>
                     </div>

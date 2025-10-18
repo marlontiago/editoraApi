@@ -9,28 +9,21 @@ return new class extends Migration {
     {
         Schema::create('anexos', function (Blueprint $table) {
             $table->id();
-
-            // Relacionamento polimórfico (gera colunas anexavel_type e anexavel_id, com índice)
-            $table->morphs('anexavel');
-
-            // Metadados do anexo/contrato
+            $table->morphs('anexavel'); // anexavel_type, anexavel_id
+            // tipos: contrato, aditivo, outro, contrato_cidade
             $table->string('tipo', 20)->default('contrato')->index();
+            $table->foreignId('cidade_id')->nullable()->constrained('cities'); // <- NOVO
             $table->string('arquivo');
             $table->string('descricao')->nullable();
-
-            // Datas e status de assinatura
             $table->date('data_assinatura')->nullable();
             $table->date('data_vencimento')->nullable()->index();
             $table->boolean('assinado')->default(false);
-
-            // >>> Novos campos para controle do percentual vigente <<<
             $table->decimal('percentual_vendas', 5, 2)->nullable();
             $table->boolean('ativo')->default(false);
-
             $table->timestamps();
 
-            // Índice útil para recuperar rapidamente o "anexo ativo" do dono
             $table->index(['anexavel_type', 'anexavel_id', 'ativo'], 'anexos_anexavel_ativo_idx');
+            $table->index(['tipo', 'cidade_id']);
         });
     }
 

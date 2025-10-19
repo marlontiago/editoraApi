@@ -47,13 +47,12 @@ class AdvogadoController extends Controller
         $advogado = null;
 
         DB::transaction(function () use (&$advogado, $dados) {
-            // cria o usuário atrelado
+
             $user = User::create([
                 'name'     => $dados['nome'],
                 'email'    => $dados['email'],
                 'password' => bcrypt(Str::random(12)),
             ]);
-            // $user->assignRole('advogado'); // se estiver usando Spatie
 
             $dados['user_id'] = $user->id;
 
@@ -93,7 +92,6 @@ class AdvogadoController extends Controller
         ]);
 
         DB::transaction(function () use ($advogado, $dados) {
-            // opcional: sincronizar nome/email no User
             if ($advogado->user) {
                 $advogado->user->update([
                     'name'  => $dados['nome'],

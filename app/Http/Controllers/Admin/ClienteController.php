@@ -26,19 +26,16 @@ class ClienteController extends Controller
             'razao_social'   => ['required','string','max:255'],
             'email'          => ['nullable','email','max:255','unique:clientes,email'],
 
-            // documentos
             'cnpj'           => ['nullable','string','max:18','required_without:cpf'],
             'cpf'            => ['nullable','string','max:14','required_without:cnpj'],
             'inscr_estadual' => ['nullable','string','max:30'],
 
-            // contato legado + listas novas (se você já atualizou o form)
             'telefone'       => ['nullable','string','max:20'],
             'telefones'      => ['nullable','array'],
             'telefones.*'    => ['nullable','string','max:30'],
             'emails'         => ['nullable','array'],
             'emails.*'       => ['nullable','email','max:255'],
 
-            // endereço principal
             'endereco'       => ['nullable','string','max:255'],
             'numero'         => ['nullable','string','max:20'],
             'complemento'    => ['nullable','string','max:100'],
@@ -47,7 +44,6 @@ class ClienteController extends Controller
             'uf'             => ['nullable','string','size:2'],
             'cep'            => ['nullable','string','max:9'],
 
-            // endereço secundário
             'endereco2'      => ['nullable','string','max:255'],
             'numero2'        => ['nullable','string','max:20'],
             'complemento2'   => ['nullable','string','max:100'],
@@ -86,12 +82,10 @@ class ClienteController extends Controller
             'cpf'            => $validated['cpf'] ?? null,
             'inscr_estadual' => $validated['inscr_estadual'] ?? null,
 
-            // legado único + novas listas
             'telefone'       => $validated['telefone'] ?? null,
             'telefones'      => !empty($telefones) ? $telefones : null,
             'emails'         => !empty($emails) ? $emails : null,
 
-            // endereço principal
             'endereco'       => $validated['endereco'] ?? null,
             'numero'         => $validated['numero'] ?? null,
             'complemento'    => $validated['complemento'] ?? null,
@@ -100,7 +94,6 @@ class ClienteController extends Controller
             'uf'             => $validated['uf'] ?? null,
             'cep'            => $validated['cep'] ?? null,
 
-            // endereço secundário
             'endereco2'      => $validated['endereco2'] ?? null,
             'numero2'        => $validated['numero2'] ?? null,
             'complemento2'   => $validated['complemento2'] ?? null,

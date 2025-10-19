@@ -11,11 +11,7 @@ use App\Models\City;
 
 class CidadeController extends Controller
 {
-    /**
-     * (Opcional) Mantido por compatibilidade.
-     * Agora o gestor NÃO trava mais a UF/cidade. Use apenas se quiser listar
-     * as cidades da UF do gestor como atalho.
-     */
+   
     public function cidadesPorGestor(Gestor $gestor)
     {
         $ufGestor = $gestor->estado_uf;
@@ -32,7 +28,6 @@ class CidadeController extends Controller
             }
         }
 
-        // Fallback via pivot (se você mantiver esse vínculo manual)
         $cidades = City::query()
             ->select('cities.id', 'cities.name')
             ->join('city_gestor', 'city_gestor.city_id', '=', 'cities.id')
@@ -49,7 +44,6 @@ class CidadeController extends Controller
      */
     public function porDistribuidor(Distribuidor $distribuidor)
 {
-    // cidades do distribuidor + sempre mande "state"
     $cidades = $distribuidor->cities()
         ->select('cities.id','cities.name','cities.state')
         ->get()
@@ -67,7 +61,6 @@ class CidadeController extends Controller
 
     /**
      * Lista cidades por UF SEM travar UF por gestor e informando “ocupação”.
-     * Mantido por compatibilidade com a tela antiga (select por UF).
      */
     public function porUf(string $uf, Request $request)
 {
@@ -103,11 +96,6 @@ class CidadeController extends Controller
     return response()->json($cidades);
 }
 
-    /**
-     * NOVO: Busca global por cidades (qualquer UF), com flag de ocupação.
-     * GET /admin/cidades/busca?q=curi&uf=PR&with_occupancy=1&limit=20
-     * Retorna [{id,name,uf,occupied,distribuidor_id,distribuidor_name}]
-     */
     public function search(Request $request)
     {
         $q  = trim((string) $request->query('q', ''));
@@ -115,7 +103,6 @@ class CidadeController extends Controller
         $withOcc = (bool) $request->boolean('with_occupancy', false);
         $limit = min((int)$request->integer('limit', 50), 100);
 
-        // se não tem UF e o termo tem < 2 chars, não busque nada (evita seq scan gigante)
         if ($uf === '' && mb_strlen($q) < 2) {
             return response()->json([]);
         }
@@ -127,7 +114,6 @@ class CidadeController extends Controller
 
         $rows = $query->orderBy('name')->limit($limit)->get();
 
-        // Ocupação (opcional)
         $occupiedMap = [];
         if ($withOcc && $rows->isNotEmpty()) {
             $ids = $rows->pluck('id');
@@ -143,7 +129,7 @@ class CidadeController extends Controller
             'id' => $r->id,
             'name' => $r->name,
             'state' => $r->state,
-            'uf' => $r->state,             // compatibilidade com o que o front espera
+            'uf' => $r->state,            
             'occupied' => isset($occupiedMap[$r->id]),
             'distribuidor_name' => $occupiedMap[$r->id] ?? null,
         ]);

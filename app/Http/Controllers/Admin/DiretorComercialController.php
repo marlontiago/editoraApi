@@ -51,7 +51,6 @@ class DiretorComercialController extends Controller
                 'email'    => $dados['email'],
                 'password' => bcrypt(Str::random(12)),
             ]);
-            // $user->assignRole('diretor'); // ou 'diretor_comercial' conforme seu seeder
 
             $dados['user_id'] = $user->id;
 
@@ -90,7 +89,6 @@ class DiretorComercialController extends Controller
         ]);
 
         DB::transaction(function () use ($diretor_comercial, $dados) {
-            // opcional: sincronizar nome/email no User
             if ($diretor_comercial->user) {
                 $diretor_comercial->user->update([
                     'name'  => $dados['nome'],

@@ -145,7 +145,6 @@ class DistribuidorController extends Controller
                 }
             }
 
-            // ocupação
             $ocupadas = DB::table('city_distribuidor')
                 ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
                 ->join('cities','cities.id','=','city_distribuidor.city_id')
@@ -188,8 +187,6 @@ class DistribuidorController extends Controller
                 $user->assignRole('distribuidor');
             }
 
-            // DISTRIBUIDOR
-            /** @var \App\Models\Distribuidor $distribuidor */
             $distribuidor = Distribuidor::create([
                 'user_id'             => $user->id,
                 'gestor_id'           => $data['gestor_id'],
@@ -292,13 +289,13 @@ class DistribuidorController extends Controller
             ->with('success', 'Distribuidor criado com sucesso!');
     }
 
-    public function show(\App\Models\Distribuidor $distribuidor)
+    public function show(Distribuidor $distribuidor)
     {
         $distribuidor->load([
             'user',
             'gestor',
             'cities',
-            'anexos.cidade', // <— AQUI
+            'anexos.cidade',
         ]);
 
         return view('admin.distribuidores.show', compact('distribuidor'));

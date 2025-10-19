@@ -22,17 +22,14 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
 {
-    // ---- paginação/ordenação seguras ----
     $perPage = min(max((int)$request->integer('per_page', 20), 5), 100);
     $orderBy = in_array($request->get('order_by'), ['id','data','created_at','valor_total']) ? $request->get('order_by') : 'id';
     $dir     = $request->get('dir') === 'asc' ? 'asc' : 'desc';
 
-    // ---- contadores (pode usar Cache facade) ----
     $totalProdutos = Cache::remember('dash.total_produtos', now()->addMinutes(5), fn() => Produto::count());
     $totalGestores = Cache::remember('dash.total_gestores', now()->addMinutes(5), fn() => Gestor::count());
     $totalUsuarios = Cache::remember('dash.total_usuarios', now()->addMinutes(5), fn() => User::count());
 
-    // ---- listas auxiliares leves ----
     $produtosComEstoqueBaixo = Produto::query()
         ->where('quantidade_estoque', '<=', 100)
         ->orderBy('quantidade_estoque')
@@ -55,7 +52,6 @@ class DashboardController extends Controller
             DB::raw('SUM(pp.quantidade) - pr.quantidade_estoque AS excedente'),
         ]);
 
-    // ---- contratos vencendo/vencidos ----
     $gestoresVencendo = Gestor::vencendoEmAte(30)
         ->orderBy('vencimento_contrato')
         ->limit(10)
@@ -153,7 +149,6 @@ class DashboardController extends Controller
         ->without(['gestor','distribuidor','cidades'])
         ->select(['id','valor_total']);
 
-    // remove ORDER BY herdado para a subquery
     $sub->getQuery()->orders = null;
 
     $aggregates = DB::query()

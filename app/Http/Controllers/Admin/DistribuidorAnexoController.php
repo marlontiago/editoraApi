@@ -18,9 +18,9 @@ class DistribuidorAnexoController extends Controller
     $this->assertPertenceAoDistribuidor($distribuidor, $anexo);
 
     $cidades = $distribuidor->cities()
-        ->select('cities.id', 'cities.name', 'cities.state as uf') // <-- qualificado
-        ->orderBy('cities.state')                                  // <-- qualificado
-        ->orderBy('cities.name')                                   // <-- qualificado
+        ->select('cities.id', 'cities.name', 'cities.state as uf') 
+        ->orderBy('cities.state')                                  
+        ->orderBy('cities.name')                                   
         ->get();
 
     return view('admin.distribuidores.anexos.edit', compact('distribuidor', 'anexo', 'cidades'));
@@ -45,7 +45,6 @@ class DistribuidorAnexoController extends Controller
         $dados['assinado'] = $request->boolean('assinado');
         $dados['ativo']    = $request->boolean('ativo');
 
-        // 🔒 valida se a cidade pertence ao distribuidor
         if ($dados['tipo'] === 'contrato_cidade') {
             if (empty($dados['cidade_id'])) {
                 return back()->withErrors(['cidade_id' => 'Selecione a cidade para "contrato_cidade".'])->withInput();
@@ -64,7 +63,7 @@ class DistribuidorAnexoController extends Controller
             $dados['cidade_id'] = null;
         }
 
-        // 🧮 calcula data de fim (mesma lógica do gestor)
+        //  calcula data de fim (mesma lógica do gestor)
         $novaDataAss = null;
         $novaDataVenc = null;
 

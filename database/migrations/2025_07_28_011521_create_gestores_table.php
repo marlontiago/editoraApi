@@ -10,9 +10,8 @@ return new class extends Migration {
         Schema::create('gestores', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-
-            // UF de atuação (separada do endereço cadastral)
+            // Dono do cadastro (pode ser removido no futuro sem apagar o gestor)
+            $table->foreignId('user_id')->nullable();
             $table->string('estado_uf', 2)->nullable()->index();
 
             $table->string('razao_social');
@@ -21,11 +20,11 @@ return new class extends Migration {
             $table->string('cpf', 14)->nullable();
             $table->string('rg', 30)->nullable();
 
-            // Telefone/e-mail "legados" (mantidos p/ compat)
+            // Legado
             $table->string('telefone', 20)->nullable();
             $table->string('email')->nullable()->unique();
 
-            // NOVOS: listas
+            // Listas
             $table->json('telefones')->nullable();
             $table->json('emails')->nullable();
 
@@ -38,7 +37,7 @@ return new class extends Migration {
             $table->string('uf', 2)->nullable();
             $table->string('cep', 9)->nullable();
 
-            // Endereço secundário (novo)
+            // Endereço secundário
             $table->string('endereco2', 255)->nullable();
             $table->string('numero2', 20)->nullable();
             $table->string('complemento2', 100)->nullable();
@@ -47,16 +46,23 @@ return new class extends Migration {
             $table->string('uf2', 2)->nullable();
             $table->string('cep2', 9)->nullable();
 
-            // Regras contratuais
+            // Contratuais
             $table->decimal('percentual_vendas', 5, 2)->default(0);
             $table->date('vencimento_contrato')->nullable();
             $table->boolean('contrato_assinado')->default(false);
 
             $table->timestamps();
+            $table->softDeletes(); // deleted_at
 
-            // Índices
             $table->index('cnpj');
             $table->index('cpf');
+        });
+
+        // FK user_id com nullOnDelete
+        Schema::table('gestores', function (Blueprint $table) {
+            $table->foreign('user_id')
+                  ->references('id')->on('users')
+                  ->nullOnDelete();
         });
     }
 

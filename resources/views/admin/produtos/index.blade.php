@@ -91,7 +91,6 @@
                         <th class="px-3 py-2 hidden xl:table-cell">Edição</th>
                         <th class="px-3 py-2 hidden lg:table-cell">Ano</th>
                         <th class="px-3 py-2 hidden xl:table-cell">Páginas</th>
-                        <th class="px-3 py-2 hidden xl:table-cell">Peso (kg)</th>
                         <th class="px-3 py-2 hidden lg:table-cell">Ano Escolar</th>
                         <th class="px-3 py-2 whitespace-nowrap">Preço</th>
                         <th class="px-3 py-2">Estoque</th>
@@ -115,16 +114,14 @@
 
                             <td class="px-3 py-2 hidden md:table-cell">{{ $produto->titulo ?? '—' }}</td>
                             <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->colecao?->nome ?? '—' }}</td>
-                           <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->isbn_formatado }}</td>
+                           <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->isbn }}</td>
                             <td class="px-3 py-2 hidden xl:table-cell">
                                 <span class="line-clamp-2">{{ $produto->autores ?? '—' }}</span>
                             </td>
                             <td class="px-3 py-2 hidden xl:table-cell">{{ $produto->edicao ?? '—' }}</td>
                             <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->ano ?? '—' }}</td>
                             <td class="px-3 py-2 hidden xl:table-cell">{{ $produto->numero_paginas ?? '—' }}</td>
-                            <td class="px-3 py-2 hidden xl:table-cell">
-                                {{ $produto->peso ? number_format($produto->peso, 3, ',', '.') : '—' }}
-                            </td>
+                            
                             <td class="px-3 py-2 hidden lg:table-cell">
                                 @if($produto->ano_escolar)
                                     <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">

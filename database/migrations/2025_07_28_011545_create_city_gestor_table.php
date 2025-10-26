@@ -14,10 +14,8 @@ return new class extends Migration {
                 $table->foreignId('gestor_id')->constrained('gestores')->cascadeOnDelete();
                 $table->timestamps();
 
-                // Evita duplicidade do vínculo
                 $table->unique(['city_id', 'gestor_id'], 'city_gestor_unique');
 
-                // Índices úteis
                 $table->index('city_id');
                 $table->index('gestor_id');
             });

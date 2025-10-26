@@ -237,6 +237,16 @@
                                       onsubmit="return confirm('Tem certeza que deseja excluir este anexo?');">
                                     @csrf
                                     @method('DELETE')
+                                    @php
+                                        $venAnexo = $anexo->data_vencimento ? \Carbon\Carbon::parse($anexo->data_vencimento) : null;
+                                    @endphp
+
+                                    @if($venAnexo && $venAnexo->isPast())
+                                        <span class="inline-flex items-center rounded-md bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 border border-red-200">
+                                            Contrato vencido
+                                        </span>
+                                    @endif
+
                                     <button type="submit"
                                             class="inline-flex h-8 items-center rounded-md border px-3 text-xs text-red-600 hover:bg-red-50">
                                         Excluir

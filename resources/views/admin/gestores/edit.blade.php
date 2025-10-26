@@ -140,34 +140,27 @@
 
             {{-- UFs de atuação (MÚLTIPLAS) --}}
             @php
-                $selecionadas = old('estados_uf', isset($gestor) ? $gestor->ufs->pluck('uf')->all() : []);
-                $ocupadas = $ufOcupadas ?? [];
+                $selecionadas = old(
+                    'estados_uf',
+                    isset($gestor) ? $gestor->ufs->pluck('uf')->map(fn($u)=>strtoupper($u))->all() : []
+                );
             @endphp
 
             <div class="col-span-12">
                 <label class="block text-sm font-medium text-gray-700">UF(s) de Atuação</label>
                 <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                    @foreach($ufs as $uf)
-                        @php
-                            $isOcupada = array_key_exists($uf, $ocupadas);
-                            $checked   = in_array($uf, $selecionadas);
-                        @endphp
-                        <label class="inline-flex items-center gap-2 text-sm {{ $isOcupada ? 'text-gray-400' : '' }}">
+                     @foreach($ufs as $uf)
+                        @php $checked = in_array($uf, $selecionadas); @endphp
+                        <label class="inline-flex items-center gap-2 text-sm">
                             <input
                                 type="checkbox"
                                 name="estados_uf[]"
                                 value="{{ $uf }}"
                                 class="rounded border-gray-300"
                                 @checked($checked)
-                                @disabled($isOcupada)
                                 @change="$store.gestor.toggleUf('{{$uf}}', $event.target.checked)"
                             >
-                            <span>
-                                {{ $uf }}
-                                @if($isOcupada)
-                                    — ocupada por {{ $ocupadas[$uf] }}
-                                @endif
-                            </span>
+                            <span>{{ $uf }}</span>
                         </label>
                     @endforeach
                 </div>

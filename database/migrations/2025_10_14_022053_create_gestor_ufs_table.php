@@ -22,7 +22,7 @@ return new class extends Migration {
         Schema::table('gestor_ufs', function (Blueprint $table) {
             $table->foreign('gestor_id')
                   ->references('id')->on('gestores')
-                  ->restrictOnDelete(); // protege histórico
+                  ->restrictOnDelete();
         });
     }
 

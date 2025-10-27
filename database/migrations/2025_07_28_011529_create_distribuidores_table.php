@@ -10,16 +10,8 @@ return new class extends Migration {
         Schema::create('distribuidores', function (Blueprint $table) {
             $table->id();
 
-            // Relacionamentos
-            $table->foreignId('user_id')
-                ->constrained()
-                ->cascadeOnDelete();
-
-            // vínculo opcional com gestor
-            $table->foreignId('gestor_id')
-                ->nullable()
-                ->constrained('gestores')
-                ->nullOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('gestor_id')->nullable()->constrained('gestores')->nullOnDelete();
 
             // Dados principais
             $table->string('razao_social')->nullable();
@@ -28,10 +20,8 @@ return new class extends Migration {
             $table->string('cpf')->nullable();
             $table->string('rg')->nullable();
 
-            // Contatos (agora como listas JSON)
-            // O primeiro e-mail da lista será usado para a conta do usuário
-            $table->json('emails')->nullable();     // ex: ["a@x.com","b@y.com"]
-            $table->json('telefones')->nullable();  // ex: ["41999999999","4133333333"]
+            $table->json('emails')->nullable();     
+            $table->json('telefones')->nullable();  
 
             // Endereço principal
             $table->string('endereco', 255)->nullable();
@@ -42,7 +32,7 @@ return new class extends Migration {
             $table->string('uf', 2)->nullable();
             $table->string('cep', 9)->nullable();
 
-            // Endereço secundário (mesma estrutura)
+            // Endereço secundário
             $table->string('endereco2', 255)->nullable();
             $table->string('numero2', 20)->nullable();
             $table->string('complemento2', 100)->nullable();
@@ -51,7 +41,7 @@ return new class extends Migration {
             $table->string('uf2', 2)->nullable();
             $table->string('cep2', 9)->nullable();
 
-            // Comercial / Contrato
+            // Contrato
             $table->decimal('percentual_vendas', 5, 2)->default(0)->nullable();
             $table->date('vencimento_contrato')->nullable();
             $table->boolean('contrato_assinado')->default(false);

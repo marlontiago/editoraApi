@@ -4,8 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Support\Formatters;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Produto extends Model
 {
@@ -20,17 +20,17 @@ class Produto extends Model
     ];
 
     protected $casts = [
-        'preco'               => 'decimal:2',
-        'peso'                => 'decimal:3',
-        'quantidade_estoque'  => 'integer',
-        'quantidade_por_caixa'=> 'integer',
+        'preco'                => 'decimal:2',
+        'peso'                 => 'decimal:3',
+        'quantidade_estoque'   => 'integer',
+        'quantidade_por_caixa' => 'integer',
     ];
+
+    protected $appends = ['imagem_url'];
 
     public function vendas()
     {
-
         return $this->belongsToMany(Venda::class)->withPivot('quantidade', 'preco_unitario');
-        
     }
 
     public function colecao()
@@ -54,28 +54,38 @@ class Produto extends Model
 
     public function getImagemUrlAttribute(): ?string
     {
-        $path = $this->imagem;
+        $raw = $this->imagem;
+        if (!$raw) return null;
 
-        if (! $path) {
-            return null;
+        $path = ltrim($raw, '/');
+
+        // 1) URL absoluta já pronta
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $raw;
         }
 
-        // se estiver no disco "public" padrão
+        // 2) Se veio com "storage/..." do seeder antigo, normaliza para o disco "public"
+        if (Str::startsWith($path, 'storage/')) {
+            $publicRel = Str::after($path, 'storage/'); // ex: "produtos/arquivo.jpg"
+            if (Storage::disk('public')->exists($publicRel)) {
+                return Storage::disk('public')->url($publicRel); // "/storage/produtos/arquivo.jpg"
+            }
+            // fallback: talvez o arquivo esteja mesmo no public/
+            if (file_exists(public_path($path))) {
+                return asset($path);
+            }
+        }
+
+        // 3) Caminho relativo do disco "public" (ex: "produtos/arquivo.jpg")
         if (Storage::disk('public')->exists($path)) {
-            return Storage::disk('public')->url($path); // ex: /storage/produtos/arquivo.jpg
+            return Storage::disk('public')->url($path); // "/storage/produtos/arquivo.jpg"
         }
 
-        // fallback: se o caminho já for público (ex: começa com http)
-        if (filter_var($path, FILTER_VALIDATE_URL)) {
-            return $path;
-        }
-
-        // fallback final: tenta caminho público direto (se você salva 'storage/...' no DB)
+        // 4) Arquivo direto em public/ (ex: "images/arquivo.jpg" ou "storage/produtos/arquivo.jpg")
         if (file_exists(public_path($path))) {
             return asset($path);
         }
 
         return null;
     }
-
 }

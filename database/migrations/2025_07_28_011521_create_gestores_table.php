@@ -10,7 +10,6 @@ return new class extends Migration {
         Schema::create('gestores', function (Blueprint $table) {
             $table->id();
 
-            // Dono do cadastro (pode ser removido no futuro sem apagar o gestor)
             $table->foreignId('user_id')->nullable();
             $table->string('estado_uf', 2)->nullable()->index();
 
@@ -19,12 +18,8 @@ return new class extends Migration {
             $table->string('representante_legal')->nullable();
             $table->string('cpf', 14)->nullable();
             $table->string('rg', 30)->nullable();
-
-            // Legado
             $table->string('telefone', 20)->nullable();
             $table->string('email')->nullable()->unique();
-
-            // Listas
             $table->json('telefones')->nullable();
             $table->json('emails')->nullable();
 
@@ -58,7 +53,6 @@ return new class extends Migration {
             $table->index('cpf');
         });
 
-        // FK user_id com nullOnDelete
         Schema::table('gestores', function (Blueprint $table) {
             $table->foreign('user_id')
                   ->references('id')->on('users')

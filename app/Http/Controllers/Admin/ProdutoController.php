@@ -41,7 +41,7 @@ class ProdutoController extends Controller
     private function normalize(Request $request): void
     {
         $request->merge([
-            'isbn'  => preg_replace('/\D/', '', (string) $request->input('isbn')),
+            //'isbn'  => preg_replace('/\D/', '', (string) $request->input('isbn')),
             'preco' => $this->toFloat($request->input('preco')),
             'peso'  => $this->toFloat($request->input('peso')),
         ]);
@@ -52,7 +52,19 @@ class ProdutoController extends Controller
     {
         return [
             'titulo' => ['required','string','max:255'],
-            'isbn' => ['nullable','string','digits:13'],
+            'isbn' => [
+                'nullable','string','max:17', // cabe "978-65-88702-17-8"
+                function ($attribute, $value, $fail) {
+                    if ($value === null || $value === '') return;
+                    $digits = preg_replace('/\D/', '', $value);
+                    if (strlen($digits) !== 13) {
+                        $fail('O ISBN deve conter exatamente 13 dígitos (com ou sem traços).');
+                    }
+                    if (!preg_match('/^[0-9-]+$/', $value)) {
+                        $fail('Use apenas números e traços no ISBN.');
+                    }
+                },
+            ],
             'autores' => ['nullable','string','max:255'],
             'edicao' => ['nullable','string','max:50'],
             'ano' => ['nullable','integer','min:1900','max:'.date('Y')],
@@ -67,6 +79,7 @@ class ProdutoController extends Controller
             'imagem' => ['nullable','image','mimes:png,jpg,jpeg,webp','max:2048'],
         ];
     }
+
 
     public function index(Request $request)
     {

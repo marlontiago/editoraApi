@@ -30,8 +30,7 @@ Route::get('/', function () {
     return view('auth.login');
 });
 
-// REMOVIDO: rota simples de /dashboard para evitar duplicidade
-// A versão com redirecionamento por papel fica abaixo.
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -123,6 +122,8 @@ Route::get('/notas/{nota}/consultar',[NotaFiscalPlugNotasController::class, 'con
 Route::get('/notas/{nota}/pdf',      [NotaFiscalPlugNotasController::class, 'pdf'])->name('notas.pdf');
 Route::get('/notas/{nota}/xml',      [NotaFiscalPlugNotasController::class, 'xml'])->name('notas.xml');
 Route::post('/webhooks/plugnotas', [\App\Http\Controllers\WebhookPlugNotasController::class, 'handle']);
+
+
 
 Route::middleware(['auth', 'role:gestor'])->prefix('gestor')->name('gestor.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\Gestor\DashboardController::class, 'index'])->name('dashboard');

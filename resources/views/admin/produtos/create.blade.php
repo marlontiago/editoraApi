@@ -45,9 +45,8 @@
             {{-- ISBN e Edição --}}
             <div class="col-span-12 md:col-span-6">
                 <label for="isbn" class="block text-sm font-medium text-gray-700">ISBN</label>
-                <input type="text" id="isbn" name="isbn" value="{{ old('isbn') }}" placeholder="000-00-0000-000-0" maxlength="17"
-                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                       oninput="this.value=(v=>{v=v.replace(/\D/g,'').slice(0,13);let out='',i=0;for(const len of [3,2,4,3,1]){const p=v.slice(i,i+len);if(!p) break;out+=(out?'-':'')+p;i+=len}return out})(this.value)">
+                <input type="text" id="isbn" name="isbn" value="{{ old('isbn') }}" maxlength="17"
+       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                 @error('isbn') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">

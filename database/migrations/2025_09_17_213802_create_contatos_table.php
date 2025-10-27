@@ -27,10 +27,6 @@ return new class extends Migration {
             $table->text('observacoes')->nullable();
 
             $table->timestamps();
-
-            // (Opcional, apenas Postgres) Único preferencial por dono:
-            // $table->unique(['contatavel_type','contatavel_id'], 'contatos_preferencial_unique')
-            //     ->where('preferencial', true);
         });
     }
 

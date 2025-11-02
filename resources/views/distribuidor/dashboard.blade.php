@@ -13,11 +13,11 @@
             
             <div class="bg-green-100 p-4 rounded shadow">
                 <p class="text-sm text-gray-600">Comissão Recebida</p>
-                <p class="text-xl font-bold">R$ {{ number_format($totalComissao, 2, ',', '.') }}</p>
+                
             </div>
             <div class="bg-yellow-100 p-4 rounded shadow">
                 <p class="text-sm text-gray-600">Percentual Atual</p>
-                <p class="text-xl font-bold">{{ number_format($percentual, 2, ',', '.') }}%</p>
+               
             </div>
 
             <div class="flex justify-start mb-4">

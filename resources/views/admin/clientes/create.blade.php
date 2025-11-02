@@ -85,7 +85,7 @@
                 if (empty($emailsSeed)) $emailsSeed = [''];
             @endphp
             <div class="col-span-12 md:col-span-6" x-data='{ lista: @json(array_values($emailsSeed)) }'>
-                <label class="block text-sm font-medium text-gray-700">E-mai</label>
+                <label class="block text-sm font-medium text-gray-700">E-mail</label>
                 <template x-for="(em, i) in lista" :key="i">
                     <div class="mt-1 flex gap-2">
                         <input type="email" maxlength="255"

@@ -9,10 +9,11 @@
             function moeda_br($v) { return 'R$ ' . number_format((float)$v, 2, ',', '.'); }
             function status_badge($s) {
                 $map = [
-                    'pago' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                    'pago'                 => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                    'pago_parcial'         => 'bg-sky-100 text-sky-800 border-sky-200',
                     'aguardando_pagamento' => 'bg-amber-100 text-amber-800 border-amber-200',
-                    'faturada' => 'bg-sky-100 text-sky-800 border-sky-200',
-                    'emitida' => 'bg-blue-100 text-blue-800 border-blue-200',
+                    'faturada'             => 'bg-sky-100 text-sky-800 border-sky-200',
+                    'emitida'              => 'bg-blue-100 text-blue-800 border-blue-200',
                 ];
                 $cls = $map[$s] ?? 'bg-gray-100 text-gray-700 border-gray-200';
                 return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border '.$cls.'">'.e(str_replace('_',' ',$s)).'</span>';
@@ -29,7 +30,7 @@
 
             <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'aguardando_pagamento'])) }}"
                class="bg-amber-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
-                <h1 class="text-sm uppercase tracking-wide">Aguardando pagamento</h1>
+                <h1 class="text-sm uppercase tracking-wide">Aguardando / Parcial</h1>
                 <p class="text-3xl font-bold mt-2">{{ $notasAPagar->count() }}</p>
             </a>
 
@@ -46,6 +47,9 @@
                 class="flex flex-wrap items-end gap-3 mb-4 bg-white p-4 rounded-xl border shadow-sm">
 
                 <input type="hidden" name="status" id="status" value="{{ $statusFiltro ?? '' }}">
+                {{-- adicionados para não quebrar o JS de auto-submit (retrocompat) --}}
+                <input type="hidden" name="tipo" id="tipo" value="{{ $filtroTipo ?? '' }}">
+                <input type="hidden" name="id" id="id" value="{{ $filtroId ?? '' }}">
 
                 {{-- filtros entidade principal --}}
                 <div>
@@ -89,7 +93,7 @@
 
                 {{-- filtros adicionais --}}
                 <div>
-                    <label class="block text-xs text-gray-500 mb-1">Advogado</label>
+                    <label class="block text-xs text-gray-500 mb-1">Despesas Adicionais</label>
                     <select name="advogado_id" class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm">
                         <option value="">--Todos--</option>
                         @foreach ($advogados as $a)
@@ -99,11 +103,23 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs text-gray-500 mb-1">Diretor</label>
+                    <label class="block text-xs text-gray-500 mb-1">Comercial</label>
                     <select name="diretor_id" class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm">
                         <option value="">--Todos--</option>
                         @foreach ($diretores as $d)
                             <option value="{{ $d->id }}" @selected((int)($diretorId ?? 0)===$d->id)>{{ $d->nome }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">UF</label>
+                    <select name="uf" id="select-uf"
+                            class="w-[100px] md:w-[120px] rounded-xl border-gray-200 shadow-sm"
+                            onchange="this.form.submit()">
+                        <option value="">-- UF --</option>
+                        @foreach ($ufsOptions as $uf)
+                            <option value="{{ $uf }}" @selected(($ufSelecionada ?? '') === $uf)>{{ $uf }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -135,15 +151,13 @@
                     Aplicar
                 </button>
 
-                @if($dataInicio || $dataFim || $filtroTipo || $filtroId || $statusFiltro || $advogadoId || $diretorId || $cidadeId)
+                @if($dataInicio || $dataFim || $filtroTipo || $filtroId || $statusFiltro || $advogadoId || $diretorId || $cidadeId || ($ufSelecionada ?? false))
                     <a href="{{ route('admin.relatorios.index') }}" class="px-2 py-2 text-sm text-blue-700 hover:underline">
                         Limpar
                     </a>
                 @endif
             </form>
         </div>
-
-
 
         {{-- chips --}}
         <div class="px-4">
@@ -176,6 +190,11 @@
                 @if($cidadeId)
                     <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
                         Cidade: <strong class="ml-1">#{{ $cidadeId }}</strong>
+                    </span>
+                @endif
+                @if(!empty($ufSelecionada))
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
+                        UF: <strong class="ml-1">{{ $ufSelecionada }}</strong>
                     </span>
                 @endif
             </div>
@@ -223,13 +242,13 @@
                                         });
                                     }
                                     $liquido   = (float) $pgts->sum('valor_liquido');
-                                        $retencoes = 0.0;
-                                        foreach ([
-                                            'ret_irrf_valor','ret_iss_valor','ret_inss_valor',
-                                            'ret_pis_valor','ret_cofins_valor','ret_csll_valor','ret_outros_valor'
-                                        ] as $campoRet) {
-                                            $retencoes += (float) $pgts->sum($campoRet);
-                                        }
+                                    $retencoes = 0.0;
+                                    foreach ([
+                                        'ret_irrf_valor','ret_iss_valor','ret_inss_valor',
+                                        'ret_pis_valor','ret_cofins_valor','ret_csll_valor','ret_outros_valor'
+                                    ] as $campoRet) {
+                                        $retencoes += (float) $pgts->sum($campoRet);
+                                    }
                                     $cidadesStr = $pedido && $pedido->cidades ? $pedido->cidades->pluck('name')->join(', ') : '—';
                                 @endphp
                                 <tr class="hover:bg-gray-50">

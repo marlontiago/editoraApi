@@ -25,6 +25,7 @@ class DashboardController extends Controller
     $perPage = min(max((int)$request->integer('per_page', 20), 5), 100);
     $orderBy = in_array($request->get('order_by'), ['id','data','created_at','valor_total']) ? $request->get('order_by') : 'id';
     $dir     = $request->get('dir') === 'asc' ? 'asc' : 'desc';
+    
 
     $totalProdutos = Cache::remember('dash.total_produtos', now()->addMinutes(5), fn() => Produto::count());
     $totalGestores = Cache::remember('dash.total_gestores', now()->addMinutes(5), fn() => Gestor::count());

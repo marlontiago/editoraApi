@@ -50,6 +50,9 @@ class RelatoriosController extends Controller
         $dataInicio = $request->input('data_inicio'); // YYYY-MM-DD
         $dataFim    = $request->input('data_fim');
 
+        // NOVO: UF selecionada
+        $ufSelecionada = $request->get('uf');
+
         // Janela temporal normalizada (dia inteiro)
         $inicio = $dataInicio ? Carbon::parse($dataInicio)->startOfDay() : null;
         $fim    = $dataFim    ? Carbon::parse($dataFim)->endOfDay()     : null;
@@ -67,6 +70,13 @@ class RelatoriosController extends Controller
         $advogados      = Advogado::orderBy('nome')->get();
         $diretores      = DiretorComercial::orderBy('nome')->get();
 
+        // NOVO: opções de UF a partir das cidades
+        $ufsOptions = City::query()
+            ->select('state')           // coluna é 'state' (não 'uf')
+            ->distinct()
+            ->orderBy('state')
+            ->pluck('state');
+
         // ==========================
         // Base: Notas Fiscais
         // ==========================
@@ -76,7 +86,7 @@ class RelatoriosController extends Controller
                 'pedido.cliente:id,razao_social',
                 'pedido.gestor:id,razao_social,percentual_vendas',
                 'pedido.distribuidor:id,razao_social,percentual_vendas',
-                'pedido.cidades:id,name',
+                'pedido.cidades:id,name,state', // inclui state para possíveis usos na view
                 // snapshots salvos em nota_pagamentos
                 'pagamentos:id,nota_fiscal_id,valor_pago,valor_liquido,data_pagamento,' .
                     'ret_irrf_valor,ret_iss_valor,ret_inss_valor,ret_pis_valor,ret_cofins_valor,ret_csll_valor,ret_outros_valor,' .
@@ -88,13 +98,19 @@ class RelatoriosController extends Controller
             ]);
 
         // Status
-        if (!empty($statusFiltro)) {
-            if (in_array($statusFiltro, ['pago', 'aguardando_pagamento', 'faturada'])) {
-                $notasQuery->where('status_financeiro', $statusFiltro);
-            } elseif ($statusFiltro === 'emitida') {
-                $notasQuery->whereNotNull('emitida_em');
-            }
-        }
+if (!empty($statusFiltro)) {
+    if ($statusFiltro === 'aguardando_pagamento') {
+        // Inclui também notas com status 'pago_parcial'
+        $notasQuery->where(function ($q) {
+            $q->where('status_financeiro', 'aguardando_pagamento')
+              ->orWhere('status_financeiro', 'pago_parcial');
+        });
+    } elseif (in_array($statusFiltro, ['pago', 'faturada'])) {
+        $notasQuery->where('status_financeiro', $statusFiltro);
+    } elseif ($statusFiltro === 'emitida') {
+        $notasQuery->whereNotNull('emitida_em');
+    }
+}
 
         // Período (considera emitida, faturada ou pagamento no range)
         if ($periodo) {
@@ -124,6 +140,7 @@ class RelatoriosController extends Controller
                 if ($periodo) $q->whereBetween('data_pagamento', [$inicio, $fim]);
             });
         }
+
         // Diretor
         if ($diretorId > 0) {
             $notasQuery->whereHas('pagamentos', function ($q) use ($diretorId, $periodo, $inicio, $fim) {
@@ -131,6 +148,7 @@ class RelatoriosController extends Controller
                 if ($periodo) $q->whereBetween('data_pagamento', [$inicio, $fim]);
             });
         }
+
         // Cidade
         if ($cidadeId > 0) {
             $notasQuery->whereHas('pedido.cidades', function ($q) use ($cidadeId) {
@@ -138,19 +156,34 @@ class RelatoriosController extends Controller
             });
         }
 
+        // NOVO: UF (state)
+        if (!empty($ufSelecionada)) {
+            $notasQuery->whereHas('pedido.cidades', function ($q) use ($ufSelecionada) {
+                $q->where('state', $ufSelecionada);
+            });
+        }
+
         $notas = $notasQuery->orderByDesc('id')->get();
 
         // ==========================
-        // Dropdown de Cidades (apenas as que aparecem no resultado atual)
+        // Dropdown de Cidades
         // ==========================
-        $cityIds = $notas->flatMap(function ($n) {
-            $pedido = $n->pedido;
-            return $pedido && $pedido->cidades ? $pedido->cidades->pluck('id') : collect();
-        })->unique()->values();
+        // Quando há UF selecionada, mostra TODAS as cidades daquela UF (mais útil para o usuário),
+        // senão mantém o comportamento de listar apenas cidades presentes no resultado atual.
+        if (!empty($ufSelecionada)) {
+            $cidadesOptions = City::where('state', $ufSelecionada)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+        } else {
+            $cityIds = $notas->flatMap(function ($n) {
+                $pedido = $n->pedido;
+                return $pedido && $pedido->cidades ? $pedido->cidades->pluck('id') : collect();
+            })->unique()->values();
 
-        $cidadesOptions = $cityIds->isEmpty()
-            ? collect()
-            : City::whereIn('id', $cityIds)->orderBy('name')->get(['id', 'name']);
+            $cidadesOptions = $cityIds->isEmpty()
+                ? collect()
+                : City::whereIn('id', $cityIds)->orderBy('name')->get(['id', 'name']);
+        }
 
         // ==========================
         // Agregações / Totais (usando snapshots!)
@@ -390,7 +423,9 @@ class RelatoriosController extends Controller
             'gestoresBreak','distsBreak','advogadosBreak','diretoresBreak',
             'gestoresDetalhe','distsDetalhe','advogadosDetalhe','diretoresDetalhe',
             'notasPagas','notasAPagar','notasEmitidas',
-            'cidadesOptions'
+            'cidadesOptions',
+            // NOVO:
+            'ufsOptions','ufSelecionada'
         ));
     }
 }

@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Models\Anexo;
 use App\Models\Distribuidor;
 use App\Models\GestorUf;
-use App\Models\City; // <-- necessário para cidades
+use App\Models\City; 
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema; // <-- para detectar colunas dinamicamente
+use Illuminate\Support\Facades\Schema; 
 
 class GestorController extends Controller
 {

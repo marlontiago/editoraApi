@@ -15,10 +15,6 @@ class DashboardController extends Controller
     {
         $distribuidor = Auth::user()->distribuidor;        
 
-        // Busca percentual atual do distribuidor
-        $percentual = Commission::where('user_id', Auth::id())
-            ->latest()
-            ->value('percentage') ?? 0;
 
         // Aplica os mesmos filtros do relatório
         $vendasQuery = Venda::with('produtos')
@@ -43,13 +39,12 @@ class DashboardController extends Controller
 
         // Totais (com base no resultado filtrado mostrado no dashboard)
         $totalVendas   = $vendas->sum('valor_total');
-        $totalComissao = $vendas->sum(fn ($v) => ($percentual / 100) * $v->valor_total);
+        
 
         return view('distribuidor.dashboard', compact(
             'vendas',
             'totalVendas',
-            'totalComissao',
-            'percentual'
+            
         ));
     }
 }

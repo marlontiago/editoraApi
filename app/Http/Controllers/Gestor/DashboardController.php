@@ -24,7 +24,7 @@ class DashboardController extends Controller
             ->get();
 
         // Comissões dos distribuidores (último percentual ativo por user_id)
-        $comissoes = Commission::whereIn('user_id', $distribuidores->pluck('user_id'))->get()->groupBy('user_id');
+        
 
         // Totalizadores
         $totalVendas = $vendas->count();

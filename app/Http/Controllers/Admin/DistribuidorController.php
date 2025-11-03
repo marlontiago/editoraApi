@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Schema; // <<<<<< importante
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
+use Illuminate\Database\QueryException;
 
 class DistribuidorController extends Controller
 {
@@ -34,14 +36,16 @@ class DistribuidorController extends Controller
     {
         // normaliza listas
         $emailsReq    = collect($request->input('emails', []))
-                            ->map(fn($e) => trim((string)$e))
-                            ->filter(fn($e) => $e !== '')
-                            ->values();
-        $telefonesReq = collect($request->input('telefones', []))
-                            ->map(fn($t) => preg_replace('/\D+/', '', (string)$t))
-                            ->filter(fn($t) => $t !== '')
-                            ->values();
+            ->map(fn($e) => trim((string)$e))
+            ->filter(fn($e) => $e !== '')
+            ->values();
 
+        $telefonesReq = collect($request->input('telefones', []))
+            ->map(fn($t) => preg_replace('/\D+/', '', (string)$t))
+            ->filter(fn($t) => $t !== '')
+            ->values();
+
+        // se não veio "email" explícito, usa o primeiro de emails[]
         if (!$request->filled('email') && $emailsReq->isNotEmpty()) {
             $request->merge(['email' => $emailsReq->first()]);
         }
@@ -109,7 +113,22 @@ class DistribuidorController extends Controller
             'contratos.*.ativo'             => ['nullable','boolean'],
             'contratos.*.data_assinatura'   => ['nullable','date'],
             'contratos.*.validade_meses'    => ['nullable','integer','min:1','max:120'],
-                    ]);
+        ], [
+            // mensagens PT-BR
+            'gestor_id.required' => 'Selecione um gestor.',
+            'gestor_id.exists'   => 'Gestor inválido.',
+            'email.email'        => 'Informe um e-mail válido.',
+            'email.unique'       => 'Já existe um usuário cadastrado com este e-mail.',
+            'password.min'       => 'A senha deve ter no mínimo :min caracteres.',
+            'razao_social.required' => 'Informe a razão social.',
+            'cities.*.exists'    => 'Cidade inválida selecionada.',
+            'contratos.*.tipo.required_with' => 'Informe o tipo do anexo.',
+            'contratos.*.tipo.in'            => 'Tipo de anexo inválido.',
+            'contratos.*.arquivo.mimes'      => 'Os anexos devem ser arquivos PDF.',
+            'contratos.*.arquivo.max'        => 'Cada anexo pode ter no máximo :max KB.',
+            'contratos.*.cidade_id.required_if' => 'Selecione a cidade para o contrato por cidade.',
+            'contratos.*.cidade_id.exists'      => 'Cidade do contrato inválida.',
+        ]);
 
         // >>>>> Validação extra: TODAS as cidades devem estar nas UFs do gestor escolhido
         $gestorUfs = DB::table('gestor_ufs')
@@ -121,7 +140,7 @@ class DistribuidorController extends Controller
         $cityIds = collect($data['cities'] ?? [])->map(fn($i)=>(int)$i)->unique()->values();
 
         if ($cityIds->isNotEmpty()) {
-            $ufCol = $this->cityUfColumn(); // <<< detecção automática da coluna de UF
+            $ufCol = $this->cityUfColumn(); // detecção automática da coluna de UF
             $qCidades = DB::table('cities')
                 ->whereIn('id', $cityIds)
                 ->select('id','name');
@@ -168,121 +187,132 @@ class DistribuidorController extends Controller
             }
         }
 
-        $distribuidor = DB::transaction(function () use ($data, $request, $cityIds, $emailsReq, $telefonesReq, $temAssinado) {
-            // e-mail/senha opcionais (placeholder se vazio)
-            $userEmail = trim((string)($data['email'] ?? ''));
-            $userPass  = (string)($data['password'] ?? '');
+        try {
+            $distribuidor = DB::transaction(function () use ($data, $request, $cityIds, $emailsReq, $telefonesReq, $temAssinado) {
+                // e-mail/senha opcionais (placeholder se vazio)
+                $userEmail = trim((string)($data['email'] ?? ''));
+                $userPass  = (string)($data['password'] ?? '');
 
-            if ($userEmail === '') $userEmail = 'distribuidor+'.Str::uuid().'@placeholder.local';
-            if ($userPass  === '') $userPass  = Str::random(12);
+                if ($userEmail === '') $userEmail = 'distribuidor+'.Str::uuid().'@placeholder.local';
+                if ($userPass  === '') $userPass  = Str::random(12);
 
-            // USER
-            /** @var \App\Models\User $user */
-            $user = User::create([
-                'name'     => $data['razao_social'],
-                'email'    => $userEmail,
-                'password' => Hash::make($userPass),
-            ]);
-            if (method_exists($user, 'assignRole')) {
-                $user->assignRole('distribuidor');
-            }
-
-            $distribuidor = Distribuidor::create([
-                'user_id'             => $user->id,
-                'gestor_id'           => $data['gestor_id'],
-
-                'razao_social'        => $data['razao_social'],
-                'cnpj'                => $data['cnpj'],
-                'representante_legal' => $data['representante_legal'],
-                'cpf'                 => $data['cpf'],
-                'rg'                  => $data['rg'] ?? null,
-
-                'emails'              => $emailsReq->isNotEmpty() ? $emailsReq->all() : null,
-                'telefones'           => $telefonesReq->isNotEmpty() ? $telefonesReq->all() : null,
-
-                // Endereço principal
-                'endereco'            => $data['endereco'] ?? null,
-                'numero'              => $data['numero'] ?? null,
-                'complemento'         => $data['complemento'] ?? null,
-                'bairro'              => $data['bairro'] ?? null,
-                'cidade'              => $data['cidade'] ?? null,
-                'uf'                  => $data['uf'] ?? null,
-                'cep'                 => $data['cep'] ?? null,
-
-                // Endereço secundário
-                'endereco2'           => $data['endereco2'] ?? null,
-                'numero2'             => $data['numero2'] ?? null,
-                'complemento2'        => $data['complemento2'] ?? null,
-                'bairro2'             => $data['bairro2'] ?? null,
-                'cidade2'             => $data['cidade2'] ?? null,
-                'uf2'                 => $data['uf2'] ?? null,
-                'cep2'                => $data['cep2'] ?? null,
-
-                'percentual_vendas'   => $data['percentual_vendas'],
-                'vencimento_contrato' => null, // definido por anexo ativo
-                'contrato_assinado'   => $temAssinado,
-            ]);
-
-            // Cidades
-            if ($cityIds->isNotEmpty()) {
-                $distribuidor->cities()->attach($cityIds->all());
-            }
-
-            // Anexos (com percentual/ativo/datas)
-            if (!empty($data['contratos']) && is_array($data['contratos'])) {
-                $idAtivoEscolhido = null;
-
-                foreach ($data['contratos'] as $idx => $meta) {
-                    $file = $request->file("contratos.$idx.arquivo");
-                    if (!$file) continue;
-
-                    $path   = $file->store("distribuidores/{$distribuidor->id}", 'public');
-                    $ativo  = !empty($meta['ativo']);
-
-                    $inicio = !empty($meta['data_assinatura']) ? Carbon::parse($meta['data_assinatura']) : null;
-                    $meses  = !empty($meta['validade_meses']) ? (int)$meta['validade_meses'] : null;
-                    $dataVenc = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
-
-                    $anexo = $distribuidor->anexos()->create([
-                        'tipo'              => $meta['tipo'] ?? 'contrato',
-                        'cidade_id'         => ($meta['tipo'] ?? null) === 'contrato_cidade'
-                            ? (!empty($meta['cidade_id']) ? (int)$meta['cidade_id'] : null)
-                            : null,
-                        'arquivo'           => $path,
-                        'descricao'         => $meta['descricao'] ?? null,
-                        'assinado'          => !empty($meta['assinado']),
-                        'percentual_vendas' => isset($meta['percentual_vendas']) ? (float)$meta['percentual_vendas'] : null,
-                        'ativo'             => $ativo,
-                        'data_assinatura'   => $inicio,
-                        'data_vencimento'   => $dataVenc,
-                    ]);
-
-                    if ($ativo) $idAtivoEscolhido = $anexo->id;
+                // USER
+                /** @var \App\Models\User $user */
+                $user = User::create([
+                    'name'     => $data['razao_social'],
+                    'email'    => $userEmail,
+                    'password' => Hash::make($userPass),
+                ]);
+                if (method_exists($user, 'assignRole')) {
+                    $user->assignRole('distribuidor');
                 }
 
-                // no máx 1 ativo
-                if ($distribuidor->anexos()->where('ativo', true)->count() > 1) {
-                    $distribuidor->anexos()->where('ativo', true)
-                        ->where('id', '<>', $idAtivoEscolhido)
-                        ->update(['ativo' => false]);
+                $distribuidor = Distribuidor::create([
+                    'user_id'             => $user->id,
+                    'gestor_id'           => $data['gestor_id'],
+
+                    'razao_social'        => $data['razao_social'],
+                    'cnpj'                => $data['cnpj'],
+                    'representante_legal' => $data['representante_legal'],
+                    'cpf'                 => $data['cpf'],
+                    'rg'                  => $data['rg'] ?? null,
+
+                    'emails'              => $emailsReq->isNotEmpty() ? $emailsReq->all() : null,
+                    'telefones'           => $telefonesReq->isNotEmpty() ? $telefonesReq->all() : null,
+
+                    // Endereço principal
+                    'endereco'            => $data['endereco'] ?? null,
+                    'numero'              => $data['numero'] ?? null,
+                    'complemento'         => $data['complemento'] ?? null,
+                    'bairro'              => $data['bairro'] ?? null,
+                    'cidade'              => $data['cidade'] ?? null,
+                    'uf'                  => $data['uf'] ?? null,
+                    'cep'                 => $data['cep'] ?? null,
+
+                    // Endereço secundário
+                    'endereco2'           => $data['endereco2'] ?? null,
+                    'numero2'             => $data['numero2'] ?? null,
+                    'complemento2'        => $data['complemento2'] ?? null,
+                    'bairro2'             => $data['bairro2'] ?? null,
+                    'cidade2'             => $data['cidade2'] ?? null,
+                    'uf2'                 => $data['uf2'] ?? null,
+                    'cep2'                => $data['cep2'] ?? null,
+
+                    'percentual_vendas'   => $data['percentual_vendas'],
+                    'vencimento_contrato' => null, // definido por anexo ativo
+                    'contrato_assinado'   => $temAssinado,
+                ]);
+
+                // Cidades
+                if ($cityIds->isNotEmpty()) {
+                    $distribuidor->cities()->attach($cityIds->all());
                 }
 
-                // aplica percentual/vencimento do ativo
-                $ativo = $distribuidor->anexos()->where('ativo', true)->latest('id')->first();
-                if ($ativo) {
-                    $payload = [];
-                    if ($ativo->percentual_vendas !== null) {
-                        $payload['percentual_vendas'] = $ativo->percentual_vendas;
+                // Anexos (com percentual/ativo/datas)
+                if (!empty($data['contratos']) && is_array($data['contratos'])) {
+                    $idAtivoEscolhido = null;
+
+                    foreach ($data['contratos'] as $idx => $meta) {
+                        $file = $request->file("contratos.$idx.arquivo");
+                        if (!$file) continue;
+
+                        $path   = $file->store("distribuidores/{$distribuidor->id}", 'public');
+                        $ativo  = !empty($meta['ativo']);
+
+                        $inicio = !empty($meta['data_assinatura']) ? Carbon::parse($meta['data_assinatura']) : null;
+                        $meses  = !empty($meta['validade_meses']) ? (int)$meta['validade_meses'] : null;
+                        $dataVenc = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
+
+                        $anexo = $distribuidor->anexos()->create([
+                            'tipo'              => $meta['tipo'] ?? 'contrato',
+                            'cidade_id'         => ($meta['tipo'] ?? null) === 'contrato_cidade'
+                                ? (!empty($meta['cidade_id']) ? (int)$meta['cidade_id'] : null)
+                                : null,
+                            'arquivo'           => $path,
+                            'descricao'         => $meta['descricao'] ?? null,
+                            'assinado'          => !empty($meta['assinado']),
+                            'percentual_vendas' => isset($meta['percentual_vendas']) ? (float)$meta['percentual_vendas'] : null,
+                            'ativo'             => $ativo,
+                            'data_assinatura'   => $inicio,
+                            'data_vencimento'   => $dataVenc,
+                        ]);
+
+                        if ($ativo) $idAtivoEscolhido = $anexo->id;
                     }
-                    if ($ativo->data_vencimento) {
-                        $payload['vencimento_contrato'] = $ativo->data_vencimento;
-                    }
-                    if (!empty($payload)) $distribuidor->update($payload);
-                }
-            }
 
-            return $distribuidor;
-        });
+                    // no máx 1 ativo
+                    if ($distribuidor->anexos()->where('ativo', true)->count() > 1) {
+                        $distribuidor->anexos()->where('ativo', true)
+                            ->where('id', '<>', $idAtivoEscolhido)
+                            ->update(['ativo' => false]);
+                    }
+
+                    // aplica percentual/vencimento do ativo
+                    $ativo = $distribuidor->anexos()->where('ativo', true)->latest('id')->first();
+                    if ($ativo) {
+                        $payload = [];
+                        if ($ativo->percentual_vendas !== null) {
+                            $payload['percentual_vendas'] = $ativo->percentual_vendas;
+                        }
+                        if ($ativo->data_vencimento) {
+                            $payload['vencimento_contrato'] = $ativo->data_vencimento;
+                        }
+                        if (!empty($payload)) $distribuidor->update($payload);
+                    }
+                }
+
+                return $distribuidor;
+            });
+
+        } catch (QueryException $e) {
+            // Tradução de violação de unique no e-mail do users
+            if ((int) $e->getCode() === 23505 || str_contains($e->getMessage(), 'users_email_unique')) {
+                throw ValidationException::withMessages([
+                    'email' => 'Já existe um usuário cadastrado com este e-mail.',
+                ]);
+            }
+            throw $e; // propaga outros erros de banco
+        }
 
         return redirect()
             ->route('admin.distribuidores.index')
@@ -312,13 +342,14 @@ class DistribuidorController extends Controller
     {
         // normaliza listas
         $emailsReq    = collect($request->input('emails', []))
-                            ->map(fn($e) => trim((string)$e))
-                            ->filter(fn($e) => $e !== '')
-                            ->values();
+            ->map(fn($e) => trim((string)$e))
+            ->filter(fn($e) => $e !== '')
+            ->values();
+
         $telefonesReq = collect($request->input('telefones', []))
-                            ->map(fn($t) => preg_replace('/\D+/', '', (string)$t))
-                            ->filter(fn($t) => $t !== '')
-                            ->values();
+            ->map(fn($t) => preg_replace('/\D+/', '', (string)$t))
+            ->filter(fn($t) => $t !== '')
+            ->values();
 
         if (!$request->filled('email') && $emailsReq->isNotEmpty()) {
             $request->merge(['email' => $emailsReq->first()]);
@@ -328,7 +359,7 @@ class DistribuidorController extends Controller
             'gestor_id'           => ['required','exists:gestores,id'],
 
             // USER (login)
-            'email'               => ['nullable','email','max:255','unique:users,email,'.$distribuidor->user_id],
+            'email'               => ['nullable','email','max:255', Rule::unique('users','email')->ignore($distribuidor->user_id)],
             'password'            => ['nullable','string','min:8'],
 
             'razao_social'        => ['nullable','string','max:255'],
@@ -383,7 +414,24 @@ class DistribuidorController extends Controller
             'contratos.*.ativo'             => ['nullable','boolean'],
             'contratos.*.data_assinatura'   => ['nullable','date'],
             'contratos.*.validade_meses'    => ['nullable','integer','min:1','max:120'],
-                    ]);
+        ], [
+            // mensagens PT-BR
+            'gestor_id.required' => 'Selecione um gestor.',
+            'gestor_id.exists'   => 'Gestor inválido.',
+            'email.email'        => 'Informe um e-mail válido.',
+            'email.unique'       => 'Já existe um usuário cadastrado com este e-mail.',
+            'password.min'       => 'A senha deve ter no mínimo :min caracteres.',
+            'cities.*.exists'    => 'Cidade inválida selecionada.',
+            'percentual_vendas.required' => 'Informe o percentual sobre vendas.',
+            'percentual_vendas.min'      => 'O percentual não pode ser negativo.',
+            'percentual_vendas.max'      => 'O percentual não pode ser maior que 100.',
+            'contratos.*.tipo.required_with' => 'Informe o tipo do anexo.',
+            'contratos.*.tipo.in'            => 'Tipo de anexo inválido.',
+            'contratos.*.arquivo.mimes'      => 'Os anexos devem ser arquivos PDF.',
+            'contratos.*.arquivo.max'        => 'Cada anexo pode ter no máximo :max KB.',
+            'contratos.*.cidade_id.required_if' => 'Selecione a cidade para o contrato por cidade.',
+            'contratos.*.cidade_id.exists'      => 'Cidade do contrato inválida.',
+        ]);
 
         // >>>>> Validação extra: cidades x UFs do gestor
         $gestorUfs = DB::table('gestor_ufs')
@@ -435,109 +483,118 @@ class DistribuidorController extends Controller
             }
         }
 
-        DB::transaction(function () use ($data, $request, $distribuidor, $cityIds, $emailsReq, $telefonesReq) {
-            // USER
-            $user = $distribuidor->user;
-            if (!empty($data['email']))    $user->email    = $data['email'];
-            if (!empty($data['password'])) $user->password = Hash::make($data['password']);
-            if (!empty($data['email']) || !empty($data['password'])) $user->save();
+        try {
+            DB::transaction(function () use ($data, $request, $distribuidor, $cityIds, $emailsReq, $telefonesReq) {
+                // USER
+                $user = $distribuidor->user;
+                if (!empty($data['email']))    $user->email    = $data['email'];
+                if (!empty($data['password'])) $user->password = Hash::make($data['password']);
+                if (!empty($data['email']) || !empty($data['password'])) $user->save();
 
-            // DISTRIBUIDOR
-            $distribuidor->update([
-                'gestor_id'           => $data['gestor_id'],
+                // DISTRIBUIDOR
+                $distribuidor->update([
+                    'gestor_id'           => $data['gestor_id'],
 
-                'razao_social'        => $data['razao_social'],
-                'cnpj'                => $data['cnpj'],
-                'representante_legal' => $data['representante_legal'],
-                'cpf'                 => $data['cpf'],
-                'rg'                  => $data['rg'] ?? null,
+                    'razao_social'        => $data['razao_social'],
+                    'cnpj'                => $data['cnpj'],
+                    'representante_legal' => $data['representante_legal'],
+                    'cpf'                 => $data['cpf'],
+                    'rg'                  => $data['rg'] ?? null,
 
-                'emails'              => $emailsReq->isNotEmpty() ? $emailsReq->all() : null,
-                'telefones'           => $telefonesReq->isNotEmpty() ? $telefonesReq->all() : null,
+                    'emails'              => $emailsReq->isNotEmpty() ? $emailsReq->all() : null,
+                    'telefones'           => $telefonesReq->isNotEmpty() ? $telefonesReq->all() : null,
 
-                // Endereço principal
-                'endereco'            => $data['endereco'] ?? null,
-                'numero'              => $data['numero'] ?? null,
-                'complemento'         => $data['complemento'] ?? null,
-                'bairro'              => $data['bairro'] ?? null,
-                'cidade'              => $data['cidade'] ?? null,
-                'uf'                  => $data['uf'] ?? null,
-                'cep'                 => $data['cep'] ?? null,
+                    // Endereço principal
+                    'endereco'            => $data['endereco'] ?? null,
+                    'numero'              => $data['numero'] ?? null,
+                    'complemento'         => $data['complemento'] ?? null,
+                    'bairro'              => $data['bairro'] ?? null,
+                    'cidade'              => $data['cidade'] ?? null,
+                    'uf'                  => $data['uf'] ?? null,
+                    'cep'                 => $data['cep'] ?? null,
 
-                // Endereço secundário
-                'endereco2'           => $data['endereco2'] ?? null,
-                'numero2'             => $data['numero2'] ?? null,
-                'complemento2'        => $data['complemento2'] ?? null,
-                'bairro2'             => $data['bairro2'] ?? null,
-                'cidade2'             => $data['cidade2'] ?? null,
-                'uf2'                 => $data['uf2'] ?? null,
-                'cep2'                => $data['cep2'] ?? null,
+                    // Endereço secundário
+                    'endereco2'           => $data['endereco2'] ?? null,
+                    'numero2'             => $data['numero2'] ?? null,
+                    'complemento2'        => $data['complemento2'] ?? null,
+                    'bairro2'             => $data['bairro2'] ?? null,
+                    'cidade2'             => $data['cidade2'] ?? null,
+                    'uf2'                 => $data['uf2'] ?? null,
+                    'cep2'                => $data['cep2'] ?? null,
 
-                'percentual_vendas'   => $data['percentual_vendas'],
-            ]);
+                    'percentual_vendas'   => $data['percentual_vendas'],
+                ]);
 
-            // Cities: sincroniza
-            $distribuidor->cities()->sync($cityIds->all());
+                // Cities: sincroniza
+                $distribuidor->cities()->sync($cityIds->all());
 
-            // Anexos (novos - append)
-            if (!empty($data['contratos']) && is_array($data['contratos'])) {
-                $idAtivoEscolhido = null;
+                // Anexos (novos - append)
+                if (!empty($data['contratos']) && is_array($data['contratos'])) {
+                    $idAtivoEscolhido = null;
 
-                foreach ($data['contratos'] as $idx => $meta) {
-                    $file = $request->file("contratos.$idx.arquivo");
-                    if (!$file) continue;
+                    foreach ($data['contratos'] as $idx => $meta) {
+                        $file = $request->file("contratos.$idx.arquivo");
+                        if (!$file) continue;
 
-                    $path   = $file->store("distribuidores/{$distribuidor->id}", 'public');
-                    $ativo  = !empty($meta['ativo']);
+                        $path   = $file->store("distribuidores/{$distribuidor->id}", 'public');
+                        $ativo  = !empty($meta['ativo']);
 
-                    $inicio = !empty($meta['data_assinatura']) ? Carbon::parse($meta['data_assinatura']) : null;
-                    $meses  = !empty($meta['validade_meses']) ? (int)$meta['validade_meses'] : null;
-                    $dataVenc = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
+                        $inicio = !empty($meta['data_assinatura']) ? Carbon::parse($meta['data_assinatura']) : null;
+                        $meses  = !empty($meta['validade_meses']) ? (int)$meta['validade_meses'] : null;
+                        $dataVenc = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
 
-                    $anexo = $distribuidor->anexos()->create([
-                        'tipo'              => $meta['tipo'] ?? 'contrato',
-                        'cidade_id'         => ($meta['tipo'] ?? null) === 'contrato_cidade'
-                            ? (!empty($meta['cidade_id']) ? (int)$meta['cidade_id'] : null)
-                            : null,
-                        'arquivo'           => $path,
-                        'descricao'         => $meta['descricao'] ?? null,
-                        'assinado'          => !empty($meta['assinado']),
-                        'percentual_vendas' => isset($meta['percentual_vendas']) ? (float)$meta['percentual_vendas'] : null,
-                        'ativo'             => $ativo,
-                        'data_assinatura'   => $inicio,
-                        'data_vencimento'   => $dataVenc,
-                    ]);
+                        $anexo = $distribuidor->anexos()->create([
+                            'tipo'              => $meta['tipo'] ?? 'contrato',
+                            'cidade_id'         => ($meta['tipo'] ?? null) === 'contrato_cidade'
+                                ? (!empty($meta['cidade_id']) ? (int)$meta['cidade_id'] : null)
+                                : null,
+                            'arquivo'           => $path,
+                            'descricao'         => $meta['descricao'] ?? null,
+                            'assinado'          => !empty($meta['assinado']),
+                            'percentual_vendas' => isset($meta['percentual_vendas']) ? (float)$meta['percentual_vendas'] : null,
+                            'ativo'             => $ativo,
+                            'data_assinatura'   => $inicio,
+                            'data_vencimento'   => $dataVenc,
+                        ]);
 
-                    if ($ativo) $idAtivoEscolhido = $anexo->id;
+                        if ($ativo) $idAtivoEscolhido = $anexo->id;
+                    }
+
+                    // no máx 1 ativo
+                    if ($distribuidor->anexos()->where('ativo', true)->count() > 1) {
+                        $distribuidor->anexos()->where('ativo', true)
+                            ->where('id', '<>', $idAtivoEscolhido)
+                            ->update(['ativo' => false]);
+                    }
                 }
 
-                // no máx 1 ativo
-                if ($distribuidor->anexos()->where('ativo', true)->count() > 1) {
-                    $distribuidor->anexos()->where('ativo', true)
-                        ->where('id', '<>', $idAtivoEscolhido)
-                        ->update(['ativo' => false]);
+                // contrato_assinado (derivado)
+                $temAssinadoAgora = $distribuidor->anexos()->where('assinado', true)->exists();
+                if ($distribuidor->contrato_assinado !== $temAssinadoAgora) {
+                    $distribuidor->update(['contrato_assinado' => $temAssinadoAgora]);
                 }
+
+                // aplica percentual/vencimento do ativo
+                $ativo = $distribuidor->anexos()->where('ativo', true)->latest('id')->first();
+                if ($ativo) {
+                    $payload = [];
+                    if ($ativo->percentual_vendas !== null) {
+                        $payload['percentual_vendas'] = $ativo->percentual_vendas;
+                    }
+                    if ($ativo->data_vencimento) {
+                        $payload['vencimento_contrato'] = $ativo->data_vencimento;
+                    }
+                    if (!empty($payload)) $distribuidor->update($payload);
+                }
+            });
+        } catch (QueryException $e) {
+            if ((int) $e->getCode() === 23505 || str_contains($e->getMessage(), 'users_email_unique')) {
+                throw ValidationException::withMessages([
+                    'email' => 'Já existe um usuário cadastrado com este e-mail.',
+                ]);
             }
-
-            // contrato_assinado (derivado)
-            $temAssinadoAgora = $distribuidor->anexos()->where('assinado', true)->exists();
-            if ($distribuidor->contrato_assinado !== $temAssinadoAgora) {
-                $distribuidor->update(['contrato_assinado' => $temAssinadoAgora]);
-            }
-
-            // aplica percentual/vencimento do ativo
-            $ativo = $distribuidor->anexos()->where('ativo', true)->latest('id')->first();
-            if ($ativo) {
-                $payload = [];
-                if ($ativo->percentual_vendas !== null) {
-                    $payload['percentual_vendas'] = $ativo->percentual_vendas;
-                }
-                if ($ativo->data_vencimento) {
-                    $payload['vencimento_contrato'] = $ativo->data_vencimento;
-                }
-                if (!empty($payload)) $distribuidor->update($payload);
-            }
-        });
+            throw $e;
+        }
 
         return redirect()
             ->route('admin.distribuidores.index')
@@ -612,50 +669,49 @@ class DistribuidorController extends Controller
     }
 
     // Retorna cidades pelas UFs (ex.: ?ufs=PR,SC)
-public function cidadesPorUfs(Request $request)
-{
-    $ufs = collect(explode(',', (string)$request->query('ufs', '')))
-        ->map(fn($u) => strtoupper(trim($u)))
-        ->filter(fn($u) => preg_match('/^[A-Z]{2}$/', $u))
-        ->unique()->values();
+    public function cidadesPorUfs(Request $request)
+    {
+        $ufs = collect(explode(',', (string)$request->query('ufs', '')))
+            ->map(fn($u) => strtoupper(trim($u)))
+            ->filter(fn($u) => preg_match('/^[A-Z]{2}$/', $u))
+            ->unique()->values();
 
-    if ($ufs->isEmpty()) return response()->json([]);
+        if ($ufs->isEmpty()) return response()->json([]);
 
-    $ufCol = $this->cityUfColumn();
-    if (!$ufCol) return response()->json([]);
+        $ufCol = $this->cityUfColumn();
+        if (!$ufCol) return response()->json([]);
 
-    $cidades = DB::table('cities')
-        ->whereIn($ufCol, $ufs->all())
-        ->select('id', 'name as nome', $ufCol.' as uf')
-        ->orderBy($ufCol)->orderBy('nome')
-        ->get();
+        $cidades = DB::table('cities')
+            ->whereIn($ufCol, $ufs->all())
+            ->select('id', 'name as nome', $ufCol.' as uf')
+            ->orderBy($ufCol)->orderBy('nome')
+            ->get();
 
-    return response()->json(
-        $cidades->map(fn($c) => ['id'=>$c->id, 'text'=> "{$c->nome} ({$c->uf})", 'uf'=>$c->uf])
-    );
-}
+        return response()->json(
+            $cidades->map(fn($c) => ['id'=>$c->id, 'text'=> "{$c->nome} ({$c->uf})", 'uf'=>$c->uf])
+        );
+    }
 
-        // Retorna cidades das UFs do gestor informado (ex.: ?gestor_id=123)
-        public function cidadesPorGestor(Request $request)
-        {
-            $gestorId = (int) $request->query('gestor_id', 0);
-            if (!$gestorId) return response()->json([]);
+    // Retorna cidades das UFs do gestor informado (ex.: ?gestor_id=123)
+    public function cidadesPorGestor(Request $request)
+    {
+        $gestorId = (int) $request->query('gestor_id', 0);
+        if (!$gestorId) return response()->json([]);
 
-            $ufsGestor = DB::table('gestor_ufs')->where('gestor_id', $gestorId)->pluck('uf')->map(fn($u)=>strtoupper($u));
-            if ($ufsGestor->isEmpty()) return response()->json([]);
+        $ufsGestor = DB::table('gestor_ufs')->where('gestor_id', $gestorId)->pluck('uf')->map(fn($u)=>strtoupper($u));
+        if ($ufsGestor->isEmpty()) return response()->json([]);
 
-            $ufCol = $this->cityUfColumn();
-            if (!$ufCol) return response()->json([]);
+        $ufCol = $this->cityUfColumn();
+        if (!$ufCol) return response()->json([]);
 
-            $cidades = DB::table('cities')
-                ->whereIn($ufCol, $ufsGestor->all())
-                ->select('id', 'name as nome', $ufCol.' as uf')
-                ->orderBy($ufCol)->orderBy('nome')
-                ->get();
+        $cidades = DB::table('cities')
+            ->whereIn($ufCol, $ufsGestor->all())
+            ->select('id', 'name as nome', $ufCol.' as uf')
+            ->orderBy($ufCol)->orderBy('nome')
+            ->get();
 
-            return response()->json(
-                $cidades->map(fn($c) => ['id'=>$c->id, 'text'=> "{$c->nome} ({$c->uf})", 'uf'=>$c->uf])
-            );
-        }
-
+        return response()->json(
+            $cidades->map(fn($c) => ['id'=>$c->id, 'text'=> "{$c->nome} ({$c->uf})", 'uf'=>$c->uf])
+        );
+    }
 }

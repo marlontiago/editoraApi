@@ -72,10 +72,18 @@
                 @endif
             </form>
 
-            <a href="{{ route('admin.produtos.create') }}"
-            class="inline-flex h-10 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
-                Novo Produto
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('admin.colecoes.index') }}"
+                class="inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium text-white border-gray-300 hover:bg-green-700 bg-green-600">
+                    Coleções
+                </a>
+
+                <a href="{{ route('admin.produtos.create') }}"
+                class="inline-flex h-10 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
+                    Novo Produto
+                </a>
+            </div>
+
         </div>
 
         {{-- Tabela --}}
@@ -139,19 +147,24 @@
                             <td class="px-3 py-2">{{ $produto->quantidade_estoque }}</td>
 
                             {{-- Ações --}}
-                            <td class="px-3 py-2">
-                                <div class="flex items-center justify-center gap-2">
+                            <td class="px-3 py-2 text-center">
+                                <div class="flex items-center justify-center gap-3">
+                                    {{-- Editar --}}
                                     <a href="{{ route('admin.produtos.edit', $produto) }}"
-                                       class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium text-blue-700 border-blue-200 hover:bg-blue-50">
-                                        Editar
+                                    class="text-blue-600 hover:text-blue-800"
+                                    title="Editar">
+                                        <x-lucide-pencil class="w-5 h-5" />
                                     </a>
+
+                                    {{-- Excluir --}}
                                     <form action="{{ route('admin.produtos.destroy', $produto) }}" method="POST" class="inline"
-                                          onsubmit="return confirm('Tem certeza que deseja excluir este produto?');">
+                                        onsubmit="return confirm('Tem certeza que deseja excluir este produto?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
-                                                class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium text-red-700 border-red-200 hover:bg-red-50">
-                                            Excluir
+                                                class="text-red-600 hover:text-red-800"
+                                                title="Excluir">
+                                            <x-lucide-trash-2 class="w-5 h-5" />
                                         </button>
                                     </form>
                                 </div>

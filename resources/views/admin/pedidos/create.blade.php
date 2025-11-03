@@ -20,11 +20,11 @@
       </div>
     @endif
 
-    <form action="{{ route('admin.pedidos.store') }}" method="POST"
+    <form id="pedido-form" action="{{ route('admin.pedidos.store') }}" method="POST"
           class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
       @csrf
 
-      {{-- Cliente (obrigatório) --}}
+      {{-- Cliente --}}
       <div class="col-span-12 md:col-span-6">
         <label for="cliente_id" class="block text-sm font-medium text-gray-700">Cliente</label>
         <select name="cliente_id" id="cliente_id" required
@@ -36,7 +36,7 @@
         </select>
       </div>
 
-      {{-- Gestor (opcional) --}}
+      {{-- Gestor --}}
       <div class="col-span-12 md:col-span-6">
         <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor (opcional)</label>
         <select name="gestor_id" id="gestor_id"
@@ -48,7 +48,7 @@
         </select>
       </div>
 
-      {{-- Distribuidor (opcional) --}}
+      {{-- Distribuidor --}}
       <div class="col-span-12 md:col-span-6">
         <label for="distribuidor_id" class="block text-sm font-medium text-gray-700">Distribuidor (opcional)</label>
         <select name="distribuidor_id" id="distribuidor_id"
@@ -76,7 +76,7 @@
         </select>
       </div>
 
-      {{-- Cidade da Venda --}}
+      {{-- Cidade --}}
       <div class="col-span-12 md:col-span-6">
         <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
         @php $temDistOuGestor = old('distribuidor_id') || old('gestor_id') || old('state'); @endphp
@@ -96,28 +96,61 @@
       {{-- CFOP --}}
       <div class="col-span-12 md:col-span-6">
         <label for="cfop" class="block text-sm font-medium text-gray-700">CFOP (opcional)</label>
-
         @php $cfopLabels = $cfopLabels ?? config('cfop.labels', []); @endphp
-
         @if(!empty($cfopLabels))
           <select name="cfop" id="cfop"
                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             <option value="">-- Selecione --</option>
             @foreach($cfopLabels as $code => $label)
-              <option value="{{ $code }}" @selected(old('cfop') === $code)>
-                {{ $code }} — {{ $label }}
-              </option>
+              <option value="{{ $code }}" @selected(old('cfop') === $code)>{{ $code }} — {{ $label }}</option>
             @endforeach
           </select>
           <p class="text-xs text-gray-500 mt-1">Este CFOP será usado como padrão ao emitir a Nota.</p>
         @else
-          <input type="text" name="cfop" id="cfop" value="{{ old('cfop') }}"
-                 pattern="\d{4}" maxlength="4"
+          <input type="text" name="cfop" id="cfop" value="{{ old('cfop') }}" pattern="\d{4}" maxlength="4"
                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                  placeholder="Ex.: 5910" />
-          <p class="text-xs text-gray-500 mt-1">Informe 4 dígitos (ex.: 5910). Configure labels em <code>config/cfop.php</code> para ter uma lista.</p>
+          <p class="text-xs text-gray-500 mt-1">Informe 4 dígitos (ex.: 5910). Configure labels em <code>config/cfop.php</code>.</p>
         @endif
       </div>
+
+      {{-- ===================== COLEÇÕES (UI + preview) ===================== --}}
+      <div class="col-span-12">
+        <label class="block text-sm font-medium text-gray-700">Coleções</label>
+
+        <div class="mt-2 grid grid-cols-12 gap-3 items-end">
+          <div class="col-span-12 md:col-span-6">
+            <select id="colecao_select" name="colecao_id"
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">-- Selecione a coleção --</option>
+            </select>
+          </div>
+
+          <div class="col-span-6 md:col-span-3">
+            <label class="block text-sm font-medium text-gray-700">Quantidade padrão</label>
+            <input type="number" id="colecao_qtd" name="colecao_qtd" min="1" value="{{ old('colecao_qtd', 1) }}"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+
+          <div class="col-span-6 md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700">Desc. padrão (%)</label>
+            <input type="number" id="colecao_desc" name="colecao_desc" min="0" max="100" step="0.01" value="{{ old('colecao_desc', 0) }}"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+
+          <div class="col-span-12 md:col-span-1">
+            <button type="button" id="btn_add_colecao"
+                    class="inline-flex w-full items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+              + Adicionar
+            </button>
+          </div>
+        </div>
+
+        {{-- Preview compacto da coleção --}}
+        <div id="colecao-preview" class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+        <p class="text-xs text-gray-500 mt-2">Você pode salvar apenas com a coleção; os itens serão gerados automaticamente.</p>
+      </div>
+      {{-- =================== FIM COLEÇÕES =================== --}}
 
       {{-- Produtos --}}
       <div class="col-span-12">
@@ -154,7 +187,8 @@
 
   {{-- ===== DADOS PARA JS ===== --}}
   <script>
-    const ALL_PRODUCTS = {!! $produtos->toJson() !!};
+    const ALL_PRODUCTS    = @json($produtos ?? []);
+    const ALL_COLLECTIONS = @json($colecoes ?? []);
 
     const OLD_PRODUTOS     = @json(old('produtos', []));
     const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
@@ -162,13 +196,12 @@
     const OLD_CIDADE       = @json(old('cidade_id'));
   </script>
 
-  {{-- ===== PRODUTOS (sem duplicados + linha única de infos) ===== --}}
+  {{-- ===== PRODUTOS (linhas + cálculos) ===== --}}
   <script>
     let produtoIndex = 0;
     const container = document.getElementById('produtos-container');
     const addBtn    = document.querySelector('button[onclick="adicionarProduto()"]');
-
-    const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const fmtBRL    = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
     function getProductById(id) {
       return ALL_PRODUCTS.find(p => String(p.id) === String(id)) || null;
@@ -268,8 +301,7 @@
       const imgEl      = row.querySelector('.product-thumb');
 
       const pid   = sel?.value || '';
-      theProd = getProductById(pid);
-      const prod  = theProd;
+      const prod  = getProductById(pid);
       const qtd   = Math.max(1, parseInt(qEl?.value || '1', 10));
       const desc  = Math.max(0, Math.min(100, parseFloat(dEl?.value || '0')));
 
@@ -284,28 +316,15 @@
       totalDSpan.textContent = fmtBRL.format(totalDesc);
 
       const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">' +
-          '<rect width="100%" height="100%" fill="#E5E7EB"/>' +
-          '<text x="50%" y="50%" alignment-baseline="middle" text-anchor="middle" font-size="10" fill="#9CA3AF">Sem imagem</text>' +
-        '</svg>'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="100%" height="100%" fill="#E5E7EB"/><text x="50%" y="50%" alignment-baseline="middle" text-anchor="middle" font-size="10" fill="#9CA3AF">Sem imagem</text></svg>'
       );
 
-      if (!prod) {
-        imgEl.src = PLACEHOLDER;
-        imgEl.alt = 'Sem produto';
-        return;
-      }
+      if (!prod) { imgEl.src = PLACEHOLDER; imgEl.alt = 'Sem produto'; return; }
 
       if (prod.imagem) {
         const testImg = new Image();
-        testImg.onload = () => {
-          imgEl.src = prod.imagem;
-          imgEl.alt = prod.titulo || 'Produto';
-        };
-        testImg.onerror = () => {
-          imgEl.src = PLACEHOLDER;
-          imgEl.alt = prod.titulo || 'Sem imagem';
-        };
+        testImg.onload = () => { imgEl.src = prod.imagem; imgEl.alt = prod.titulo || 'Produto'; };
+        testImg.onerror = () => { imgEl.src = PLACEHOLDER; imgEl.alt = prod.titulo || 'Sem imagem'; };
         testImg.src = prod.imagem;
       } else {
         imgEl.src = PLACEHOLDER;
@@ -349,10 +368,125 @@
     document.addEventListener('DOMContentLoaded', () => {
       if (Array.isArray(OLD_PRODUTOS) && OLD_PRODUTOS.length) {
         OLD_PRODUTOS.forEach(p => adicionarProduto(p));
-      } else {
-        adicionarProduto();
+        calcAll();
       }
+    });
+  </script>
+
+  {{-- ===== COLEÇÕES (popular select, preview e opcionalmente adicionar) ===== --}}
+  <script>
+    const colecaoSelect = document.getElementById('colecao_select');
+    const colecaoQtdEl  = document.getElementById('colecao_qtd');
+    const colecaoDescEl = document.getElementById('colecao_desc');
+    const colecaoPrev   = document.getElementById('colecao-preview');
+
+    function getCollectionById(id) {
+      return (ALL_COLLECTIONS || []).find(c => String(c.id) === String(id)) || null;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      colecaoSelect.innerHTML = '';
+      colecaoSelect.append(new Option('-- Selecione a coleção --', ''));
+      (ALL_COLLECTIONS || []).forEach(c => {
+        colecaoSelect.append(new Option(`${c.nome} (${c.produtos.length} itens)`, c.id));
+      });
+    });
+
+    function renderColecaoPreview() {
+      const id  = colecaoSelect.value;
+      const col = getCollectionById(id);
+      const qtd = Math.max(1, parseInt(colecaoQtdEl.value || '1', 10));
+      const des = Math.max(0, Math.min(100, parseFloat(colecaoDescEl.value || '0')));
+
+      colecaoPrev.innerHTML = '';
+      if (!col || !Array.isArray(col.produtos) || col.produtos.length === 0) return;
+
+      const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+      col.produtos.forEach(p => {
+        const unit  = Number(p.preco || 0);
+        const uDesc = unit * (1 - (des / 100));
+        const tot   = unit  * qtd;
+        const totD  = uDesc * qtd;
+
+        const card = document.createElement('div');
+        card.className = 'border rounded-lg p-3 bg-gray-50 flex items-center gap-3';
+
+        const img = document.createElement('img');
+        img.className = 'w-12 h-12 rounded object-cover ring-1 ring-gray-200 flex-shrink-0';
+        img.alt = p.titulo || 'Produto';
+        img.src = p.imagem || ('data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="100%" height="100%" fill="#E5E7EB"/><text x="50%" y="50%" alignment-baseline="middle" text-anchor="middle" font-size="9" fill="#9CA3AF">Sem</text></svg>'));
+
+        const info = document.createElement('div');
+        info.className = 'flex-1 min-w-0';
+        info.innerHTML = `
+          <div class="text-sm font-medium text-gray-800 truncate">${p.titulo}</div>
+          <div class="text-xs text-gray-600 mt-1 space-x-2">
+            <span>Unit: <strong>${fmt.format(unit)}</strong></span>
+            <span>Desc: <strong>${fmt.format(uDesc)}</strong></span>
+          </div>
+          <div class="text-xs text-gray-700 mt-1 space-x-2">
+            <span>Total: <strong>${fmt.format(tot)}</strong></span>
+            <span>c/ desc: <strong>${fmt.format(totD)}</strong></span>
+          </div>
+        `;
+
+        card.appendChild(img);
+        card.appendChild(info);
+        colecaoPrev.appendChild(card);
+      });
+    }
+
+    colecaoSelect.addEventListener('change', renderColecaoPreview);
+    colecaoQtdEl.addEventListener('input', renderColecaoPreview);
+    colecaoDescEl.addEventListener('input', renderColecaoPreview);
+
+    // Botão (opcional) para já expandir como linhas de produto
+    document.getElementById('btn_add_colecao').addEventListener('click', () => {
+      const colId = colecaoSelect.value;
+      if (!colId) return;
+      const col   = getCollectionById(colId);
+      if (!col) return;
+
+      const qtd = Math.max(1, parseInt(colecao_qtd.value || '1', 10));
+      const des = Math.max(0, Math.min(100, parseFloat(colecao_desc.value || '0')));
+
+      const chosenSet = new Set(getSelectedProductIds().map(String));
+
+      for (const p of (col.produtos || [])) {
+        if (chosenSet.has(String(p.id))) {
+          // incrementa a linha existente
+          const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
+          for (const sel of selects) {
+            if (String(sel.value) === String(p.id)) {
+              const row = sel.closest('.produto');
+              const qEl = row.querySelector('input[name^="produtos["][name$="[quantidade]"]');
+              const dEl = row.querySelector('input[name^="produtos["][name$="[desconto]"]');
+              qEl.value = Math.max(1, parseInt(qEl.value || '1', 10)) + qtd;
+              dEl.value = des;
+              calcRow(row);
+            }
+          }
+        } else {
+          adicionarProduto({ id: p.id, quantidade: qtd, desconto: des });
+        }
+      }
+      refreshAllProductSelects();
       calcAll();
+    });
+
+    // Guard de submissão: se não houver produto selecionado, o back-end converte colecao_id -> produtos
+    document.getElementById('pedido-form').addEventListener('submit', function(e) {
+      const selects = Array.from(container.querySelectorAll('select[name^="produtos["][name$="[id]"]'));
+      const selectedIds = selects.map(s => s.value).filter(v => v !== '');
+      if (selectedIds.length === 0) {
+        if (!colecaoSelect.value) {
+          alert('Selecione ao menos um produto ou uma coleção.');
+          e.preventDefault();
+          return false;
+        }
+        // Sem produtos, mas com coleção -> deixa o back montar.
+      }
     });
   </script>
 
@@ -360,30 +494,22 @@
   <script>
     const distSelect = document.getElementById('distribuidor_id');
     const originalDistOptions = Array.from(distSelect.options).map(opt => ({
-      value: opt.value,
-      text: opt.text,
-      gestorId: opt.getAttribute('data-gestor-id') || '',
-      selected: opt.selected
+      value: opt.value, text: opt.text, gestorId: opt.getAttribute('data-gestor-id') || '', selected: opt.selected
     }));
 
     function rebuildDistribuidorOptions(gestorId) {
       const hadValue = distSelect.value;
       distSelect.innerHTML = '';
-
-      const first = new Option('-- Sem distribuidor --', '');
-      distSelect.add(first);
-
+      distSelect.add(new Option('-- Sem distribuidor --', ''));
       const pool = (!gestorId)
         ? originalDistOptions
         : originalDistOptions.filter(o => o.value === '' || (o.gestorId && String(o.gestorId) === String(gestorId)));
-
       pool.forEach(o => {
         if (o.value === '') return;
         const opt = new Option(o.text, o.value);
         opt.setAttribute('data-gestor-id', o.gestorId || '');
         distSelect.add(opt);
       });
-
       const stillValid = Array.from(distSelect.options).some(o => o.value === hadValue);
       distSelect.value = stillValid ? hadValue : '';
     }
@@ -391,7 +517,6 @@
     document.getElementById('gestor_id').addEventListener('change', function () {
       rebuildDistribuidorOptions(this.value || '');
     });
-
     document.addEventListener('DOMContentLoaded', function () {
       const oldGestor = @json(old('gestor_id'));
       rebuildDistribuidorOptions(oldGestor || '');
@@ -419,20 +544,16 @@
     function rebuildCidadeOptions(cidades, { allowOccupied = false, ufFallback = null } = {}) {
       cidadeSelect.innerHTML = '';
       cidadeSelect.add(new Option('-- Selecione --', ''));
-
       cidades.forEach(c => {
         const opt = new Option(cidadeLabel(c, ufFallback), c.id);
         const isOccupied = Boolean(c.ocupado);
         const distName   = c.distribuidor_nome || null;
-
         if (isOccupied && !allowOccupied) {
           opt.disabled = true;
           opt.text = `${cidadeLabel(c, ufFallback)} ${distName ? `(ocupada por ${distName})` : '(ocupada)'}`;
         }
-
         cidadeSelect.add(opt);
       });
-
       cidadeSelect.disabled = false;
       cidadeSelect.classList.remove('bg-gray-50');
     }
@@ -467,7 +588,6 @@
     distribuidorSelect.addEventListener('change', async function () {
       const distId = this.value || null;
       const uf = stateSelect.value || null;
-
       if (distId) {
         await carregarCidadesPorDistribuidor(distId, null);
       } else if (uf) {
@@ -496,14 +616,9 @@
       const OLD_CIDADE       = @json(old('cidade_id'));
       const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
       const OLD_STATE        = @json(old('state'));
-
-      if (OLD_DISTRIBUIDOR) {
-        await carregarCidadesPorDistribuidor(OLD_DISTRIBUIDOR, OLD_CIDADE);
-      } else if (OLD_STATE) {
-        await carregarCidadesPorUF(OLD_STATE, OLD_CIDADE);
-      } else {
-        resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
-      }
+      if (OLD_DISTRIBUIDOR)      await carregarCidadesPorDistribuidor(OLD_DISTRIBUIDOR, OLD_CIDADE);
+      else if (OLD_STATE)        await carregarCidadesPorUF(OLD_STATE, OLD_CIDADE);
+      else                       resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
     });
   </script>
 </x-app-layout>

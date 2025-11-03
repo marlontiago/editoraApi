@@ -21,6 +21,7 @@ use App\Http\Controllers\RelatoriosController;
 use App\Http\Controllers\NotaFiscalPlugNotasController;
 use App\Http\Controllers\NotaFiscalPlugBridgeController;
 use App\Http\Controllers\Admin\GestorAnexoController;
+use App\Http\Controllers\Admin\ColecaoController;
 use App\Models\Gestor;
 
 Route::pattern('gestor', '[0-9]+');        // {gestor} numérico
@@ -98,6 +99,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/pedidos/{pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
     Route::post('/pedidos/{pedido}/pre-visualizar-nota', [PedidoController::class, 'emitirNota'])->name('pedidos.pre-visualizar-nota');
+
+    Route::resource('colecoes', ColecaoController::class)->parameters(['colecoes' => 'colecao']);
 
     // Notas Fiscais & Pagamentos
     Route::post('/pedidos/{pedido}/emitir-nota', [NotaFiscalController::class, 'emitir'])->name('pedidos.emitir-nota');

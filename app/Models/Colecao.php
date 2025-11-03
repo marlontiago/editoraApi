@@ -15,6 +15,6 @@ class Colecao extends Model
 
     public function produtos()
     {
-        return $this->hasMany(Produto::class);
+        return $this->hasMany(Produto::class, 'colecao_id');
     }
 }

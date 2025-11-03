@@ -1,537 +1,497 @@
 {{-- resources/views/admin/pedidos/edit.blade.php --}}
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Editar Pedido #{{ $pedido->id }}</h2>
-    </x-slot>
+  <x-slot name="header">
+    <h2 class="text-xl font-semibold text-gray-800">Editar Pedido #{{ $pedido->id }}</h2>
+  </x-slot>
 
-    @if (session('error'))
-        <div class="bg-red-100 text-red-800 p-3 rounded mb-4">
-            {{ session('error') }}
-        </div>
+  @php
+    // ===== Pré-cálculos para evitar @json complexos e facilitar o template =====
+    $cidadeAtual     = optional($pedido->cidades)->first();
+    $cidadeAtualId   = old('cidade_id', $cidadeAtual?->id);
+    $cidadeAtualNome = $cidadeAtual?->name ?? '—';
+    $ufAtual         = old('state', $pedido->state);
+
+    $clienteNome = optional($pedido->cliente)->razao_social ?? optional($pedido->cliente)->nome ?? '—';
+    $gestorNome  = optional($pedido->gestor)->razao_social ?? '—';
+    $distNome    = optional($pedido->distribuidor)->razao_social ?? '—';
+
+    // Produtos pré-carregados no formato esperado pelo JS do "create"
+    $produtosOldEdit = old('produtos', $pedido->produtos->map(function($p) {
+        return [
+          'id'         => $p->id,
+          'quantidade' => (int) ($p->pivot->quantidade ?? 1),
+          'desconto'   => (float) ($p->pivot->desconto_item ?? 0),
+        ];
+    })->values()->all());
+
+    $cfopLabels = $cfopLabels ?? config('cfop.labels', []);
+
+    $statuses = [
+      'em_andamento' => 'Em andamento',
+      'finalizado'   => 'Finalizado',
+      'cancelado'    => 'Cancelado',
+    ];
+  @endphp
+
+  <div class="max-w-6xl mx-auto p-6">
+    @if(session('success'))
+      <div class="mb-6 rounded-md border border-green-300 bg-green-50 p-4 text-green-800">
+        {{ session('success') }}
+      </div>
     @endif
 
-    <div class="p-6 space-y-6">
-        @if ($errors->any())
-            <div class="bg-red-100 text-red-800 p-3 rounded">
-                <ul class="list-disc list-inside">
-                    @foreach ($errors->all() as $e)
-                        <li>{{ $e }}</li>
-                    @endforeach
-                </ul>
-            </div>
+    @if(session('error'))
+      <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
+        {{ session('error') }}
+      </div>
+    @endif
+
+    @if($errors->any())
+      <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
+        <ul class="list-disc pl-5 space-y-1">
+          @foreach($errors->all() as $error)
+            <li class="text-sm">{{ $error }}</li>
+          @endforeach
+        </ul>
+      </div>
+    @endif
+
+    <form id="pedido-edit-form" action="{{ route('admin.pedidos.update', $pedido) }}" method="POST"
+          class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
+      @csrf
+      @method('PUT')
+
+      {{-- ====== Somente visual (com hidden para enviar valor) ====== --}}
+
+      {{-- Cliente (visual) --}}
+      <div class="col-span-12 md:col-span-6">
+        <label class="block text-sm font-medium text-gray-700">Cliente</label>
+        <input type="text" class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm" value="{{ $clienteNome }}" readonly>
+        <input type="hidden" name="cliente_id" value="{{ old('cliente_id', $pedido->cliente_id) }}">
+      </div>
+
+      {{-- Gestor (visual) --}}
+      <div class="col-span-12 md:col-span-6">
+        <label class="block text-sm font-medium text-gray-700">Gestor</label>
+        <input type="text" class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm" value="{{ $gestorNome }}" readonly>
+        <input type="hidden" name="gestor_id" value="{{ old('gestor_id', $pedido->gestor_id) }}">
+      </div>
+
+      {{-- Distribuidor (visual) --}}
+      <div class="col-span-12 md:col-span-6">
+        <label class="block text-sm font-medium text-gray-700">Distribuidor</label>
+        <input type="text" class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm" value="{{ $distNome }}" readonly>
+        <input type="hidden" name="distribuidor_id" value="{{ old('distribuidor_id', $pedido->distribuidor_id) }}">
+      </div>
+
+      {{-- UF (visual) --}}
+      <div class="col-span-12 md:col-span-3">
+        <label class="block text-sm font-medium text-gray-800">UF</label>
+        <input type="text" class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm" value="{{ $ufAtual ?: '—' }}" readonly>
+        <input type="hidden" name="state" value="{{ $ufAtual }}">
+      </div>
+
+      {{-- Cidade da Venda (visual) --}}
+      <div class="col-span-12 md:col-span-9">
+        <label class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
+        <input type="text" class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm" value="{{ $cidadeAtualNome }}" readonly>
+        <input type="hidden" name="cidade_id" value="{{ $cidadeAtualId }}">
+      </div>
+
+      {{-- ====== Campos editáveis ====== --}}
+
+      {{-- Data --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="data" class="block text-sm font-medium text-gray-700">Data</label>
+        <input type="date" name="data" id="data"
+               value="{{ old('data', \Carbon\Carbon::parse($pedido->data)->format('Y-m-d')) }}"
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+      </div>
+
+      {{-- Status (NOVO) --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+        <select name="status" id="status" required
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          @foreach($statuses as $value => $label)
+            <option value="{{ $value }}" @selected(old('status', $pedido->status) === $value)>{{ $label }}</option>
+          @endforeach
+        </select>
+      </div>
+
+      {{-- CFOP (opcional) --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="cfop" class="block text-sm font-medium text-gray-700">CFOP (opcional)</label>
+        @if(!empty($cfopLabels))
+          <select name="cfop" id="cfop"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">-- Selecione --</option>
+            @foreach($cfopLabels as $code => $label)
+              <option value="{{ $code }}" @selected(old('cfop', $pedido->cfop) === $code)>{{ $code }} — {{ $label }}</option>
+            @endforeach
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Este CFOP será usado como padrão ao emitir a Nota.</p>
+        @else
+          <input type="text" name="cfop" id="cfop" value="{{ old('cfop', $pedido->cfop) }}" pattern="\d{4}" maxlength="4"
+                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                 placeholder="Ex.: 5910" />
+          <p class="text-xs text-gray-500 mt-1">Informe 4 dígitos (ex.: 5910). Configure labels em <code>config/cfop.php</code>.</p>
         @endif
+      </div>
 
-        @if (session('success'))
-            <div class="bg-green-100 text-green-800 p-3 rounded">
-                {{ session('success') }}
-            </div>
-        @endif
+      {{-- ===================== COLEÇÕES (visual/ação igual ao create) ===================== --}}
+      <div class="col-span-12">
+        <label class="block text-sm font-medium text-gray-700">Coleções</label>
 
-        <form method="POST" action="{{ route('admin.pedidos.update', $pedido) }}" class="space-y-6" id="formPedidoEdit">
-            @csrf
-            @method('PUT')
+        <div class="mt-2 grid grid-cols-12 gap-3 items-end">
+          <div class="col-span-12 md:col-span-6">
+            <select id="colecao_select" name="colecao_id"
+                    class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">-- Selecione a coleção --</option>
+            </select>
+          </div>
 
-            {{-- ==================== DADOS GERAIS ==================== --}}
-            <div class="grid grid-cols-12 gap-4 bg-white p-6 rounded-2xl shadow">
+          <div class="col-span-6 md:col-span-3">
+            <label class="block text-sm font-medium text-gray-700">Quantidade padrão</label>
+            <input type="number" id="colecao_qtd" name="colecao_qtd" min="1"
+                   value="{{ old('colecao_qtd', 1) }}"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
 
-                {{-- Data --}}
-                <div class="col-span-12 md:col-span-3">
-                    <label class="block text-sm font-medium text-gray-700">Data</label>
-                    <input
-                        type="date"
-                        name="data"
-                        value="{{ old('data', \Carbon\Carbon::parse($pedido->data)->format('Y-m-d')) }}"
-                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                    >
-                </div>
+          <div class="col-span-6 md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700">Desc. padrão (%)</label>
+            <input type="number" id="colecao_desc" name="colecao_desc" min="0" max="100" step="0.01"
+                   value="{{ old('colecao_desc', 0) }}"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
 
-                {{-- Status --}}
-                <div class="col-span-12 md:col-span-3">
-                    <label class="block text-sm font-medium text-gray-700">Status</label>
-                    @php $statuses = ['em_andamento' => 'Em andamento', 'finalizado' => 'Finalizado', 'cancelado' => 'Cancelado']; @endphp
-                    <select name="status" class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                        @foreach ($statuses as $val => $label)
-                            <option value="{{ $val }}" @selected(old('status', $pedido->status) === $val)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </div>
+          <div class="col-span-12 md:col-span-1">
+            <button type="button" id="btn_add_colecao"
+                    class="inline-flex w-full items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+              + Adicionar
+            </button>
+          </div>
+        </div>
 
-                {{-- Cliente --}}
-                <div class="col-span-12 md:col-span-6">
-                    <label for="cliente_id" class="block text-sm font-medium text-gray-700">Cliente</label>
-                    <select
-                        name="cliente_id"
-                        id="cliente_id"
-                        required
-                        class="mt-1 block w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                        <option value="">— Selecionar —</option>
-                        @foreach ($clientes as $c)
-                            <option value="{{ $c->id }}" @selected(old('cliente_id', $pedido->cliente_id) == $c->id)>
-                                {{ $c->razao_social ?? $c->nome }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+        <div id="colecao-preview" class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+        <p class="text-xs text-gray-500 mt-2">Use uma coleção para adicionar/atualizar rapidamente os itens.</p>
+      </div>
+      {{-- =================== FIM COLEÇÕES =================== --}}
 
-                {{-- CFOP (opcional) --}}
-                <div class="col-span-12 md:col-span-3">
-                    <label class="block text-sm font-medium text-gray-700">CFOP (opcional)</label>
-                    @php $cfopAtual = old('cfop', $pedido->cfop); @endphp
-                    @if(!empty($cfopLabels))
-                        <select name="cfop" class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">— Sem CFOP —</option>
-                            @foreach($cfopLabels as $code => $label)
-                                <option value="{{ $code }}" @selected($cfopAtual === $code)>{{ $code }} — {{ $label }}</option>
-                            @endforeach
-                        </select>
-                    @else
-                        <input
-                            type="text"
-                            name="cfop"
-                            value="{{ $cfopAtual }}"
-                            placeholder="Ex.: 5910"
-                            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                        <p class="text-xs text-gray-500 mt-1">Apenas 4 dígitos numéricos.</p>
-                    @endif
-                </div>
+      {{-- Produtos (mesmo componente do create) --}}
+      <div class="col-span-12">
+        <label class="block text-sm font-medium text-gray-700">Produtos</label>
+        <div id="produtos-container" class="space-y-4 mt-2"></div>
 
-                {{-- Gestor (read-only) --}}
-                @php $gestorAtual = $pedido->gestor; @endphp
-                <div class="col-span-12 md:col-span-6">
-                    <label class="block text-sm font-medium text-gray-700">Gestor</label>
-                    <input
-                        type="text"
-                        class="mt-1 w-full rounded-lg border px-3 py-2 bg-gray-100"
-                        value="{{ $gestorAtual?->razao_social ?: '—' }}"
-                        readonly
-                    >
-                    <input type="hidden" name="gestor_id" value="{{ $gestorAtual?->id }}">
-                </div>
+        <button type="button" onclick="adicionarProduto()"
+                class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          + Adicionar Produto
+        </button>
+      </div>
 
-                {{-- Distribuidor (read-only) --}}
-                @php $distAtual = $pedido->distribuidor; @endphp
-                <div class="col-span-12 md:col-span-6">
-                    <label class="block text-sm font-medium text-gray-700">Distribuidor</label>
-                    <input
-                        type="text"
-                        class="mt-1 w-full rounded-lg border px-3 py-2 bg-gray-100"
-                        value="{{ $distAtual?->razao_social ?: '—' }}"
-                        readonly
-                    >
-                    <input type="hidden" name="distribuidor_id" value="{{ $distAtual?->id }}">
-                </div>
+      {{-- Observações --}}
+      <div class="col-span-12">
+        <label class="block text-sm font-medium text-gray-700">Observações</label>
+        <textarea name="observacoes" rows="3"
+                  class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Anotações internas sobre o pedido (opcional)">{{ old('observacoes', $pedido->observacoes) }}</textarea>
+      </div>
 
-                {{-- UF (fixa do gestor) --}}
-                @php $ufGestor = optional($pedido->gestor)->estado_uf; @endphp
-                <div class="col-span-12 md:col-span-3">
-                    <label class="block text-sm font-medium text-gray-800">UF (do gestor)</label>
-                    <input
-                        type="text"
-                        id="ufDisplay"
-                        value="{{ $ufGestor ?: '—' }}"
-                        class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm"
-                        readonly
-                    >
-                    <input type="hidden" id="ufHidden" name="state" value="{{ $ufGestor }}">
-                </div>
+      {{-- Botões --}}
+      <div class="col-span-12 flex justify-between md:justify-end gap-3 pt-4">
+        <a href="{{ route('admin.pedidos.show', $pedido) }}"
+           class="inline-flex h-10 items-center rounded-md border px-4 text-sm hover:bg-gray-50">
+          Cancelar
+        </a>
+        <button type="submit"
+                class="inline-flex h-10 items-center rounded-md bg-green-600 px-5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+          Salvar alterações
+        </button>
+      </div>
+    </form>
+  </div>
 
-                {{-- Cidade da Venda --}}
-                <div class="col-span-12 md:col-span-6">
-                    <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
-                    @php
-                        $temDistOuGestor = old('distribuidor_id', $pedido->distribuidor_id) || old('gestor_id', $pedido->gestor_id);
-                    @endphp
-                    <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
-                            class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor ou o distribuidor --' }}</option>
-                    </select>
-                </div>
+  {{-- ===== DADOS PARA JS (simples) ===== --}}
+  <script>
+    const ALL_PRODUCTS     = @json($produtos ?? []);
+    const ALL_COLLECTIONS  = @json($colecoes ?? []);
+    const OLD_PRODUTOS     = @json($produtosOldEdit);
+  </script>
 
-                {{-- Observações --}}
-                <div class="col-span-12">
-                    <label class="block text-sm font-medium text-gray-700">Observações</label>
-                    <textarea
-                        name="observacoes"
-                        rows="3"
-                        class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Anotações internas sobre o pedido (opcional)"
-                    >{{ old('observacoes', $pedido->observacoes) }}</textarea>
-                </div>
-            </div>
+  {{-- ===== PRODUTOS (mesmo JS do create) ===== --}}
+  <script>
+    let produtoIndex = 0;
+    const container = document.getElementById('produtos-container');
+    const addBtn    = document.querySelector('button[onclick="adicionarProduto()"]');
+    const fmtBRL    = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-            {{-- ==================== TABELA DE PRODUTOS ==================== --}}
-            <div class="bg-white p-6 rounded-2xl shadow">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">Produtos do Pedido</h3>
-                    <button type="button" id="btnAddRow"
-                        class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition">
-                        + Adicionar produto
-                    </button>
-                </div>
+    function getProductById(id) { return (ALL_PRODUCTS || []).find(p => String(p.id) === String(id)) || null; }
+    function getSelectedProductIds() {
+      return Array.from(container.querySelectorAll('select[name^="produtos["][name$="[id]"]'))
+        .map(sel => sel.value).filter(v => v !== '');
+    }
+    function buildOptions(excludeIds = [], selectedId = null) {
+      const frag = document.createDocumentFragment();
+      frag.append(new Option('-- Selecione --', ''));
+      (ALL_PRODUCTS || []).forEach(p => {
+        const isSelected = String(p.id) === String(selectedId);
+        const isExcluded = excludeIds.includes(String(p.id));
+        if (isExcluded && !isSelected) return;
+        const opt = new Option(p.titulo ?? p.nome ?? `#${p.id}`, p.id);
+        if (isSelected) opt.selected = true;
+        frag.append(opt);
+      });
+      return frag;
+    }
+    function refreshAllProductSelects() {
+      const chosen = getSelectedProductIds();
+      const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
+      selects.forEach(sel => {
+        const current = sel.value || null;
+        sel.innerHTML = '';
+        const exclude = chosen.filter(id => id !== current);
+        sel.append(buildOptions(exclude, current));
+      });
+      const maxReached = chosen.length >= (ALL_PRODUCTS || []).length;
+      addBtn.disabled = maxReached;
+      addBtn.classList.toggle('opacity-50', maxReached);
+      addBtn.title = maxReached ? 'Todos os produtos já foram adicionados' : '';
+    }
+    function makeProdutoRow(preset = {}) {
+      const idx = produtoIndex++;
+      const row = document.createElement('div');
+      row.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4 items-start';
+      row.innerHTML = `
+        <div class="col-span-12 md:col-span-6 flex items-start gap-3">
+          <div class="w-20 h-20 flex-shrink-0">
+            <img src="" alt="Imagem do produto" class="product-thumb w-20 h-20 object-cover rounded-md shadow-sm" />
+          </div>
+          <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-700">Produto</label>
+            <select name="produtos[${idx}][id]"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+          </div>
+        </div>
 
-                <div class="overflow-x-auto rounded-lg border border-gray-200">
-                    <table class="min-w-full text-left border-collapse">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-sm font-medium text-gray-600">Produto</th>
-                                <th class="px-4 py-3 text-sm font-medium text-gray-600" style="width: 140px;">Quantidade</th>
-                                <th class="px-4 py-3 text-sm font-medium text-gray-600" style="width: 160px;">Desc. item (%)</th>
-                                <th class="px-4 py-3" style="width: 80px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelaProdutos">
-                            @foreach ($pedido->produtos as $p)
-                                @php
-                                    $qtd       = (int) ($p->pivot->quantidade ?? 0);
-                                    $descPerc  = (float) ($p->pivot->desconto_item ?? 0);
-                                    $precoTab  = (float) ($p->preco ?? 0);
-                                    $precoDesc = $precoTab * (1 - ($descPerc / 100));
-                                    $titulo    = $p->titulo ?: $p->nome;
-                                @endphp
-                                <tr class="border-t" data-index="{{ $loop->index }}">
-                                    <td class="px-4 py-2 align-top">
-                                        <input type="hidden" name="produtos[{{ $loop->index }}][id]" value="{{ $p->id }}" class="inputId">
-                                        <div class="font-medium">{{ $titulo }}</div>
-                                        <div class="text-xs text-gray-500">
-                                            Tabela: R$ {{ number_format($precoTab, 2, ',', '.') }} •
-                                            c/ desc ({{ number_format($descPerc,2,',','.') }}%): R$
-                                            {{ number_format($precoDesc, 2, ',', '.') }}
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-2 text-center align-top">
-                                        <input type="number" min="1"
-                                            class="w-28 border rounded-lg px-2 py-1 inputQtd focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            name="produtos[{{ $loop->index }}][quantidade]"
-                                            value="{{ old('produtos.'.$loop->index.'.quantidade', $qtd) }}" required>
-                                    </td>
-                                    <td class="px-4 py-2 align-top">
-                                        <input type="number" min="0" max="100" step="0.01"
-                                            class="w-36 border rounded-lg px-2 py-1 inputDesc focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            name="produtos[{{ $loop->index }}][desconto]"
-                                            value="{{ old('produtos.'.$loop->index.'.desconto', $descPerc) }}">
-                                    </td>
-                                    <td class="px-4 py-2 text-right align-top">
-                                        <button type="button" class="text-red-600 hover:underline btnRemoveRow">Remover</button>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div class="col-span-12 md:col-span-3">
+          <label class="block text-sm font-medium text-gray-700">Quantidade</label>
+          <input type="number" min="1" value="${preset.quantidade ?? 1}" name="produtos[${idx}][quantidade]"
+                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+        </div>
 
-            <div class="flex items-center gap-3">
-                <a href="{{ route('admin.pedidos.show', $pedido) }}" class="px-4 py-2 rounded-lg border hover:bg-gray-50">
-                    Cancelar
-                </a>
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                    Salvar alterações
-                </button>
-            </div>
-        </form>
-    </div>
+        <div class="col-span-12 md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700">Desc. item (%)</label>
+          <input type="number" min="0" max="100" step="0.01" value="${preset.desconto ?? 0}" name="produtos[${idx}][desconto]"
+                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
 
-    {{-- Template para NOVA linha --}}
-    <template id="rowTemplate">
-        <tr class="border-t" data-index="__INDEX__">
-            <td class="px-4 py-3 align-top">
-                <select class="w-full border rounded-lg px-2 py-2 produtoSelect focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">— Selecionar produto —</option>
-                    @foreach ($produtos as $pp)
-                        <option value="{{ $pp->id }}"
-                                data-titulo="{{ $pp->titulo ?? $pp->nome }}"
-                                data-preco="{{ (float) ($pp->preco ?? 0) }}">
-                            {{ $pp->titulo ?? $pp->nome }} — Tabela: R$ {{ number_format((float)($pp->preco ?? 0), 2, ',', '.') }}
-                        </option>
-                    @endforeach
-                </select>
-                <input type="hidden" data-name="produtos[__INDEX__][id]" class="inputId">
+        <div class="col-span-12 md:col-span-1 flex items-end">
+          <button type="button" class="remove-row inline-flex items-center rounded-md border px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700">
+            Remover
+          </button>
+        </div>
 
-                {{-- faixa de informações (atualiza em tempo real) --}}
-                <div class="mt-2 rounded-md bg-white border p-2 text-xs text-gray-700 space-x-2 infoPreco hidden">
-                    <span class="unit">Tabela: R$ 0,00</span>
-                    <span>•</span>
-                    <span class="unitDesc">c/ desc: R$ 0,00</span>
-                </div>
-            </td>
-            <td class="px-4 py-3 align-top">
-                <input type="number" min="1"
-                    class="w-28 border rounded-lg px-2 py-1 inputQtd focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    data-name="produtos[__INDEX__][quantidade]" value="1" required>
-            </td>
-            <td class="px-4 py-3 align-top">
-                <input type="number" min="0" max="100" step="0.01"
-                    class="w-36 border rounded-lg px-2 py-1 inputDesc focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    data-name="produtos[__INDEX__][desconto]" value="0">
-            </td>
-            <td class="px-4 py-3 text-right align-top">
-                <button type="button" class="text-red-600 hover:underline btnRemoveRow">Remover</button>
-            </td>
-        </tr>
-    </template>
+        <div class="col-span-12">
+          <div class="mt-2 rounded-md bg-white border p-3 text-sm text-gray-700 space-x-3 calc-area">
+            <span><span class="font-medium">Preço de tabela:</span> <span class="unit-price">R$ 0,00</span></span>
+            <span>•</span>
+            <span><span class="font-medium">Preço com desconto:</span> <span class="unit-disc">R$ 0,00</span></span>
+            <span>•</span>
+            <span><span class="font-medium">Total:</span> <span class="total-tabela">R$ 0,00</span></span>
+            <span>•</span>
+            <span><span class="font-medium">Total com desconto:</span> <span class="total-desc">R$ 0,00</span></span>
+          </div>
+        </div>
+      `;
+      const sel = row.querySelector('select');
+      sel.append(buildOptions(getSelectedProductIds(), preset.id ?? null));
+      return row;
+    }
+    function calcRow(row) {
+      const sel = row.querySelector('select[name^="produtos["][name$="[id]"]');
+      const qEl = row.querySelector('input[name^="produtos["][name$="[quantidade]"]');
+      const dEl = row.querySelector('input[name^="produtos["][name$="[desconto]"]');
 
-    {{-- ===== Dados JS compartilhados ===== --}}
-    <script>
-        const ALL_PRODUCTS = {!! $produtos->map(fn($p) => [
-            'id'     => $p->id,
-            'titulo' => $p->titulo ?? $p->nome,
-            'preco'  => (float) ($p->preco ?? 0),
-        ])->values()->toJson() !!};
+      const unitSpan   = row.querySelector('.unit-price');
+      const unitDSpan  = row.querySelector('.unit-disc');
+      const totalSpan  = row.querySelector('.total-tabela');
+      const totalDSpan = row.querySelector('.total-desc');
+      const imgEl      = row.querySelector('.product-thumb');
 
-        const fmtBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-        const getProductById = (id) => ALL_PRODUCTS.find(p => String(p.id) === String(id)) || null;
-    </script>
+      const pid   = sel?.value || '';
+      theProd     = getProductById(pid);
+      const qtd   = Math.max(1, parseInt(qEl?.value || '1', 10));
+      const desc  = Math.max(0, Math.min(100, parseFloat(dEl?.value || '0')));
 
-    <script>
-        /* =================== ESTADO INICIAL =================== */
-        window.PEDIDO_ATUAL = {
-            distribuidor_id: @json(old('distribuidor_id', $pedido->distribuidor_id)),
-            gestor_id:       @json(old('gestor_id', $pedido->gestor_id)),
-            cidade_id:       @json(old('cidade_id', $pedido->cidades->pluck('id')->first())),
-            uf_gestor:       @json(optional($pedido->gestor)->estado_uf),
-        };
+      const unit  = theProd ? Number(theProd.preco || 0) : 0;
+      const unitD = unit * (1 - (desc / 100));
+      const totalTabela = unit  * qtd;
+      const totalDesc   = unitD * qtd;
 
-        /* =================== CIDADES =================== */
-        const cidadeSelect = document.getElementById('cidade_id');
-        const ufDisplay    = document.getElementById('ufDisplay');
-        const ufHidden     = document.getElementById('ufHidden');
+      unitSpan.textContent   = fmtBRL.format(unit);
+      unitDSpan.textContent  = fmtBRL.format(unitD);
+      totalSpan.textContent  = fmtBRL.format(totalTabela);
+      totalDSpan.textContent = fmtBRL.format(totalDesc);
 
-        function resetCidadeSelect(placeholder = '-- Selecione --') {
-            if (!cidadeSelect) return;
-            cidadeSelect.innerHTML = '';
-            cidadeSelect.add(new Option(placeholder, ''));
-            cidadeSelect.disabled = true;
-            cidadeSelect.classList.add('bg-gray-50');
-        }
+      const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="100%" height="100%" fill="#E5E7EB"/><text x="50%" y="50%" alignment-baseline="middle" text-anchor="middle" font-size="10" fill="#9CA3AF">Sem imagem</text></svg>'
+      );
+      if (!theProd) { imgEl.src = PLACEHOLDER; imgEl.alt = 'Sem produto'; return; }
 
-        async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
-            resetCidadeSelect('-- Carregando... --');
-            try {
-                const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const cidades = await resp.json();
-                cidadeSelect.innerHTML = '';
-                cidadeSelect.add(new Option('-- Selecione --', ''));
-                cidades.forEach(c => {
-                    const opt = new Option(c.name, c.id);
-                    if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                    cidadeSelect.add(opt);
-                });
-                cidadeSelect.disabled = false;
-                cidadeSelect.classList.remove('bg-gray-50');
-                if (!cidades.length) resetCidadeSelect('Distribuidor sem cidades vinculadas');
-            } catch (e) {
-                console.error(e);
-                resetCidadeSelect('Falha ao carregar cidades');
+      if (theProd.imagem) {
+        const testImg = new Image();
+        testImg.onload = () => { imgEl.src = theProd.imagem; imgEl.alt = theProd.titulo || 'Produto'; };
+        testImg.onerror = () => { imgEl.src = PLACEHOLDER; imgEl.alt = theProd.titulo || 'Sem imagem'; };
+        testImg.src = theProd.imagem;
+      } else {
+        imgEl.src = PLACEHOLDER;
+        imgEl.alt = theProd.titulo || 'Sem imagem';
+      }
+    }
+    function calcAll() { container.querySelectorAll('.produto').forEach(calcRow); }
+    function adicionarProduto(preset = {}) {
+      const row = makeProdutoRow(preset);
+      container.appendChild(row);
+      refreshAllProductSelects();
+      calcRow(row);
+    }
+    container.addEventListener('change', (e) => {
+      if (e.target.matches('select[name^="produtos["][name$="[id]"]')) {
+        refreshAllProductSelects();
+        calcRow(e.target.closest('.produto'));
+      }
+      if (e.target.matches('input[name^="produtos["][name$="[quantidade]"]')
+          || e.target.matches('input[name^="produtos["][name$="[desconto]"]')) {
+        calcRow(e.target.closest('.produto'));
+      }
+    });
+    container.addEventListener('input', (e) => {
+      if (e.target.matches('input[name^="produtos["][name$="[quantidade]"]')
+          || e.target.matches('input[name^="produtos["][name$="[desconto]"]')) {
+        calcRow(e.target.closest('.produto'));
+      }
+    });
+    container.addEventListener('click', (e) => {
+      if (e.target.closest('.remove-row')) {
+        e.target.closest('.produto').remove();
+        refreshAllProductSelects();
+        calcAll();
+      }
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+      if (Array.isArray(OLD_PRODUTOS) && OLD_PRODUTOS.length) {
+        OLD_PRODUTOS.forEach(p => adicionarProduto(p));
+        calcAll();
+      }
+    });
+  </script>
+
+  {{-- ===== COLEÇÕES (popular select + preview + adicionar itens) ===== --}}
+  <script>
+    const colecaoSelect = document.getElementById('colecao_select');
+    const colecaoQtdEl  = document.getElementById('colecao_qtd');
+    const colecaoDescEl = document.getElementById('colecao_desc');
+    const colecaoPrev   = document.getElementById('colecao-preview');
+
+    function getCollectionById(id) {
+      return (ALL_COLLECTIONS || []).find(c => String(c.id) === String(id)) || null;
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!colecaoSelect) return;
+      colecaoSelect.innerHTML = '';
+      colecaoSelect.append(new Option('-- Selecione a coleção --', ''));
+      (ALL_COLLECTIONS || []).forEach(c => {
+        const qty = Array.isArray(c.produtos) ? c.produtos.length : 0;
+        colecaoSelect.append(new Option(`${c.nome} (${qty} itens)`, c.id));
+      });
+    });
+    function renderColecaoPreview() {
+      const id  = colecaoSelect.value;
+      const col = getCollectionById(id);
+      const qtd = Math.max(1, parseInt(colecaoQtdEl.value || '1', 10));
+      const des = Math.max(0, Math.min(100, parseFloat(colecaoDescEl.value || '0')));
+      colecaoPrev.innerHTML = '';
+      if (!col || !Array.isArray(col.produtos) || col.produtos.length === 0) return;
+
+      const fmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+      col.produtos.forEach(p => {
+        const unit  = Number(p.preco || 0);
+        const uDesc = unit * (1 - (des / 100));
+        const tot   = unit  * qtd;
+        const totD  = uDesc * qtd;
+
+        const card = document.createElement('div');
+        card.className = 'border rounded-lg p-3 bg-gray-50 flex items-center gap-3';
+
+        const img = document.createElement('img');
+        img.className = 'w-12 h-12 rounded object-cover ring-1 ring-gray-200 flex-shrink-0';
+        img.alt = p.titulo || 'Produto';
+        img.src = p.imagem || ('data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="100%" height="100%" fill="#E5E7EB"/><text x="50%" y="50%" alignment-baseline="middle" text-anchor="middle" font-size="9" fill="#9CA3AF">Sem</text></svg>'));
+
+        const info = document.createElement('div');
+        info.className = 'flex-1 min-w-0';
+        info.innerHTML = `
+          <div class="text-sm font-medium text-gray-800 truncate">${p.titulo}</div>
+          <div class="text-xs text-gray-600 mt-1 space-x-2">
+            <span>Unit: <strong>${fmt.format(unit)}</strong></span>
+            <span>Desc: <strong>${fmt.format(uDesc)}</strong></span>
+          </div>
+          <div class="text-xs text-gray-700 mt-1 space-x-2">
+            <span>Total: <strong>${fmt.format(tot)}</strong></span>
+            <span>c/ desc: <strong>${fmt.format(totD)}</strong></span>
+          </div>
+        `;
+        card.appendChild(img);
+        card.appendChild(info);
+        colecaoPrev.appendChild(card);
+      });
+    }
+    colecaoSelect?.addEventListener('change', renderColecaoPreview);
+    colecaoQtdEl?.addEventListener('input', renderColecaoPreview);
+    colecaoDescEl?.addEventListener('input', renderColecaoPreview);
+
+    document.getElementById('btn_add_colecao')?.addEventListener('click', () => {
+      const colId = colecaoSelect.value;
+      if (!colId) return;
+      const col   = getCollectionById(colId);
+      if (!col) return;
+
+      const qtd = Math.max(1, parseInt(colecao_qtd.value || '1', 10));
+      const des = Math.max(0, Math.min(100, parseFloat(colecao_desc.value || '0')));
+      const chosenSet = new Set(getSelectedProductIds().map(String));
+
+      for (const p of (col.produtos || [])) {
+        if (chosenSet.has(String(p.id))) {
+          const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
+          for (const sel of selects) {
+            if (String(sel.value) === String(p.id)) {
+              const row = sel.closest('.produto');
+              const qEl = row.querySelector('input[name^="produtos["][name$="[quantidade]"]');
+              const dEl = row.querySelector('input[name^="produtos["][name$="[desconto]"]');
+              qEl.value = Math.max(1, parseInt(qEl.value || '1', 10)) + qtd;
+              dEl.value = des;
+              calcRow(row);
             }
+          }
+        } else {
+          adicionarProduto({ id: p.id, quantidade: qtd, desconto: des });
         }
+      }
+      refreshAllProductSelects();
+      calcAll();
+    });
 
-        async function carregarCidadesPorGestor(gestorId, selectedCidadeId = null) {
-            resetCidadeSelect('-- Carregando... --');
-            try {
-                const resp = await fetch(`/admin/cidades/por-gestor/${gestorId}`);
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const cidades = await resp.json();
-                cidadeSelect.innerHTML = '';
-                cidadeSelect.add(new Option('-- Selecione --', ''));
-                cidades.forEach(c => {
-                    const opt = new Option(c.name, c.id);
-                    if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
-                    cidadeSelect.add(opt);
-                });
-                cidadeSelect.disabled = false;
-                cidadeSelect.classList.remove('bg-gray-50');
-                if (!cidades.length) resetCidadeSelect('Nenhuma cidade para a UF do gestor');
-            } catch (e) {
-                console.error(e);
-                resetCidadeSelect('Falha ao carregar cidades');
-            }
+    // Guard de submissão: exige ao menos 1 produto ou uma coleção
+    document.getElementById('pedido-edit-form').addEventListener('submit', function(e) {
+      const selects = Array.from(container.querySelectorAll('select[name^="produtos["][name$="[id]"]'));
+      const selectedIds = selects.map(s => s.value).filter(v => v !== '');
+      if (selectedIds.length === 0) {
+        if (!document.getElementById('colecao_select').value) {
+          alert('Selecione ao menos um produto ou uma coleção.');
+          e.preventDefault();
+          return false;
         }
-
-        /* =================== PRODUTOS (sem duplicar) =================== */
-        const tabelaProdutosBody = document.getElementById('tabelaProdutos');
-        const btnAddRow          = document.getElementById('btnAddRow');
-        const rowTemplate        = document.getElementById('rowTemplate');
-        let nextIndex = tabelaProdutosBody ? tabelaProdutosBody.querySelectorAll('tr[data-index]').length : 0;
-
-        function getSelectedProductIds() {
-            if (!tabelaProdutosBody) return [];
-            const ids = [];
-            tabelaProdutosBody.querySelectorAll('input.inputId[name^="produtos["][name$="[id]"]').forEach(h => {
-                const v = String(h.value || '').trim();
-                if (v) ids.push(v);
-            });
-            tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
-                const v = String(sel.value || '').trim();
-                if (v) ids.push(v);
-            });
-            return Array.from(new Set(ids));
-        }
-
-        function refreshAllProductSelectOptions() {
-            if (!tabelaProdutosBody) return;
-            const chosen = getSelectedProductIds();
-
-            tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
-                const current = String(sel.value || '');
-                const allOpts = Array.from(sel.querySelectorAll('option')).map(o => ({
-                    value: o.value,
-                    text:  o.textContent,
-                    dataset: { titulo: o.dataset.titulo, preco: o.dataset.preco }
-                }));
-
-                sel.innerHTML = '';
-                const placeholder = document.createElement('option');
-                placeholder.value = '';
-                placeholder.textContent = '— Selecionar produto —';
-                sel.appendChild(placeholder);
-
-                allOpts.forEach(({value, text, dataset}) => {
-                    if (value === '') return;
-                    const isExcluded = chosen.includes(value) && value !== current;
-                    if (isExcluded) return;
-
-                    const opt = document.createElement('option');
-                    opt.value = value;
-                    opt.textContent = text;
-                    if (dataset && dataset.titulo) opt.dataset.titulo = dataset.titulo;
-                    if (dataset && dataset.preco)  opt.dataset.preco  = dataset.preco;
-
-                    if (value === current) opt.selected = true;
-                    sel.appendChild(opt);
-                });
-            });
-        }
-
-        function updateRowInfo(tr) {
-            const sel   = tr.querySelector('select.produtoSelect');
-            const descI = tr.querySelector('input.inputDesc');
-            const info  = tr.querySelector('.infoPreco');
-            if (!sel || !descI || !info) return;
-
-            const pid   = sel.value || '';
-            const prod  = getProductById(pid);
-            const desc  = Math.max(0, Math.min(100, parseFloat(descI.value || '0')));
-            const unit  = prod ? Number(prod.preco || 0) : 0;
-            const unitD = unit * (1 - (desc / 100));
-
-            info.querySelector('.unit').textContent     = `Tabela: ${fmtBRL.format(unit)}`;
-            info.querySelector('.unitDesc').textContent = `c/ desc: ${fmtBRL.format(unitD)}`;
-            info.classList.toggle('hidden', !prod);
-
-            // Atualiza label da opção selecionada (visual)
-            const optSel = sel.options[sel.selectedIndex];
-            if (optSel && prod) {
-                optSel.textContent = `${prod.titulo} — Tabela: ${fmtBRL.format(unit)} — c/ desc: ${fmtBRL.format(unitD)}`;
-            }
-        }
-
-        function wireRowEvents(tr) {
-            const sel   = tr.querySelector('select.produtoSelect');
-            const hid   = tr.querySelector('input.inputId');
-            const descI = tr.querySelector('input.inputDesc');
-
-            if (sel) {
-                sel.addEventListener('change', () => {
-                    if (hid) hid.value = sel.value || '';
-                    refreshAllProductSelectOptions();
-                    updateRowInfo(tr);
-                });
-            }
-            if (descI) {
-                descI.addEventListener('input',  () => updateRowInfo(tr));
-                descI.addEventListener('change', () => updateRowInfo(tr));
-            }
-
-            updateRowInfo(tr);
-        }
-
-        function addProductRow() {
-            if (!rowTemplate || !tabelaProdutosBody) return;
-
-            const clone = rowTemplate.content.cloneNode(true);
-            const html  = clone.firstElementChild.outerHTML.replaceAll('__INDEX__', String(nextIndex));
-            const container = document.createElement('tbody');
-            container.innerHTML = html;
-            const tr = container.firstElementChild;
-
-            tr.querySelectorAll('[data-name]').forEach(el => {
-                el.setAttribute('name', el.getAttribute('data-name'));
-                el.removeAttribute('data-name');
-            });
-
-            const select = tr.querySelector('select.produtoSelect');
-            const hidden = tr.querySelector('input.inputId');
-
-            tr.querySelector('.btnRemoveRow')?.addEventListener('click', () => {
-                tr.remove();
-                refreshAllProductSelectOptions();
-            });
-
-            if (select) {
-                select.addEventListener('change', () => {
-                    hidden.value = select.value || '';
-                    refreshAllProductSelectOptions();
-                });
-            }
-
-            tabelaProdutosBody.appendChild(tr);
-            refreshAllProductSelectOptions();
-            wireRowEvents(tr);
-            nextIndex++;
-        }
-
-        /* =================== BOOT =================== */
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Preenche UF (fixa)
-            const uf = window.PEDIDO_ATUAL?.uf_gestor || '';
-            if (ufDisplay) ufDisplay.value = uf || '—';
-            if (ufHidden)  ufHidden.value  = uf || '';
-
-            // Carrega cidades pelo contexto atual
-            const dId = window.PEDIDO_ATUAL?.distribuidor_id ?? null;
-            const gId = window.PEDIDO_ATUAL?.gestor_id ?? null;
-            const cId = window.PEDIDO_ATUAL?.cidade_id ?? null;
-
-            if (dId) {
-                await carregarCidadesPorDistribuidor(dId, cId);
-            } else if (gId) {
-                await carregarCidadesPorGestor(gId, cId);
-            } else {
-                resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
-            }
-
-            refreshAllProductSelectOptions();
-
-            // Botão adicionar linha
-            document.getElementById('btnAddRow')?.addEventListener('click', addProductRow);
-
-            // Remover linhas existentes (delegation)
-            tabelaProdutosBody?.addEventListener('click', (e) => {
-                const btn = e.target.closest('.btnRemoveRow');
-                if (!btn) return;
-                const tr = btn.closest('tr[data-index]');
-                if (!tr) return;
-                tr.remove();
-                refreshAllProductSelectOptions();
-            });
-
-            // Limpa linhas inválidas antes de enviar
-            const form = document.getElementById('formPedidoEdit');
-            form?.addEventListener('submit', () => {
-                if (!tabelaProdutosBody) return;
-                tabelaProdutosBody.querySelectorAll('tr[data-index]').forEach(tr => {
-                    const hidden = tr.querySelector('input.inputId');
-                    const qtd    = tr.querySelector('input.inputQtd');
-                    const idVal  = parseInt(hidden?.value || '0', 10);
-                    const qVal   = parseInt(qtd?.value || '0', 10);
-                    if (!(idVal > 0 && qVal > 0)) tr.remove();
-                });
-            });
-        });
-    </script>
-
+      }
+    });
+  </script>
 </x-app-layout>

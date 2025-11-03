@@ -54,11 +54,14 @@
                 <p class="text-3xl font-bold mt-2">{{ $notasAPagar->count() }}</p>
             </a>
 
-            <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'emitida', 'tipo_relatorio' => $tipoRelatorio])) }}"
-               class="bg-blue-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
-                <h1 class="text-sm uppercase tracking-wide">Notas emitidas</h1>
-                <p class="text-3xl font-bold mt-2">{{ $notasEmitidas->count() }}</p>
-            </a>
+            {{-- EMITIDAS: só no modo GERAL --}}
+            @if($tipoRelatorio === 'geral')
+                <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'emitida', 'tipo_relatorio' => $tipoRelatorio])) }}"
+                   class="bg-blue-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
+                    <h1 class="text-sm uppercase tracking-wide">Notas emitidas</h1>
+                    <p class="text-3xl font-bold mt-2">{{ $notasEmitidas->count() }}</p>
+                </a>
+            @endif
         </div>
 
         {{-- 2) FILTROS --}}

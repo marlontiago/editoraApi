@@ -101,7 +101,7 @@ class RelatoriosController extends Controller
                 'pagamentos.diretor:id,nome',
             ]);
 
-        // Status
+        // Status (apenas quando usuário clica nos cards ou coloca manualmente)
         if (!empty($statusFiltro)) {
             if ($statusFiltro === 'aguardando_pagamento') {
                 // Inclui também notas com status_financeiro 'pago_parcial'
@@ -175,6 +175,17 @@ class RelatoriosController extends Controller
         if ($tipoRelatorio === 'financeiro') {
             // Exclui CFOPs de Remessa e Bonificação/Brinde
             $notasQuery->paraRelatorioFinanceiro();
+        }
+
+        // >>> NOVO: recorte de status para o modo FINANCEIRO
+        if ($tipoRelatorio === 'financeiro') {
+            $notasQuery->where(function ($q) {
+                $q->where('status_financeiro', 'pago')
+                  ->orWhere(function ($q2) {
+                      $q2->where('status', 'faturada')
+                         ->whereIn('status_financeiro', ['aguardando_pagamento', 'pago_parcial']);
+                  });
+            });
         }
 
         // >>> Recorte final: "apenas última nota por pedido" + "ignorar canceladas"
@@ -449,6 +460,17 @@ class RelatoriosController extends Controller
         // Recorte
         if ($tipoRelatorio === 'financeiro') {
             $base->paraRelatorioFinanceiro();
+        }
+
+        // >>> NOVO: recorte de status para o modo FINANCEIRO (cards)
+        if ($tipoRelatorio === 'financeiro') {
+            $base->where(function ($q) {
+                $q->where('status_financeiro', 'pago')
+                  ->orWhere(function ($q2) {
+                      $q2->where('status', 'faturada')
+                         ->whereIn('status_financeiro', ['aguardando_pagamento', 'pago_parcial']);
+                  });
+            });
         }
 
         // >>> aplicar o mesmo recorte dos relatórios (última por pedido + ignora canceladas)

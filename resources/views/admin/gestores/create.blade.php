@@ -20,9 +20,13 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('admin.gestores.store') }}" enctype="multipart/form-data"
+        <form method="POST"
+              action="{{ route('admin.gestores.store') }}"
+              enctype="multipart/form-data"
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4"
-              x-data>
+              x-data
+              autocomplete="off"  {{-- 🔒 bloqueia ao máximo o autofill no form --}}
+        >
             @csrf
 
             {{-- Razão Social --}}
@@ -31,6 +35,7 @@
                     Razão Social <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="razao_social" name="razao_social" value="{{ old('razao_social') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('razao_social') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -41,6 +46,7 @@
                     CNPJ <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}" maxlength="18"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -51,6 +57,7 @@
                     Representante Legal <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="representante_legal" name="representante_legal" value="{{ old('representante_legal') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('representante_legal') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -61,6 +68,7 @@
                     CPF <span class="text-red-600">*</span>
                 </label>
                 <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}" maxlength="14"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -69,6 +77,7 @@
             <div class="col-span-12 md:col-span-3">
                 <label for="rg" class="block text-sm font-medium text-gray-700">RG</label>
                 <input type="text" id="rg" name="rg" value="{{ old('rg') }}" maxlength="30"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('rg') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -82,6 +91,7 @@
                 <template x-for="(tel, i) in lista" :key="i">
                     <div class="mt-1 flex gap-2">
                         <input type="text" maxlength="20"
+                               autocomplete="off"  {{-- 🔒 --}}
                                class="flex-1 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                :name="`telefones[${i}]`" x-model="lista[i]">
                         <button type="button" class="inline-flex items-center rounded-md border px-3 text-sm hover:bg-gray-50"
@@ -95,7 +105,7 @@
                 @error('telefones.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- E-MAILS (lista com +) — o primeiro será o login do usuário (hidden "email") --}}
+            {{-- E-MAILS (lista com +) — o primeiro será o login do usuário (sem input name="email" para evitar autofill) --}}
             @php
                 $emailsOld = old('emails', ['']);
                 $emailLoginOld = old('email', '');
@@ -120,6 +130,7 @@
                 <template x-for="(em, i) in emails" :key="i">
                     <div class="mt-2 flex gap-2">
                         <input type="email" maxlength="255"
+                               autocomplete="off"  {{-- 🔒 --}}
                                class="flex-1 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                :name="`emails[${i}]`" x-model="emails[i]" @input="syncLoginEmail()">
                         <button type="button" class="rounded-md border px-2 text-xs hover:bg-gray-50"
@@ -131,12 +142,9 @@
                     O <b>primeiro e-mail</b> será usado para criar o usuário (login). Você pode alterar depois.
                 </p>
 
-                <button type="button" class="inline-flex h-8 mt-2 items-center rounded-md border px-3 text-xs hover:bg-gray-50"
-                        @click="add()">+ Adicionar</button>
-
-                {{-- IMPORTANTE: primeiro e-mail vira o login --}}
-                <input type="hidden" name="email" x-model="loginEmail">
-
+                {{-- Mantém em estado local apenas para exibir/validar; NÃO envia "email" pro servidor. --}}
+                <input type="hidden" name="login_email" x-model="loginEmail"> {{-- 🔒 não é "email" --}}
+                
                 @error('emails') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('emails.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('email') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -146,6 +154,7 @@
             <div class="col-span-12 md:col-span-4">
                 <label for="password" class="block text-sm font-medium text-gray-700">Senha (opcional)</label>
                 <input type="password" id="password" name="password"
+                       autocomplete="new-password"  {{-- 🔒 recomendado para cadastro --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <p class="mt-1 text-xs text-gray-500">Se não preencher, uma senha aleatória será usada.</p>
                 @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -159,20 +168,20 @@
             <div class="col-span-12">
                 <label class="block text-sm font-medium text-gray-700">UF(s) de Atuação</label>
                 <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                     @foreach($ufs as $uf)
-                    @php $checked = in_array($uf, $selecionadas); @endphp
-                    <label class="inline-flex items-center gap-2 text-sm">
-                        <input
-                            type="checkbox"
-                            name="estados_uf[]"
-                            value="{{ $uf }}"
-                            class="rounded border-gray-300"
-                            @checked($checked)
-                            @change="$store.gestor.toggleUf('{{$uf}}', $event.target.checked)"
-                        >
-                        <span>{{ $uf }}</span>
-                    </label>
-                @endforeach
+                    @foreach($ufs as $uf)
+                        @php $checked = in_array($uf, $selecionadas); @endphp
+                        <label class="inline-flex items-center gap-2 text-sm">
+                            <input
+                                type="checkbox"
+                                name="estados_uf[]"
+                                value="{{ $uf }}"
+                                class="rounded border-gray-300"
+                                @checked($checked)
+                                @change="$store.gestor.toggleUf('{{$uf}}', $event.target.checked)"
+                            >
+                            <span>{{ $uf }}</span>
+                        </label>
+                    @endforeach
                 </div>
                 @error('estados_uf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('estados_uf.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -184,6 +193,7 @@
                 <div class="mt-1 flex rounded-md shadow-sm">
                     <input type="number" step="0.01" min="0" max="100" id="percentual_vendas" name="percentual_vendas"
                            value="{{ old('percentual_vendas') }}"
+                           autocomplete="off"  {{-- 🔒 --}}
                            class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">%</span>
                 </div>
@@ -197,36 +207,42 @@
             <div class="col-span-12 md:col-span-6">
                 <label for="endereco" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco" name="endereco" value="{{ old('endereco') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('endereco') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="numero" class="block text-sm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero" name="numero" value="{{ old('numero') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('numero') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="complemento" class="block text-sm font-medium text-gray-700">Complemento</label>
                 <input type="text" id="complemento" name="complemento" value="{{ old('complemento') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('complemento') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-4">
                 <label for="bairro" class="block text-sm font-medium text-gray-700">Bairro</label>
                 <input type="text" id="bairro" name="bairro" value="{{ old('bairro') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('bairro') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-5">
                 <label for="cidade" class="block text-sm font-medium text-gray-700">Cidade</label>
                 <input type="text" id="cidade" name="cidade" value="{{ old('cidade') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cidade') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-1">
                 <label for="uf" class="block text-sm font-medium text-gray-700">UF</label>
                 <select id="uf" name="uf"
+                        autocomplete="off"  {{-- 🔒 --}}
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">--</option>
                     @foreach($ufs as $uf)
@@ -238,6 +254,7 @@
             <div class="col-span-12 md:col-span-2">
                 <label for="cep" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep" name="cep" value="{{ old('cep') }}" maxlength="9"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cep') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -249,36 +266,42 @@
             <div class="col-span-12 md:col-span-6">
                 <label for="endereco2" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco2" name="endereco2" value="{{ old('endereco2') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('endereco2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="numero2" class="block text-sm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero2" name="numero2" value="{{ old('numero2') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('numero2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="complemento2" class="block text-sm font-medium text-gray-700">Complemento</label>
                 <input type="text" id="complemento2" name="complemento2" value="{{ old('complemento2') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('complemento2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-4">
                 <label for="bairro2" class="block text-sm font-medium text-gray-700">Bairro</label>
                 <input type="text" id="bairro2" name="bairro2" value="{{ old('bairro2') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('bairro2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-5">
                 <label for="cidade2" class="block text-sm font-medium text-gray-700">Cidade</label>
                 <input type="text" id="cidade2" name="cidade2" value="{{ old('cidade2') }}"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cidade2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-1">
                 <label for="uf2" class="block text-sm font-medium text-gray-700">UF</label>
                 <select id="uf2" name="uf2"
+                        autocomplete="off"  {{-- 🔒 --}}
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">--</option>
                     @foreach($ufs as $uf)
@@ -290,6 +313,7 @@
             <div class="col-span-12 md:col-span-2">
                 <label for="cep2" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep2" name="cep2" value="{{ old('cep2') }}" maxlength="9"
+                       autocomplete="off"  {{-- 🔒 --}}
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cep2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -348,6 +372,7 @@
                             <div class="mt-1 flex rounded-md shadow-sm">
                                 <input type="number" step="0.01" min="0" max="100"
                                        :name="`contratos[${idx}][percentual_vendas]`"
+                                       autocomplete="off"  {{-- 🔒 --}}
                                        class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm">%</span>
                             </div>
@@ -385,6 +410,7 @@
 
                         <div class="col-span-12">
                             <input type="text" placeholder="Descrição (opcional)" :name="`contratos[${idx}][descricao]`"
+                                   autocomplete="off"  {{-- 🔒 --}}
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <label class="inline-flex items-center text-sm mt-2">
                                 <input type="checkbox" :name="`contratos[${idx}][assinado]`" value="1" class="rounded border-gray-300">

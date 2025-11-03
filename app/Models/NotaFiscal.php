@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Support\CfopRules;
 
 class NotaFiscal extends Model
 {
@@ -14,14 +14,31 @@ class NotaFiscal extends Model
 
     protected $fillable = [
         'pedido_id',
-        'numero', 'serie', 'status',
-        'status_financeiro', 'pago_em',
-        'valor_bruto', 'desconto_total', 'valor_total',
-        'peso_total', 'total_caixas',
-        'emitente_snapshot', 'destinatario_snapshot', 'pedido_snapshot',
-        'chave_acesso', 'protocolo', 'ambiente',
-        'emitida_em', 'faturada_em',
-        'cancelada_em', 'motivo_cancelamento','plugnotas_id','plugnotas_status','pdf_url','xml_url',
+        'numero',
+        'serie',
+        'cfop',
+        'status',
+        'status_financeiro',
+        'pago_em',
+        'valor_bruto',
+        'desconto_total',
+        'valor_total',
+        'peso_total',
+        'total_caixas',
+        'emitente_snapshot',
+        'destinatario_snapshot',
+        'pedido_snapshot',
+        'chave_acesso',
+        'protocolo',
+        'ambiente',
+        'emitida_em',
+        'faturada_em',
+        'cancelada_em',
+        'motivo_cancelamento',
+        'plugnotas_id',
+        'plugnotas_status',
+        'pdf_url',
+        'xml_url',
     ];
 
     protected $casts = [
@@ -36,6 +53,7 @@ class NotaFiscal extends Model
         'desconto_total'        => 'decimal:2',
         'valor_total'           => 'decimal:2',
         'peso_total'            => 'decimal:3',
+        'cfop'                  => 'string',   // ✅ garante string (evita 5901 virar int)
     ];
 
     /*
@@ -58,6 +76,10 @@ class NotaFiscal extends Model
         return $this->hasMany(NotaPagamento::class, 'nota_fiscal_id');
     }
 
+    /**
+     * ⚠️ Atenção: abaixo não são relações Eloquent corretas; vínculo é via pedido.
+     * Prefira $nota->pedido->cliente e $nota->pedido->distribuidor
+     */
     public function cliente()
     {
         return $this->hasOne(Cliente::class, 'id', 'pedido.cliente_id');
@@ -65,7 +87,7 @@ class NotaFiscal extends Model
 
     public function distribuidor()
     {
-        return $this->HasOne(Distribuidor::class, 'id', 'pedido.distribuidor_id');
+        return $this->hasOne(Distribuidor::class, 'id', 'pedido.distribuidor_id');
     }
 
     /*
@@ -73,8 +95,15 @@ class NotaFiscal extends Model
     | Escopos
     |--------------------------------------------------------------------------
     */
-    public function scopeEmitidas($q)  { return $q->where('status', 'emitida'); }
-    public function scopeFaturadas($q) { return $q->where('status', 'faturada'); }
+    public function scopeEmitidas($q)
+    {
+        return $q->where('status', 'emitida');
+    }
+
+    public function scopeFaturadas($q)
+    {
+        return $q->where('status', 'faturada');
+    }
 
     public function scopeAguardandoPagamento($q)
     {
@@ -87,24 +116,38 @@ class NotaFiscal extends Model
         return $q->where('status_financeiro', 'pago');
     }
 
+    /**
+     * Notas que DEVEM entrar no relatório financeiro
+     * (exclui Simples Remessa e Bonificação/Brinde).
+     */
+    public function scopeParaRelatorioFinanceiro($query)
+    {
+        $excluir = array_unique(array_merge(
+            config('cfop.simples_remessa', []),
+            config('cfop.bonificacao', [])
+        ));
+
+        // cfop NULL não é excluído (trata como nota financeira normal)
+        return $query->where(function ($q) use ($excluir) {
+            $q->whereNull('cfop')->orWhereNotIn('cfop', $excluir);
+        });
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Acessors (Totais Financeiros)
     |--------------------------------------------------------------------------
     */
-    // Total pago bruto (cliente efetivamente paga)
     public function getTotalPagoBrutoAttribute(): float
     {
         return (float) $this->pagamentos()->sum('valor_pago');
     }
 
-    // Total pago líquido (interno, depois de retenções)
     public function getTotalPagoLiquidoAttribute(): float
     {
         return (float) $this->pagamentos()->sum('valor_liquido');
     }
 
-    // Saldo pendente (deve bater com status_financeiro = pago)
     public function getSaldoPendenteAttribute(): float
     {
         $toCents = fn($v) => (int) round(((float) $v) * 100);
@@ -114,6 +157,23 @@ class NotaFiscal extends Model
 
         $saldoCents = $totalCents - $pagoCents;
         return $saldoCents > 0 ? $saldoCents / 100 : 0.0;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Regras CFOP (encaminham para Support\CfopRules)
+    |--------------------------------------------------------------------------
+    */
+    public function isSimplesRemessa(): bool
+    {
+        $cfop = $this->cfop !== null ? trim((string) $this->cfop) : null;
+        return CfopRules::isSimplesRemessa($cfop);
+    }
+
+    public function isBonificacao(): bool
+    {
+        $cfop = $this->cfop !== null ? trim((string) $this->cfop) : null;
+        return CfopRules::isBonificacao($cfop);
     }
 
     /*
@@ -136,9 +196,9 @@ class NotaFiscal extends Model
         $somaBruto = (float) $this->pagamentos()->sum('valor_pago');
 
         // Centavos para evitar problemas de float
-        $toCents   = fn ($v) => (int) round(((float) $v) * 100);
-        $totalCents= $toCents($this->valor_total);
-        $somaCents = $toCents($somaBruto);
+        $toCents    = fn ($v) => (int) round(((float) $v) * 100);
+        $totalCents = $toCents($this->valor_total);
+        $somaCents  = $toCents($somaBruto);
 
         $update = [];
 
@@ -166,5 +226,4 @@ class NotaFiscal extends Model
             $this->forceFill($update)->save();
         }
     }
-
 }

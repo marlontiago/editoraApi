@@ -48,7 +48,7 @@ class PedidoController extends Controller
         $gestores       = Gestor::with('user')->orderBy('razao_social')->get();
         $distribuidores = Distribuidor::with('user')->orderBy('razao_social')->get();
 
-        // Seleciona apenas colunas existentes
+        // Apenas colunas existentes + accessor de imagem
         $produtos = Produto::select('id', 'titulo', 'preco', 'imagem')
             ->orderBy('titulo')
             ->get()
@@ -56,7 +56,7 @@ class PedidoController extends Controller
                 'id'     => $p->id,
                 'titulo' => $p->titulo,
                 'preco'  => (float) ($p->preco ?? 0),
-                'imagem' => $p->imagem_url, // usa o accessor
+                'imagem' => $p->imagem_url,
             ])
             ->values();
 
@@ -64,21 +64,24 @@ class PedidoController extends Controller
         $clientes  = Cliente::orderBy('razao_social')->get();
         $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
 
+        // Labels CFOP se existir config/cfop.php
+        $cfopLabels = config('cfop.labels', []); // ['5910' => 'Bonificação', ... ]
+
         return view('admin.pedidos.create', compact(
             'produtos',
             'cidades',
             'gestores',
             'distribuidores',
             'clientes',
-            'cidadesUF'
+            'cidadesUF',
+            'cfopLabels',
         ));
     }
 
     public function store(Request $request)
     {
-        // Regras dinâmicas para cidade
+        // Regra dinâmica de cidade conforme distribuidor
         $cidadeRules = ['nullable', 'integer'];
-
         if ($request->filled('distribuidor_id')) {
             $cidadeRules[] = 'required';
             $cidadeRules[] = Rule::exists('city_distribuidor', 'city_id')
@@ -95,6 +98,7 @@ class PedidoController extends Controller
             'gestor_id'              => ['nullable', 'exists:gestores,id'],
             'distribuidor_id'        => ['nullable', 'exists:distribuidores,id'],
             'cidade_id'              => $cidadeRules,
+            'cfop'                   => ['nullable', 'regex:/^\d{4}$/'], // CFOP 4 dígitos
             'produtos'               => ['required', 'array', 'min:1'],
             'produtos.*.id'          => ['required', 'exists:produtos,id', 'distinct'],
             'produtos.*.quantidade'  => ['required', 'integer', 'min:1'],
@@ -107,11 +111,12 @@ class PedidoController extends Controller
             'cliente_id.required' => 'Selecione um cliente.',
             'cidade_id.required'  => 'Selecione a cidade da venda (ao escolher um distribuidor).',
             'cidade_id.exists'    => 'A cidade selecionada não pertence ao distribuidor escolhido.',
+            'cfop.regex'          => 'CFOP deve conter exatamente 4 dígitos.',
         ];
 
         $validated = $request->validate($rules, $messages);
 
-        // Verificações de cidade
+        // Checagens adicionais de cidade
         if (filled($request->cidade_id)) {
             if (filled($request->distribuidor_id)) {
                 $pertence = DB::table('city_distribuidor')
@@ -125,10 +130,7 @@ class PedidoController extends Controller
                     ])->withInput();
                 }
             } else {
-                $ocupada = DB::table('city_distribuidor')
-                    ->where('city_id', $request->cidade_id)
-                    ->exists();
-
+                $ocupada = DB::table('city_distribuidor')->where('city_id', $request->cidade_id)->exists();
                 if ($ocupada) {
                     $distName = DB::table('city_distribuidor')
                         ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
@@ -154,13 +156,12 @@ class PedidoController extends Controller
                 'data'            => $request->data,
                 'status'          => 'em_andamento',
                 'observacoes'     => $request->observacoes ?? null,
+                'cfop'            => $request->cfop,
             ]);
 
-            if ($request->filled('cidade_id')) {
-                $pedido->cidades()->sync([$request->cidade_id]);
-            } else {
-                $pedido->cidades()->sync([]);
-            }
+            $request->filled('cidade_id')
+                ? $pedido->cidades()->sync([$request->cidade_id])
+                : $pedido->cidades()->sync([]);
 
             $pesoTotal = 0;
             $totalCaixas = 0;
@@ -243,18 +244,9 @@ class PedidoController extends Controller
             'logs.user',
         ]);
 
-        $notaAtual = NotaFiscal::where('pedido_id', $pedido->id)
-            ->latest('id')
-            ->first();
-
-        $notaEmitida = NotaFiscal::where('pedido_id', $pedido->id)
-            ->where('status', 'emitida')
-            ->latest('id')
-            ->first();
-
-        $temNotaFaturada = NotaFiscal::where('pedido_id', $pedido->id)
-            ->where('status', 'faturada')
-            ->exists();
+        $notaAtual = NotaFiscal::where('pedido_id', $pedido->id)->latest('id')->first();
+        $notaEmitida = NotaFiscal::where('pedido_id', $pedido->id)->where('status', 'emitida')->latest('id')->first();
+        $temNotaFaturada = NotaFiscal::where('pedido_id', $pedido->id)->where('status', 'faturada')->exists();
 
         return view('admin.pedidos.show', compact('pedido', 'notaAtual', 'notaEmitida','temNotaFaturada'));
     }
@@ -307,8 +299,10 @@ class PedidoController extends Controller
             ]
         ])->toArray();
 
+        $cfopLabels = config('cfop.labels', []);
+
         return view('admin.pedidos.edit', compact(
-            'pedido','gestores','distribuidores','produtos','cidades','clientes','itensAtuais','cidadesUF',
+            'pedido','gestores','distribuidores','produtos','cidades','clientes','itensAtuais','cidadesUF','cfopLabels',
         ));
     }
 
@@ -318,6 +312,7 @@ class PedidoController extends Controller
             return back()->with('error', 'Não é mais possível editar: este pedido já foi finalizado.');
         }
 
+        // Sanitiza produtos
         $produtosLimpos = collect($request->input('produtos', []))
             ->filter(function ($row) {
                 $id = $row['id'] ?? null;
@@ -339,12 +334,13 @@ class PedidoController extends Controller
         ]);
 
         $rules = [
-            'data'                   => ['required', 'date', 'after_or_equal:' . \Carbon\Carbon::now('America/Sao_Paulo')->toDateString()],
+            'data'                   => ['required', 'date', 'after_or_equal:' . Carbon::now('America/Sao_Paulo')->toDateString()],
             'cliente_id'             => ['required', 'exists:clientes,id'],
             'gestor_id'              => ['nullable','exists:gestores,id'],
             'distribuidor_id'        => ['nullable','exists:distribuidores,id'],
             'cidade_id'              => ['nullable','integer'],
-            'status'                 => ['required', 'in:em_andamento,finalizado,cancelado'],
+            'status'                 => ['required', 'in:em_andamento,pre_aprovado,finalizado,cancelado'],
+            'cfop'                   => ['nullable', 'regex:/^\d{4}$/'],
             'produtos'               => ['required', 'array', 'min:1'],
             'produtos.*.id'          => ['required', 'exists:produtos,id', 'distinct'],
             'produtos.*.quantidade'  => ['required', 'integer', 'min:1'],
@@ -354,10 +350,12 @@ class PedidoController extends Controller
 
         $messages = [
             'cidade_id.required' => 'Selecione a cidade da venda.',
+            'cfop.regex'         => 'CFOP deve conter exatamente 4 dígitos.',
         ];
 
         $validated = $request->validate($rules, $messages);
 
+        // Cidade coerente com distribuidor
         if (filled($pedido->distribuidor_id)) {
             if (blank($request->cidade_id)) {
                 return back()->withErrors(['cidade_id' => 'Selecione a cidade da venda.'])->withInput();
@@ -373,10 +371,7 @@ class PedidoController extends Controller
             }
         } else {
             if (filled($request->cidade_id)) {
-                $ocupada = DB::table('city_distribuidor')
-                    ->where('city_id', $request->cidade_id)
-                    ->exists();
-
+                $ocupada = DB::table('city_distribuidor')->where('city_id', $request->cidade_id)->exists();
                 if ($ocupada) {
                     $distName = DB::table('city_distribuidor')
                         ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
@@ -402,6 +397,7 @@ class PedidoController extends Controller
                     'gestor_id'       => $pedido->gestor_id,
                     'distribuidor_id' => $pedido->distribuidor_id,
                     'status'          => $pedido->status,
+                    'cfop'            => $pedido->cfop,
                 ],
                 'cidades' => $pedido->cidades->pluck('id')->sort()->values()->all(),
                 'itens'   => $pedido->produtos->mapWithKeys(
@@ -411,6 +407,7 @@ class PedidoController extends Controller
 
             $novoStatus = $validated['status'];
 
+            // Cancelamento não mexe em estoque, só registra
             if ($antes['campos']['status'] !== 'cancelado' && $novoStatus === 'cancelado') {
                 $pedido->update([
                     'data'            => $validated['data'],
@@ -419,24 +416,20 @@ class PedidoController extends Controller
                     'distribuidor_id' => $pedido->distribuidor_id,
                     'status'          => 'cancelado',
                     'observacoes'     => $request->observacoes ?? null,
+                    'cfop'            => $request->cfop,
                 ]);
 
                 $request->filled('cidade_id')
                     ? $pedido->cidades()->sync([$request->cidade_id])
                     : $pedido->cidades()->sync([]);
 
-                $pedido->registrarLog(
-                    'Pedido cancelado',
-                    'Pedido cancelado (sem movimentação de estoque).',
-                    ['antes' => $antes]
-                );
+                $pedido->registrarLog('Pedido cancelado', 'Pedido cancelado (sem movimentação de estoque).', ['antes' => $antes]);
 
                 DB::commit();
-                return redirect()
-                    ->route('admin.pedidos.show', $pedido)
-                    ->with('success', 'Pedido cancelado.');
+                return redirect()->route('admin.pedidos.show', $pedido)->with('success', 'Pedido cancelado.');
             }
 
+            // Atualiza campos principais
             $pedido->update([
                 'data'            => $validated['data'],
                 'cliente_id'      => $request->cliente_id,
@@ -444,12 +437,14 @@ class PedidoController extends Controller
                 'distribuidor_id' => $pedido->distribuidor_id,
                 'status'          => $novoStatus,
                 'observacoes'     => $request->observacoes ?? null,
+                'cfop'            => $request->cfop,
             ]);
 
             $request->filled('cidade_id')
                 ? $pedido->cidades()->sync([$request->cidade_id])
                 : $pedido->cidades()->sync([]);
 
+            // Calcula itens novos e valida estoque incremental
             $depoisItens = collect($validated['produtos'])
                 ->groupBy(fn ($it) => (int)$it['id'])
                 ->map(fn ($group) => [
@@ -479,6 +474,7 @@ class PedidoController extends Controller
                 }
             }
 
+            // Recalcula agregados + sync pivot
             $pesoTotal = 0; $totalCaixas = 0; $valorBruto = 0; $valorFinal = 0;
             $sync = [];
 
@@ -520,6 +516,7 @@ class PedidoController extends Controller
                 'valor_total'  => $valorFinal,
             ]);
 
+            // Monta diffs pra log
             $pedido->load(['produtos','cidades']);
             $depois = [
                 'campos' => [
@@ -528,6 +525,7 @@ class PedidoController extends Controller
                     'gestor_id'       => $pedido->gestor_id,
                     'distribuidor_id' => $pedido->distribuidor_id,
                     'status'          => $pedido->status,
+                    'cfop'            => $pedido->cfop,
                 ],
                 'cidades' => $pedido->cidades->pluck('id')->sort()->values()->all(),
                 'itens' => $pedido->produtos->mapWithKeys(fn($p) => [
@@ -544,62 +542,44 @@ class PedidoController extends Controller
                 'gestor_id'       => 'Gestor',
                 'distribuidor_id' => 'Distribuidor',
                 'status'          => 'Status',
+                'cfop'            => 'CFOP',
             ];
 
             $mensagens = [];
 
-            $rawAntes  = $depois['campos']['data'] ? $antes['campos']['data'] ?? null : null;
+            $norm = fn ($v) => $v ? Carbon::parse($v)->toDateString() : null;
+            $rawAntes  = $antes['campos']['data'] ?? null;
             $rawDepois = $depois['campos']['data'] ?? null;
 
-            $norm = function ($v) { return $v ? \Carbon\Carbon::parse($v)->toDateString() : null; };
-
-            $antesNorm  = $norm($rawAntes);
-            $depoisNorm = $norm($rawDepois);
-
-            if ($antesNorm !== $depoisNorm) {
+            if ($norm($rawAntes) !== $norm($rawDepois)) {
                 $mensagens[] = sprintf(
                     '%s alterada: %s → %s',
                     $labelCampo['data'],
-                    $rawAntes  ? \Carbon\Carbon::parse($rawAntes)->format('d/m/Y')  : '-',
-                    $rawDepois ? \Carbon\Carbon::parse($rawDepois)->format('d/m/Y') : '-'
+                    $rawAntes  ? Carbon::parse($rawAntes)->format('d/m/Y')  : '-',
+                    $rawDepois ? Carbon::parse($rawDepois)->format('d/m/Y') : '-'
                 );
             }
 
-            foreach (['cliente_id','gestor_id','distribuidor_id','status'] as $k) {
+            foreach (['cliente_id','gestor_id','distribuidor_id','status','cfop'] as $k) {
                 $vAntes  = $antes['campos'][$k]  ?? null;
                 $vDepois = $depois['campos'][$k] ?? null;
                 if ((string)$vAntes !== (string)$vDepois) {
-                    $nomeAntes = $vAntes;
+                    $nomeAntes  = $vAntes;
                     $nomeDepois = $vDepois;
-
-                    switch ($k) {
-                        case 'cliente_id':
-                            $nomeAntes  = $vAntes  ? Cliente::find($vAntes)?->razao_social : '-';
-                            $nomeDepois = $vDepois ? Cliente::find($vDepois)?->razao_social : '-';
-                            break;
-                        case 'gestor_id':
-                            $nomeAntes  = $vAntes  ? Gestor::find($vAntes)?->razao_social : '-';
-                            $nomeDepois = $vDepois ? Gestor::find($vDepois)?->razao_social : '-';
-                            break;
-                        case 'distribuidor_id':
-                            $nomeAntes  = $vAntes  ? Distribuidor::find($vAntes)?->razao_social : '-';
-                            $nomeDepois = $vDepois ? Distribuidor::find($vDepois)?->razao_social : '-';
-                            break;
-                        case 'status':
-                            $labels = [
-                                'em_andamento' => 'Em andamento',
-                                'finalizado'   => 'Finalizado',
-                                'cancelado'    => 'Cancelado',
-                            ];
-                            $nomeAntes  = $labels[$vAntes]  ?? $vAntes  ?? '-';
-                            $nomeDepois = $labels[$vDepois] ?? $vDepois ?? '-';
-                            break;
+                    if ($k === 'status') {
+                        $labels = [
+                            'em_andamento' => 'Em andamento',
+                            'finalizado'   => 'Finalizado',
+                            'cancelado'    => 'Cancelado',
+                        ];
+                        $nomeAntes  = $labels[$vAntes]  ?? $vAntes  ?? '-';
+                        $nomeDepois = $labels[$vDepois] ?? $vDepois ?? '-';
                     }
-
                     $mensagens[] = sprintf('%s alterado: %s → %s', $labelCampo[$k], ($nomeAntes ?? '-'), ($nomeDepois ?? '-'));
                 }
             }
 
+            // Cidades
             $antesCidadeIds  = $antes['cidades'] ?? [];
             $depoisCidadeIds = $depois['cidades'] ?? [];
             $antesCidade  = count($antesCidadeIds)  ? $antesCidadeIds[0]  : null;
@@ -611,6 +591,7 @@ class PedidoController extends Controller
                 $mensagens[] = "Cidade alterada: {$nomeAntes} → {$nomeDepois}";
             }
 
+            // Itens
             $antesItens  = $antes['itens']  ?? [];
             $depoisItensSnap = $depois['itens'] ?? [];
 
@@ -621,9 +602,7 @@ class PedidoController extends Controller
             $removidos   = array_values(array_diff($idsAntes,  $idsDepois));
             $comuns      = array_values(array_intersect($idsAntes, $idsDepois));
 
-            $nomeProduto = function ($id) {
-                return Produto::find($id)?->titulo ?? "Produto #{$id}";
-            };
+            $nomeProduto = fn ($id) => Produto::find($id)?->titulo ?? "Produto #{$id}";
 
             foreach ($adicionados as $pid) {
                 $q  = (int)($depoisItensSnap[$pid]['q']    ?? 0);
@@ -668,6 +647,7 @@ class PedidoController extends Controller
                         'gestor_id'       => [$antes['campos']['gestor_id'] ?? null, $depois['campos']['gestor_id'] ?? null],
                         'distribuidor_id' => [$antes['campos']['distribuidor_id'] ?? null, $depois['campos']['distribuidor_id'] ?? null],
                         'status'          => [$antes['campos']['status'] ?? null, $depois['campos']['status'] ?? null],
+                        'cfop'            => [$antes['campos']['cfop'] ?? null, $depois['campos']['cfop'] ?? null],
                     ],
                     'cidade' => [$antesCidade, $depoisCidade],
                     'itens'  => [
@@ -697,4 +677,48 @@ class PedidoController extends Controller
             return back()->withErrors(['error' => 'Erro ao atualizar: ' . $e->getMessage()])->withInput();
         }
     }
+
+    public function emitirNota(Request $request, Pedido $pedido)
+{
+    if (in_array($pedido->status, ['finalizado', 'cancelado'])) {
+        return back()->with('error', 'Não é possível pré-visualizar nota para um pedido finalizado ou cancelado.');
+    }
+
+    $statusAntes = $pedido->status;
+
+    // 1️⃣ Atualiza o status do pedido
+    if ($pedido->status !== 'pre_aprovado') {
+        $pedido->update(['status' => 'pre_aprovado']);
+
+        $pedido->registrarLog(
+            'Pré-visualização de nota',
+            'Status alterado para Pré-aprovado.',
+            ['antes' => $statusAntes, 'depois' => 'pre_aprovado']
+        );
+    }
+
+    // 2️⃣ Cria uma nota "emitida" (rascunho interno) se ainda não existir
+    $notaExistente = NotaFiscal::where('pedido_id', $pedido->id)
+        ->where('status', 'emitida')
+        ->first();
+
+    if (!$notaExistente) {
+        $nota = NotaFiscal::create([
+            'pedido_id'  => $pedido->id,
+            'status'     => 'emitida',     // necessário para mostrar botão "Faturar Nota"
+            'emitida_em' => now(),
+        ]);
+
+        $pedido->registrarLog(
+            'Nota de pré-visualização criada',
+            'Criada nota de rascunho para permitir faturamento.',
+            ['nota_id' => $nota->id]
+        );
+    }
+
+    return redirect()
+        ->route('admin.pedidos.show', $pedido)
+        ->with('success', 'Pedido marcado como Pré-aprovado e nota de pré-visualização criada.');
+}
+
 }

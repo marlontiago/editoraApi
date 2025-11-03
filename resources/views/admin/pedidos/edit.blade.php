@@ -1,3 +1,4 @@
+{{-- resources/views/admin/pedidos/edit.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
         <h2 class="text-xl font-semibold text-gray-800">Editar Pedido #{{ $pedido->id }}</h2>
@@ -74,7 +75,30 @@
                     </select>
                 </div>
 
-                {{-- Gestor (somente leitura) --}}
+                {{-- CFOP (opcional) --}}
+                <div class="col-span-12 md:col-span-3">
+                    <label class="block text-sm font-medium text-gray-700">CFOP (opcional)</label>
+                    @php $cfopAtual = old('cfop', $pedido->cfop); @endphp
+                    @if(!empty($cfopLabels))
+                        <select name="cfop" class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">— Sem CFOP —</option>
+                            @foreach($cfopLabels as $code => $label)
+                                <option value="{{ $code }}" @selected($cfopAtual === $code)>{{ $code }} — {{ $label }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <input
+                            type="text"
+                            name="cfop"
+                            value="{{ $cfopAtual }}"
+                            placeholder="Ex.: 5910"
+                            class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                        <p class="text-xs text-gray-500 mt-1">Apenas 4 dígitos numéricos.</p>
+                    @endif
+                </div>
+
+                {{-- Gestor (read-only) --}}
                 @php $gestorAtual = $pedido->gestor; @endphp
                 <div class="col-span-12 md:col-span-6">
                     <label class="block text-sm font-medium text-gray-700">Gestor</label>
@@ -87,7 +111,7 @@
                     <input type="hidden" name="gestor_id" value="{{ $gestorAtual?->id }}">
                 </div>
 
-                {{-- Distribuidor (somente leitura) --}}
+                {{-- Distribuidor (read-only) --}}
                 @php $distAtual = $pedido->distribuidor; @endphp
                 <div class="col-span-12 md:col-span-6">
                     <label class="block text-sm font-medium text-gray-700">Distribuidor</label>
@@ -262,7 +286,7 @@
     </script>
 
     <script>
-        /* =================== ESTADO INICIAL (único) =================== */
+        /* =================== ESTADO INICIAL =================== */
         window.PEDIDO_ATUAL = {
             distribuidor_id: @json(old('distribuidor_id', $pedido->distribuidor_id)),
             gestor_id:       @json(old('gestor_id', $pedido->gestor_id)),
@@ -270,7 +294,7 @@
             uf_gestor:       @json(optional($pedido->gestor)->estado_uf),
         };
 
-        /* =================== CIDADE: carregar por distribuidor/gestor =================== */
+        /* =================== CIDADES =================== */
         const cidadeSelect = document.getElementById('cidade_id');
         const ufDisplay    = document.getElementById('ufDisplay');
         const ufHidden     = document.getElementById('ufHidden');
@@ -327,7 +351,7 @@
             }
         }
 
-        /* =================== PRODUTOS: sem duplicados + infos dinâmicas =================== */
+        /* =================== PRODUTOS (sem duplicar) =================== */
         const tabelaProdutosBody = document.getElementById('tabelaProdutos');
         const btnAddRow          = document.getElementById('btnAddRow');
         const rowTemplate        = document.getElementById('rowTemplate');
@@ -336,12 +360,10 @@
         function getSelectedProductIds() {
             if (!tabelaProdutosBody) return [];
             const ids = [];
-            // hidden inputs de linhas existentes
             tabelaProdutosBody.querySelectorAll('input.inputId[name^="produtos["][name$="[id]"]').forEach(h => {
                 const v = String(h.value || '').trim();
                 if (v) ids.push(v);
             });
-            // selects das novas linhas (se houver)
             tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
                 const v = String(sel.value || '').trim();
                 if (v) ids.push(v);
@@ -374,7 +396,7 @@
 
                     const opt = document.createElement('option');
                     opt.value = value;
-                    opt.textContent = text; // mantém "Título — Tabela: R$ ..."
+                    opt.textContent = text;
                     if (dataset && dataset.titulo) opt.dataset.titulo = dataset.titulo;
                     if (dataset && dataset.preco)  opt.dataset.preco  = dataset.preco;
 
@@ -400,7 +422,7 @@
             info.querySelector('.unitDesc').textContent = `c/ desc: ${fmtBRL.format(unitD)}`;
             info.classList.toggle('hidden', !prod);
 
-            // (opcional) atualiza texto da opção selecionada incluindo desconto
+            // Atualiza label da opção selecionada (visual)
             const optSel = sel.options[sel.selectedIndex];
             if (optSel && prod) {
                 optSel.textContent = `${prod.titulo} — Tabela: ${fmtBRL.format(unit)} — c/ desc: ${fmtBRL.format(unitD)}`;
@@ -424,7 +446,6 @@
                 descI.addEventListener('change', () => updateRowInfo(tr));
             }
 
-            // primeira atualização
             updateRowInfo(tr);
         }
 
@@ -445,13 +466,11 @@
             const select = tr.querySelector('select.produtoSelect');
             const hidden = tr.querySelector('input.inputId');
 
-            // evento de remover
             tr.querySelector('.btnRemoveRow')?.addEventListener('click', () => {
                 tr.remove();
                 refreshAllProductSelectOptions();
             });
 
-            // seta hidden quando escolher produto
             if (select) {
                 select.addEventListener('change', () => {
                     hidden.value = select.value || '';
@@ -461,7 +480,7 @@
 
             tabelaProdutosBody.appendChild(tr);
             refreshAllProductSelectOptions();
-            wireRowEvents(tr); // <<< importante
+            wireRowEvents(tr);
             nextIndex++;
         }
 
@@ -472,7 +491,7 @@
             if (ufDisplay) ufDisplay.value = uf || '—';
             if (ufHidden)  ufHidden.value  = uf || '';
 
-            // Carrega cidades com base no contexto atual
+            // Carrega cidades pelo contexto atual
             const dId = window.PEDIDO_ATUAL?.distribuidor_id ?? null;
             const gId = window.PEDIDO_ATUAL?.gestor_id ?? null;
             const cId = window.PEDIDO_ATUAL?.cidade_id ?? null;
@@ -485,12 +504,10 @@
                 resetCidadeSelect('-- Selecione o gestor ou o distribuidor --');
             }
 
-            // Produtos: linhas existentes (vindas do backend) não têm select,
-            // mas podem ter inputDesc; nada a fazer nelas além do refresh dos selects futuros.
             refreshAllProductSelectOptions();
 
             // Botão adicionar linha
-            btnAddRow?.addEventListener('click', addProductRow);
+            document.getElementById('btnAddRow')?.addEventListener('click', addProductRow);
 
             // Remover linhas existentes (delegation)
             tabelaProdutosBody?.addEventListener('click', (e) => {
@@ -502,7 +519,7 @@
                 refreshAllProductSelectOptions();
             });
 
-            // Limpeza final antes de enviar
+            // Limpa linhas inválidas antes de enviar
             const form = document.getElementById('formPedidoEdit');
             form?.addEventListener('submit', () => {
                 if (!tabelaProdutosBody) return;

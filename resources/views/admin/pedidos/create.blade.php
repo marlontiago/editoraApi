@@ -93,6 +93,32 @@
                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
       </div>
 
+      {{-- CFOP --}}
+      <div class="col-span-12 md:col-span-6">
+        <label for="cfop" class="block text-sm font-medium text-gray-700">CFOP (opcional)</label>
+
+        @php $cfopLabels = $cfopLabels ?? config('cfop.labels', []); @endphp
+
+        @if(!empty($cfopLabels))
+          <select name="cfop" id="cfop"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <option value="">-- Selecione --</option>
+            @foreach($cfopLabels as $code => $label)
+              <option value="{{ $code }}" @selected(old('cfop') === $code)>
+                {{ $code }} — {{ $label }}
+              </option>
+            @endforeach
+          </select>
+          <p class="text-xs text-gray-500 mt-1">Este CFOP será usado como padrão ao emitir a Nota.</p>
+        @else
+          <input type="text" name="cfop" id="cfop" value="{{ old('cfop') }}"
+                 pattern="\d{4}" maxlength="4"
+                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                 placeholder="Ex.: 5910" />
+          <p class="text-xs text-gray-500 mt-1">Informe 4 dígitos (ex.: 5910). Configure labels em <code>config/cfop.php</code> para ter uma lista.</p>
+        @endif
+      </div>
+
       {{-- Produtos --}}
       <div class="col-span-12">
         <label class="block text-sm font-medium text-gray-700">Produtos</label>
@@ -129,8 +155,6 @@
   {{-- ===== DADOS PARA JS ===== --}}
   <script>
     const ALL_PRODUCTS = {!! $produtos->toJson() !!};
-
-    console.log('ALL_PRODUCTS debug:', ALL_PRODUCTS);
 
     const OLD_PRODUTOS     = @json(old('produtos', []));
     const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
@@ -244,7 +268,8 @@
       const imgEl      = row.querySelector('.product-thumb');
 
       const pid   = sel?.value || '';
-      const prod  = getProductById(pid);
+      theProd = getProductById(pid);
+      const prod  = theProd;
       const qtd   = Math.max(1, parseInt(qEl?.value || '1', 10));
       const desc  = Math.max(0, Math.min(100, parseFloat(dEl?.value || '0')));
 
@@ -280,7 +305,6 @@
         testImg.onerror = () => {
           imgEl.src = PLACEHOLDER;
           imgEl.alt = prod.titulo || 'Sem imagem';
-          console.warn('Falha ao carregar imagem:', prod.imagem);
         };
         testImg.src = prod.imagem;
       } else {
@@ -289,9 +313,7 @@
       }
     }
 
-    function calcAll() {
-      container.querySelectorAll('.produto').forEach(calcRow);
-    }
+    function calcAll() { container.querySelectorAll('.produto').forEach(calcRow); }
 
     function adicionarProduto(preset = {}) {
       const row = makeProdutoRow(preset);
@@ -305,18 +327,14 @@
         refreshAllProductSelects();
         calcRow(e.target.closest('.produto'));
       }
-      if (
-        e.target.matches('input[name^="produtos["][name$="[quantidade]"]') ||
-        e.target.matches('input[name^="produtos["][name$="[desconto]"]')
-      ) {
+      if (e.target.matches('input[name^="produtos["][name$="[quantidade]"]')
+          || e.target.matches('input[name^="produtos["][name$="[desconto]"]')) {
         calcRow(e.target.closest('.produto'));
       }
     });
     container.addEventListener('input', (e) => {
-      if (
-        e.target.matches('input[name^="produtos["][name$="[quantidade]"]') ||
-        e.target.matches('input[name^="produtos["][name$="[desconto]"]')
-      ) {
+      if (e.target.matches('input[name^="produtos["][name$="[quantidade]"]')
+          || e.target.matches('input[name^="produtos["][name$="[desconto]"]')) {
         calcRow(e.target.closest('.produto'));
       }
     });
@@ -428,7 +446,6 @@
         rebuildCidadeOptions(cidades, { allowOccupied: true, ufFallback: null });
         if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
       } catch (e) {
-        console.error(e);
         resetCidadeSelect('Falha ao carregar cidades');
       }
     }
@@ -443,7 +460,6 @@
         rebuildCidadeOptions(cidades, { allowOccupied: hasDistribuidor, ufFallback: uf });
         if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
       } catch (e) {
-        console.error(e);
         resetCidadeSelect('Falha ao carregar cidades');
       }
     }

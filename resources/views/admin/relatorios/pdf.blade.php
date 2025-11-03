@@ -46,15 +46,29 @@
         .nowrap { white-space: nowrap; }
         .wrap { white-space: normal; word-break: break-word; }
 
-        /* Larguras (A4 landscape) */
-        .w-nota { width: 5%; }
-        .w-cliente { width: 12%; }
-        .w-gestor { width: 12%; }
-        .w-dist { width: 12%; }
-        .w-cidades { width: 10%; }
-        .w-data { width: 10%; }
-        .w-valor { width: 10%; }
-        .w-liquido { width: 13%; }
+        /* Larguras (A4 landscape) — 11 colunas */
+        .w-pedido   { width: 6%; }
+        .w-nota     { width: 5%; }
+        .w-cliente  { width: 11%; }
+        .w-gestor   { width: 11%; }
+        .w-dist     { width: 11%; }
+        .w-cidades  { width: 10%; }
+        .w-data     { width: 8%; }
+        .w-status   { width: 8%; }
+        .w-valor    { width: 10%; }
+        .w-liquido  { width: 10%; }
+
+        /* Badge compacto para status (compatível com dompdf) */
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 9px;
+            line-height: 1;
+            border-radius: 9999px;
+            font-weight: 700;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
 
         /* Cards grid */
         .cards-grid { width:100%; border-collapse:separate; border-spacing:0 10px; }
@@ -63,31 +77,38 @@
         .pad-l { padding-left:6px; }
         .pad-x { padding:0 3px; }
 
-        /* Lists */
-        .mini-list { margin:8px 0 0; padding:0; list-style:none; }
-        .mini-list li { display:flex; justify-content:space-between; gap:8px; font-size:10.5px; padding:2px 0; border-bottom:1px dashed #e5e7eb; }
-        .mini-list li:last-child { border-bottom:0; }
-
         /* Mini tabelas */
         .mini-tbl { width:100%; border-collapse:collapse; table-layout: fixed; }
         .mini-tbl thead th { background:#f1f5f9; font-weight:700; font-size:10px; padding:4px 6px; text-align:left; }
         .mini-tbl tbody td { font-size:10px; padding:4px 6px; border-top:1px solid #f1f5f9; }
         .mini-tbl .right { text-align:right; }
-        .w-n { width:22%; }   /* #Nota */
-        .w-b { width:26%; }   /* Base */
-        .w-p { width:16%; }   /* %    */
-        .w-c { width:36%; }   /* Comissão */
+        .w-n { width:22%; } .w-b { width:26%; } .w-p { width:16%; } .w-c { width:36%; }
 
-        /* Retenções horizontais compactas (lado a lado) */
+        /* Retenções horizontais compactas */
         .mini-ret { width:100%; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
         .mini-ret th { background:#f1f5f9; font-weight:700; font-size:10px; padding:4px 6px; text-align:center; }
         .mini-ret td { font-size:10px; padding:6px; border-top:1px solid #f1f5f9; text-align:right; }
-        .mini-ret th, .mini-ret td { width:14.285%; } /* 7 colunas iguais */
+        .mini-ret th, .mini-ret td { width:14.285%; }
     </style>
 </head>
 <body>
 @php
     function moeda_br_pdf($v){ return 'R$ ' . number_format((float)$v, 2, ',', '.'); }
+
+    /** Badge compacto por status (cores inline para dompdf) */
+    function status_badge_pdf($status) {
+        $key = strtolower((string)$status);
+        $defs = [
+            'pago'                  => ['label' => 'Pago',       'bg' => '#ECFDF5', 'bd' => '#10B981', 'tx' => '#065F46'],
+            'pago_parcial'          => ['label' => 'Parcial',    'bg' => '#E0F2FE', 'bd' => '#0284C7', 'tx' => '#075985'],
+            'aguardando_pagamento'  => ['label' => 'Aguard.',    'bg' => '#FEF3C7', 'bd' => '#D97706', 'tx' => '#92400E'],
+            'emitida'               => ['label' => 'Emitida',    'bg' => '#DBEAFE', 'bd' => '#2563EB', 'tx' => '#1E40AF'],
+            'faturada'              => ['label' => 'Faturada',   'bg' => '#E0F2FE', 'bd' => '#0EA5E9', 'tx' => '#0369A1'],
+            'cancelada'             => ['label' => 'Cancelada',  'bg' => '#FEE2E2', 'bd' => '#EF4444', 'tx' => '#991B1B'],
+        ];
+        $d = $defs[$key] ?? ['label' => strtoupper(str_replace('_',' ', $status ?: '—')), 'bg' => '#F1F5F9', 'bd' => '#CBD5E1', 'tx' => '#334155'];
+        return '<span class="badge" style="background:'.$d['bg'].';border:1px solid '.$d['bd'].';color:'.$d['tx'].';">'.$d['label'].'</span>';
+    }
 @endphp
 
 <!-- Header compacto -->
@@ -138,6 +159,7 @@
     <table class="tbl">
         <thead>
             <tr>
+                <th class="w-pedido nowrap">Pedido</th>
                 <th class="w-nota nowrap">Nota</th>
                 <th class="w-cliente wrap">Cliente</th>
                 <th class="w-gestor wrap">Gestor</th>
@@ -145,6 +167,7 @@
                 <th class="w-cidades wrap">Cidade</th>
                 <th class="w-data nowrap">Emitida</th>
                 <th class="w-data nowrap">Faturada</th>
+                <th class="w-status nowrap">Status</th>
                 <th class="w-valor right nowrap">Valor</th>
                 <th class="w-liquido right nowrap">Pago (Liq.)</th>
             </tr>
@@ -164,15 +187,18 @@
 
                     $liquido = (float) $pgts->sum('valor_liquido');
                     $cidadesStr = $pedido && $pedido->cidades ? $pedido->cidades->pluck('name')->join(', ') : '—';
+                    $statusFin = $n->status_financeiro ?: '—';
                 @endphp
                 <tr>
-                    <td class="nowrap">#{{ $n->id }}</td>
+                    <td class="nowrap">{{ $pedido->id ?? '—' }}</td>
+                    <td class="nowrap">{{ $n->id }}</td>
                     <td class="wrap">{{ $pedido->cliente->razao_social ?? '—' }}</td>
                     <td class="wrap">{{ $pedido->gestor->razao_social ?? '—' }}</td>
                     <td class="wrap">{{ $pedido->distribuidor->razao_social ?? '—' }}</td>
                     <td class="wrap">{{ $cidadesStr }}</td>
                     <td class="nowrap">{{ $n->emitida_em ? \Carbon\Carbon::parse($n->emitida_em)->format('d/m/Y') : '—' }}</td>
                     <td class="nowrap">{{ $n->faturada_em ? \Carbon\Carbon::parse($n->faturada_em)->format('d/m/Y') : '—' }}</td>
+                    <td class="nowrap">{!! status_badge_pdf($statusFin) !!}</td>
                     <td class="right nowrap">{{ moeda_br_pdf($n->valor_total ?? 0) }}</td>
                     <td class="right nowrap">{{ moeda_br_pdf($liquido) }}</td>
                 </tr>
@@ -180,15 +206,15 @@
         </tbody>
         <tfoot>
             <tr>
-                {{-- 9 colunas: somamos apenas "Valor" e "Pago (Liq.)" --}}
-                <td colspan="7" class="right">Totais:</td>
+                {{-- 11 colunas; somamos apenas "Valor" e "Pago (Liq.)" --}}
+                <td colspan="9" class="right">Totais:</td>
                 <td class="right nowrap">{{ moeda_br_pdf($totais['total_bruto'] ?? 0) }}</td>
                 <td class="right nowrap">{{ moeda_br_pdf($totais['total_liquido_pago'] ?? 0) }}</td>
             </tr>
         </tfoot>
     </table>
 
-    {{-- 2) Retenções detalhadas (logo abaixo da tabela, valores lado a lado) --}}
+    {{-- 2) Retenções detalhadas --}}
     <div class="section-title">Retenções detalhadas</div>
     <table class="mini-ret">
         <thead>
@@ -215,7 +241,7 @@
         </tbody>
     </table>
 
-    {{-- 3) Comissões (totais + breakdown detalhado por item) --}}
+    {{-- 3) Comissões (totais + breakdown) --}}
     <div class="section-title">Comissões por categoria</div>
 
     <table class="cards-grid">

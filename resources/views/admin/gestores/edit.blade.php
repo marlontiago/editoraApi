@@ -22,9 +22,17 @@
 
         <form method="POST" action="{{ route('admin.gestores.update', ['gestor' => $gestor->id]) }}" enctype="multipart/form-data"
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4"
-              x-data>
+              x-data
+              autocomplete="off">
             @csrf
             @method('PUT')
+
+            {{-- HONEYPOTS para “segurar” o autofill do navegador --}}
+            <div class="hidden" aria-hidden="true">
+                <input type="text" name="username" autocomplete="username">
+                <input type="email" name="email" autocomplete="email">
+                <input type="password" name="current-password" autocomplete="current-password">
+            </div>
 
             {{-- Razão Social --}}
             <div class="col-span-12 md:col-span-8">
@@ -114,7 +122,7 @@
                 <label class="block text-sm font-medium text-gray-700">E-mails</label>
                 <template x-for="(em, i) in lista" :key="i">
                     <div class="mt-1 flex gap-2">
-                        <input type="email" maxlength="255"
+                        <input type="email" maxlength="255" autocomplete="off" data-form-type="other"
                                class="flex-1 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                :name="`emails[${i}]`" x-model="lista[i]">
                         <button type="button" class="inline-flex items-center rounded-md border px-3 text-sm hover:bg-gray-50"
@@ -132,7 +140,7 @@
             {{-- Senha (opcional) --}}
             <div class="col-span-12 md:col-span-4">
                 <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
-                <input type="password" id="password" name="password"
+                <input type="password" id="password" name="password" autocomplete="new-password"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <p class="mt-1 text-xs text-gray-500">Informe para trocar a senha. Deixe vazio para manter.</p>
                 @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -549,5 +557,20 @@
                 }
             }));
         });
+    </script>
+
+    {{-- PLANO B: limpa autofill remanescente (senha/e-mails) --}}
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const clearSelectors = [
+        'input[type="password"]#password',
+        'input[type="email"][name^="emails["]'
+      ];
+      for (const sel of clearSelectors) {
+        document.querySelectorAll(sel).forEach(el => {
+          if (el.value && !el.defaultValue) el.value = '';
+        });
+      }
+    });
     </script>
 </x-app-layout>

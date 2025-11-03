@@ -11,6 +11,7 @@ use App\Models\NotaFiscal;
 use App\Models\City;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf; // <- export PDF
 
 class RelatoriosController extends Controller
 {
@@ -19,7 +20,11 @@ class RelatoriosController extends Controller
         // ==========================
         // Filtros (entrada do usuário)
         // ==========================
-        $statusFiltro = $request->get('status');        // 'pago' | 'aguardando_pagamento' | 'emitida' | 'faturada'
+        $statusFiltro = $request->get('status'); // 'pago' | 'pago_parcial' | 'aguardando_pagamento' | 'emitida' | 'faturada'
+
+        // NOVO: tipo de relatório
+        $tipoRelatorio = $request->get('tipo_relatorio', 'financeiro');
+        $tipoRelatorio = in_array($tipoRelatorio, ['financeiro','geral']) ? $tipoRelatorio : 'financeiro';
 
         // NOVO: ler diretamente os selects e resolver exclusividade
         $clienteSel = (int) $request->get('cliente_select');
@@ -72,7 +77,7 @@ class RelatoriosController extends Controller
 
         // NOVO: opções de UF a partir das cidades
         $ufsOptions = City::query()
-            ->select('state')           // coluna é 'state' (não 'uf')
+            ->select('state')           // coluna é 'state'
             ->distinct()
             ->orderBy('state')
             ->pluck('state');
@@ -86,8 +91,7 @@ class RelatoriosController extends Controller
                 'pedido.cliente:id,razao_social',
                 'pedido.gestor:id,razao_social,percentual_vendas',
                 'pedido.distribuidor:id,razao_social,percentual_vendas',
-                'pedido.cidades:id,name,state', // inclui state para possíveis usos na view
-                // snapshots salvos em nota_pagamentos
+                'pedido.cidades:id,name,state',
                 'pagamentos:id,nota_fiscal_id,valor_pago,valor_liquido,data_pagamento,' .
                     'ret_irrf_valor,ret_iss_valor,ret_inss_valor,ret_pis_valor,ret_cofins_valor,ret_csll_valor,ret_outros_valor,' .
                     'comissao_gestor,perc_comissao_gestor,comissao_distribuidor,perc_comissao_distribuidor,' .
@@ -98,19 +102,23 @@ class RelatoriosController extends Controller
             ]);
 
         // Status
-if (!empty($statusFiltro)) {
-    if ($statusFiltro === 'aguardando_pagamento') {
-        // Inclui também notas com status 'pago_parcial'
-        $notasQuery->where(function ($q) {
-            $q->where('status_financeiro', 'aguardando_pagamento')
-              ->orWhere('status_financeiro', 'pago_parcial');
-        });
-    } elseif (in_array($statusFiltro, ['pago', 'faturada'])) {
-        $notasQuery->where('status_financeiro', $statusFiltro);
-    } elseif ($statusFiltro === 'emitida') {
-        $notasQuery->whereNotNull('emitida_em');
-    }
-}
+        if (!empty($statusFiltro)) {
+            if ($statusFiltro === 'aguardando_pagamento') {
+                // Inclui também notas com status_financeiro 'pago_parcial'
+                $notasQuery->where(function ($q) {
+                    $q->where('status_financeiro', 'aguardando_pagamento')
+                      ->orWhere('status_financeiro', 'pago_parcial');
+                });
+            } elseif (in_array($statusFiltro, ['pago', 'pago_parcial'])) {
+                // Status financeiros
+                $notasQuery->where('status_financeiro', $statusFiltro);
+            } elseif ($statusFiltro === 'faturada') {
+                // Status de nota (não financeiro)
+                $notasQuery->where('status', 'faturada');
+            } elseif ($statusFiltro === 'emitida') {
+                $notasQuery->where('status', 'emitida');
+            }
+        }
 
         // Período (considera emitida, faturada ou pagamento no range)
         if ($periodo) {
@@ -163,18 +171,34 @@ if (!empty($statusFiltro)) {
             });
         }
 
+        // Recorte por tipo de relatório
+        if ($tipoRelatorio === 'financeiro') {
+            // Exclui CFOPs de Remessa e Bonificação/Brinde
+            $notasQuery->paraRelatorioFinanceiro();
+        }
+
+        // >>> Recorte final: "apenas última nota por pedido" + "ignorar canceladas"
+        $tabelaNotas = (new NotaFiscal)->getTable();
+        $notasQuery
+            ->where('status', '!=', 'cancelada')
+            ->whereIn('id', function ($sub) use ($tabelaNotas) {
+                $sub->selectRaw('MAX(id)')
+                    ->from($tabelaNotas)
+                    ->groupBy('pedido_id');
+            });
+
         $notas = $notasQuery->orderByDesc('id')->get();
 
         // ==========================
         // Dropdown de Cidades
         // ==========================
-        // Quando há UF selecionada, mostra TODAS as cidades daquela UF (mais útil para o usuário),
-        // senão mantém o comportamento de listar apenas cidades presentes no resultado atual.
         if (!empty($ufSelecionada)) {
+            // Todas as cidades da UF selecionada
             $cidadesOptions = City::where('state', $ufSelecionada)
                 ->orderBy('name')
                 ->get(['id', 'name']);
         } else {
+            // Cidades presentes no resultado atual
             $cityIds = $notas->flatMap(function ($n) {
                 $pedido = $n->pedido;
                 return $pedido && $pedido->cidades ? $pedido->cidades->pluck('id') : collect();
@@ -231,7 +255,7 @@ if (!empty($statusFiltro)) {
             $liquido = (float) $pagamentos->sum('valor_liquido');
             $totais['total_liquido_pago'] += $liquido;
 
-            // retenções por tipo (snapshot em R$)
+            // retenções por tipo
             $map = [
                 'IRRF'   => 'ret_irrf_valor',
                 'ISS'    => 'ret_iss_valor',
@@ -247,11 +271,11 @@ if (!empty($statusFiltro)) {
                 $totais['total_retencoes']            += $sub;
             }
 
-            // === Gestor/Distribuidor — usar snapshots de cada pagamento ===
+            // Gestor/Distribuidor — snapshots de cada pagamento
             $comG = (float) $pagamentos->sum('comissao_gestor');
             $comD = (float) $pagamentos->sum('comissao_distribuidor');
 
-            // percentuais a partir dos snapshots (média dos pagamentos da nota no período)
+            // percentuais (média no período)
             $percGestorSnap  = (float) $pagamentos->avg('perc_comissao_gestor');
             $percDistribSnap = (float) $pagamentos->avg('perc_comissao_distribuidor');
 
@@ -272,7 +296,7 @@ if (!empty($statusFiltro)) {
                 $gestoresDetalhe[$gid][] = [
                     'nota'     => (int) $nota->id,
                     'base'     => round($liquido, 2),
-                    'perc'     => $percGestorSnap,   // snapshot
+                    'perc'     => $percGestorSnap,
                     'comissao' => round($comG, 2),
                 ];
             }
@@ -291,12 +315,12 @@ if (!empty($statusFiltro)) {
                 $distsDetalhe[$did][] = [
                     'nota'     => (int) $nota->id,
                     'base'     => round($liquido, 2),
-                    'perc'     => $percDistribSnap,  // snapshot
+                    'perc'     => $percDistribSnap,
                     'comissao' => round($comD, 2),
                 ];
             }
 
-            // Advogado / Diretor (por pagamento, já snapshot)
+            // Advogado / Diretor (por pagamento)
             foreach ($pagamentos as $pg) {
                 // Advogado
                 if (!empty($pg->advogado_id)) {
@@ -371,45 +395,117 @@ if (!empty($statusFiltro)) {
         uasort($diretoresBreak, $byTotalDesc);
 
         // ==========================
-        // Cards do topo (contagens) – usa a mesma base de filtros
+        // Cards do topo (respeitam o recorte 'financeiro' x 'geral')
         // ==========================
-        $base = clone $notasQuery;
+        $base = NotaFiscal::query();
+
+        // Reaplica filtros essenciais nos cards:
+        $base->with([
+            'pedido:id,cliente_id,gestor_id,distribuidor_id',
+            'pagamentos:id,nota_fiscal_id,valor_pago,valor_liquido,data_pagamento',
+        ]);
+
+        // Período
+        if ($periodo) {
+            $base->where(function ($q) use ($inicio, $fim) {
+                $q->whereBetween('emitida_em', [$inicio, $fim])
+                  ->orWhereBetween('faturada_em', [$inicio, $fim])
+                  ->orWhereHas('pagamentos', function ($p) use ($inicio, $fim) {
+                      $p->whereBetween('data_pagamento', [$inicio, $fim]);
+                  });
+            });
+        }
+
+        // Entidade principal
+        if (in_array($filtroTipo, ['cliente','gestor','distribuidor']) && $filtroId > 0) {
+            $coluna = $filtroTipo === 'cliente' ? 'cliente_id' : ($filtroTipo === 'gestor' ? 'gestor_id' : 'distribuidor_id');
+            $base->whereHas('pedido', fn($q) => $q->where($coluna, $filtroId));
+        }
+
+        // Advogado
+        if ($advogadoId > 0) {
+            $base->whereHas('pagamentos', function ($q) use ($advogadoId, $periodo, $inicio, $fim) {
+                $q->where('advogado_id', $advogadoId);
+                if ($periodo) $q->whereBetween('data_pagamento', [$inicio, $fim]);
+            });
+        }
+
+        // Diretor
+        if ($diretorId > 0) {
+            $base->whereHas('pagamentos', function ($q) use ($diretorId, $periodo, $inicio, $fim) {
+                $q->where('diretor_id', $diretorId);
+                if ($periodo) $q->whereBetween('data_pagamento', [$inicio, $fim]);
+            });
+        }
+
+        // Cidade / UF
+        if ($cidadeId > 0) {
+            $base->whereHas('pedido.cidades', fn($q) => $q->where('cities.id', $cidadeId));
+        }
+        if (!empty($ufSelecionada)) {
+            $base->whereHas('pedido.cidades', fn($q) => $q->where('state', $ufSelecionada));
+        }
+
+        // Recorte
+        if ($tipoRelatorio === 'financeiro') {
+            $base->paraRelatorioFinanceiro();
+        }
+
+        // >>> aplicar o mesmo recorte dos relatórios (última por pedido + ignora canceladas)
+        $base->where('status', '!=', 'cancelada')
+             ->whereIn('id', function ($sub) use ($tabelaNotas) {
+                 $sub->selectRaw('MAX(id)')
+                     ->from($tabelaNotas)
+                     ->groupBy('pedido_id');
+             });
+
         $notasPagas    = (clone $base)->where('status_financeiro', 'pago')->get();
-        $notasAPagar   = (clone $base)->where('status_financeiro', 'aguardando_pagamento')->get();
-        $notasEmitidas = (clone $base)->get();
+        $notasAPagar   = (clone $base)->where(function($q){
+                                $q->where('status_financeiro','aguardando_pagamento')
+                                  ->orWhere('status_financeiro','pago_parcial');
+                           })->get();
+        $notasEmitidas = (clone $base)->where('status','emitida')->get();
 
         // ==========================
-        // Export PDF
+        // EXPORT PDF (detecta ?export=pdf)
         // ==========================
         if ($request->get('export') === 'pdf') {
-            if ($notas->isEmpty()) {
-                return back()->with('error', 'Nenhum dado para exportar com os filtros atuais.');
-            }
+            $pdf = Pdf::loadView('admin.relatorios.pdf', [
+                // mesmos dados da view HTML
+                'clientes'          => $clientes,
+                'gestores'          => $gestores,
+                'distribuidores'    => $distribuidores,
+                'advogados'         => $advogados,
+                'diretores'         => $diretores,
 
-            $filename = 'relatorio_' . now()->format('Ymd_His') . '.pdf';
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.relatorios.pdf', [
-                'notas'            => $notas,
-                'totais'           => $totais,
-                'gestoresBreak'    => $gestoresBreak,
-                'distsBreak'       => $distsBreak,
-                'advogadosBreak'   => $advogadosBreak,
-                'diretoresBreak'   => $diretoresBreak,
-                'gestoresDetalhe'  => $gestoresDetalhe,
-                'distsDetalhe'     => $distsDetalhe,
-                'advogadosDetalhe' => $advogadosDetalhe,
-                'diretoresDetalhe' => $diretoresDetalhe,
+                'statusFiltro'      => $statusFiltro,
+                'filtroTipo'        => $filtroTipo,
+                'filtroId'          => $filtroId,
+                'advogadoId'        => $advogadoId,
+                'diretorId'         => $diretorId,
+                'cidadeId'          => $cidadeId,
+                'dataInicio'        => $dataInicio,
+                'dataFim'           => $dataFim,
+                'ufSelecionada'     => $ufSelecionada,
 
-                'statusFiltro'     => $statusFiltro,
-                'filtroTipo'       => $filtroTipo,
-                'filtroId'         => $filtroId,
-                'advogadoId'       => $advogadoId,
-                'diretorId'        => $diretorId,
-                'cidadeId'         => $cidadeId,
-                'dataInicio'       => $dataInicio,
-                'dataFim'          => $dataFim,
+                'notas'             => $notas,
+                'totais'            => $totais,
+                'gestoresBreak'     => $gestoresBreak,
+                'distsBreak'        => $distsBreak,
+                'advogadosBreak'    => $advogadosBreak,
+                'diretoresBreak'    => $diretoresBreak,
+                'gestoresDetalhe'   => $gestoresDetalhe,
+                'distsDetalhe'      => $distsDetalhe,
+                'advogadosDetalhe'  => $advogadosDetalhe,
+                'diretoresDetalhe'  => $diretoresDetalhe,
+
+                'ufsOptions'        => $ufsOptions,
+                'cidadesOptions'    => $cidadesOptions,
+
+                'tipoRelatorio'     => $tipoRelatorio,
             ])->setPaper('a4', 'landscape');
 
-            return $pdf->download($filename);
+            return $pdf->download('relatorio-financeiro-'.now()->format('Ymd-His').'.pdf');
         }
 
         // ==========================
@@ -424,8 +520,8 @@ if (!empty($statusFiltro)) {
             'gestoresDetalhe','distsDetalhe','advogadosDetalhe','diretoresDetalhe',
             'notasPagas','notasAPagar','notasEmitidas',
             'cidadesOptions',
-            // NOVO:
-            'ufsOptions','ufSelecionada'
+            'ufsOptions','ufSelecionada',
+            'tipoRelatorio'
         ));
     }
 }

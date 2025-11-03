@@ -73,6 +73,13 @@
         $ext=strtolower(pathinfo($full,PATHINFO_EXTENSION)?:'png'); $mime=$ext==='jpg'?'jpeg':$ext;
         $data=@file_get_contents($full); return $data?('data:image/'.$mime.';base64,'.base64_encode($data)):'';
     }
+
+    // 🟢 Define título conforme status do pedido
+    $tituloDocumento = match($pedido->status) {
+        'em_andamento' => 'Estudo de Preço',
+        'cancelado'    => 'Orçamento Cancelado',
+        default        => 'Orçamento Comercial',
+    };
 @endphp
 
 {{-- Header com Informações do Pedido --}}
@@ -88,7 +95,7 @@
                                  style="height:46px; display:block; object-fit:contain; margin-top:30px">
                         @endif
                         <span style="font-size:20px; font-weight:700; color:#fff; white-space:nowrap; line-height:1;">
-                            Orçamento Comercial
+                            {{ $tituloDocumento }}
                         </span>
                     </div>
                 </td>
@@ -115,7 +122,6 @@
         </table>
     </div>
 </div>
-
 
 {{-- Footer --}}
 <div class="footer">
@@ -181,7 +187,7 @@
     </table>
 </div>
 
-{{-- Resumo Financeiro (após itens) --}}
+{{-- Resumo Financeiro --}}
 <div class="mt-6">
     <div class="section-title">Resumo Financeiro</div>
     <table style="width:100%; border-collapse:separate; border-spacing:0 10px;">
@@ -201,10 +207,10 @@
 
 {{-- Termos --}}
 <div class="terms">
-    <h3>Observações:</h1>
-    <p> - Validade: 60 dias.</p>
-    <p> - Prazo de entrega: 30 dias após o envio da autorização de fornecimento.</p>
-    <p> - A editora LT terá a responsabilidade de promover cursos de qualificação para todos os professores e multiplicadores, com data, local e tempo determinados por este órgão, sem custo adicional</p>
+    <h3>Observações:</h3>
+    <p>- Validade: 60 dias.</p>
+    <p>- Prazo de entrega: 30 dias após o envio da autorização de fornecimento.</p>
+    <p>- A editora LT terá a responsabilidade de promover cursos de qualificação para todos os professores e multiplicadores, com data, local e tempo determinados por este órgão, sem custo adicional.</p>
 </div>
 <div class="sign">
     <p>__________________________________________</p>

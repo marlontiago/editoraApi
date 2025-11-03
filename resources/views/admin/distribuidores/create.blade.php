@@ -15,10 +15,30 @@
             </div>
         @endif
 
-        <form action="{{ route('admin.distribuidores.store') }}" method="POST" enctype="multipart/form-data"
+        <form action="{{ route('admin.distribuidores.store') }}"
+              method="POST"
+              enctype="multipart/form-data"
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4"
-              x-data="formDist()" x-init="init()">
+              x-data="formDist()" x-init="init()"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false">
             @csrf
+
+            {{-- ---------- Chrome autofill shim (username/password falsos) ---------- --}}
+            <input type="text"
+                   name="__fake_username__"
+                   tabindex="-1"
+                   aria-hidden="true"
+                   autocomplete="username"
+                   style="position:absolute;left:-9999px;opacity:0;height:0;width:0;pointer-events:none;">
+            <input type="password"
+                   name="__fake_password__"
+                   tabindex="-1"
+                   aria-hidden="true"
+                   autocomplete="new-password"
+                   style="position:absolute;left:-9999px;opacity:0;height:0;width:0;pointer-events:none;">
 
             {{-- ===== Gestor + Percentual ===== --}}
             <div class="col-span-12 md:col-span-6">
@@ -27,6 +47,7 @@
                 </label>
                 <select name="gestor_id" id="gestor_id" x-model="gestorId"
                         @change="onGestorChange"
+                        autocomplete="off"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                     <option value="">-- Selecione --</option>
                     @foreach($gestores as $gestor)
@@ -46,8 +67,9 @@
                             name="percentual_vendas"
                             step="0.01" min="0" max="100"
                             value="{{ old('percentual_vendas') }}"
-                            class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
+                            autocomplete="off"
+                            inputmode="decimal"
+                            class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">%</span>
                     </div>
                     <p class="mt-1 text-xs text-gray-500">
@@ -69,11 +91,13 @@
 
                 <div class="flex gap-2">
                     <input type="text" x-model="q" @input="debouncedFetch()" placeholder="Buscar cidade..."
+                           autocomplete="off"
                            class="flex-1 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-3 py-2">
                     @php
                         $ufs = ['','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
                     @endphp
                     <select id="ufFiltroCidades" x-model="uf" @change="fetchList()"
+                            autocomplete="off"
                             class="w-28 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         @foreach($ufs as $uf)
                             <option value="{{ $uf }}">{{ $uf === '' ? 'UF...' : $uf }}</option>
@@ -112,7 +136,7 @@
                             <span class="inline-flex items-center text-xs rounded-full bg-blue-100 text-blue-800 px-3 py-1">
                                 <span x-text="s.name + (s.uf ? ' ('+s.uf+')' : '')"></span>
                                 <button type="button" class="ml-2 text-blue-700 hover:text-blue-900" @click="remove(s.id)">×</button>
-                                <input type="hidden" name="cities[]" :value="s.id">
+                                <input type="hidden" name="cities[]" :value="s.id" autocomplete="off">
                             </span>
                         </template>
                     </div>
@@ -124,30 +148,40 @@
             <div class="col-span-12 md:col-span-6">
                 <label for="razao_social" class="block text-sm font-medium text-gray-700">Razão Social </label>
                 <input type="text" id="razao_social" name="razao_social" value="{{ old('razao_social') }}"
+                       autocomplete="off"
+                       autocapitalize="none"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('razao_social') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
                 <label for="representante_legal" class="block text-sm font-medium text-gray-700">Representante Legal </label>
                 <input type="text" id="representante_legal" name="representante_legal" value="{{ old('representante_legal') }}"
+                       autocomplete="off"
+                       autocapitalize="words"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('representante_legal') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-6">
                 <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ </label>
                 <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj') }}" maxlength="18"
+                       autocomplete="off"
+                       inputmode="numeric"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="cpf" class="block text-sm font-medium text-gray-700">CPF </label>
                 <input type="text" id="cpf" name="cpf" value="{{ old('cpf') }}" maxlength="14"
+                       autocomplete="off"
+                       inputmode="numeric"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="rg" class="block text-sm font-medium text-gray-700">RG </label>
                 <input type="text" id="rg" name="rg" value="{{ old('rg') }}" maxlength="30"
+                    autocomplete="off"
+                    inputmode="numeric"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('rg') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -162,12 +196,15 @@
                 <template x-for="(e, i) in emails" :key="i">
                     <div class="mt-2 flex gap-2">
                         <input type="email" class="flex-1 rounded-md border-gray-300"
-                               :name="'emails['+i+']'" x-model="emails[i]" @input="syncLoginEmail()">
+                               :name="'emails['+i+']'"
+                               autocomplete="off"
+                               autocapitalize="none"
+                               x-model="emails[i]" @input="syncLoginEmail()">
                         <button type="button" class="rounded-md border px-2 text-xs hover:bg-gray-50"
                                 @click="removeEmail(i)" x-show="emails.length > 1">Remover</button>
                     </div>
                 </template>
-                <input type="hidden" name="email" x-model="loginEmail">
+                <input type="hidden" name="email" x-model="loginEmail" autocomplete="off">
                 <p class="mt-1 text-xs text-gray-500">O <b>primeiro e-mail</b> será usado para criar o usuário (login). Você pode alterar depois.</p>
                 @error('emails') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                 @error('emails.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -184,7 +221,10 @@
                 <template x-for="(t, i) in telefones" :key="i">
                     <div class="mt-2 flex gap-2">
                         <input type="text" maxlength="30" class="flex-1 rounded-md border-gray-300"
-                               :name="'telefones['+i+']'" x-model="telefones[i]">
+                               :name="'telefones['+i+']'"
+                               autocomplete="off"
+                               inputmode="tel"
+                               x-model="telefones[i]">
                         <button type="button" class="rounded-md border px-2 text-xs hover:bg-gray-50"
                                 @click="removeTelefone(i)" x-show="telefones.length > 1">Remover</button>
                     </div>
@@ -197,6 +237,7 @@
             <div class="col-span-12 md:col-span-6">
                 <label for="password" class="block text-sm font-medium text-gray-700">Senha (para o usuário)</label>
                 <input type="password" id="password" name="password"
+                       autocomplete="new-password"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('password') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -205,36 +246,43 @@
             <div class="col-span-12 md:col-span-9">
                 <label for="endereco" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco" name="endereco" value="{{ old('endereco') }}"
+                       autocomplete="off"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('endereco') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-1">
                 <label for="numero" class="block text-sm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero" name="numero" value="{{ old('numero') }}"
+                       autocomplete="off"
+                       inputmode="numeric"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('numero') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-2">
                 <label for="complemento" class="block text-sm font-medium text-gray-700">Complemento</label>
                 <input type="text" id="complemento" name="complemento" value="{{ old('complemento') }}"
+                       autocomplete="off"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('complemento') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="bairro" class="block text-sm font-medium text-gray-700">Bairro</label>
                 <input type="text" id="bairro" name="bairro" value="{{ old('bairro') }}"
+                       autocomplete="off"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('bairro') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-2">
                 <label for="cidade" class="block text-sm font-medium text-gray-700">Cidade</label>
                 <input type="text" id="cidade" name="cidade" value="{{ old('cidade') }}"
+                       autocomplete="off"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cidade') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-1">
                 <label for="uf" class="block text-sm font-medium text-gray-700">UF</label>
                 <select id="uf" name="uf"
+                        autocomplete="off"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">--</option>
                     @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
@@ -246,47 +294,56 @@
             <div class="col-span-12 md:col-span-4">
                 <label for="cep" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep" name="cep" value="{{ old('cep') }}" maxlength="9"
+                       autocomplete="off"
+                       inputmode="numeric"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cep') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-            {{-- ===== Endereço secundário ===== --}}
+            {{-- ===== Endereço Secundário ===== --}}
             <div class="col-span-12">
                 <h3 class="text-sm font-semibold text-gray-700 mt-4 mb-2">Endereço Secundário (opcional)</h3>
             </div>
             <div class="col-span-12 md:col-span-9">
                 <label for="endereco2" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco2" name="endereco2" value="{{ old('endereco2') }}"
+                       autocomplete="off"
                        class="mt-1 block w-full rounded-md border-gray-300">
                 @error('endereco2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-1">
                 <label for="numero2" class="block text-sm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero2" name="numero2" value="{{ old('numero2') }}"
+                       autocomplete="off"
+                       inputmode="numeric"
                        class="mt-1 block w-full rounded-md border-gray-300">
                 @error('numero2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-2">
                 <label for="complemento2" class="block text-sm font-medium text-gray-700">Complemento</label>
                 <input type="text" id="complemento2" name="complemento2" value="{{ old('complemento2') }}"
+                       autocomplete="off"
                        class="mt-1 block w-full rounded-md border-gray-300">
                 @error('complemento2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-3">
                 <label for="bairro2" class="block text-sm font-medium text-gray-700">Bairro</label>
                 <input type="text" id="bairro2" name="bairro2" value="{{ old('bairro2') }}"
+                       autocomplete="off"
                        class="mt-1 block w-full rounded-md border-gray-300">
                 @error('bairro2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-2">
                 <label for="cidade2" class="block text-sm font-medium text-gray-700">Cidade</label>
                 <input type="text" id="cidade2" name="cidade2" value="{{ old('cidade2') }}"
+                       autocomplete="off"
                        class="mt-1 block w-full rounded-md border-gray-300">
                 @error('cidade2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="col-span-12 md:col-span-1">
                 <label for="uf2" class="block text-sm font-medium text-gray-700">UF</label>
                 <select id="uf2" name="uf2"
+                        autocomplete="off"
                         class="mt-1 block w-full rounded-md border-gray-300">
                     <option value="">--</option>
                     @foreach(['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] as $uf)
@@ -298,6 +355,8 @@
             <div class="col-span-12 md:col-span-4">
                 <label for="cep2" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep2" name="cep2" value="{{ old('cep2') }}" maxlength="9"
+                       autocomplete="off"
+                       inputmode="numeric"
                        class="mt-1 block w-full rounded-md border-gray-300">
                 @error('cep2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
@@ -309,11 +368,11 @@
                 <template x-for="(item, idx) in itens" :key="item.id">
                     <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border"
                          x-data="anexoCidadeDist()" x-init="init()">
-                        <!-- Tipo + Cidade (dinâmico) -->
                         <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Tipo</label>
                             <select :name="'contratos['+idx+'][tipo]'"
                                     x-model="tipo" @change="onTipoChange()"
+                                    autocomplete="off"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <option value="contrato">Contrato</option>
                                 <option value="aditivo">Aditivo</option>
@@ -321,15 +380,14 @@
                                 <option value="contrato_cidade">Contrato por cidade</option>
                             </select>
 
-                            <!-- Select CIDADE (apenas quando contrato_cidade) -->
                             <div x-show="tipo === 'contrato_cidade'" class="mt-2">
                                 <label class="text-xs text-gray-600">Cidade (das UFs do gestor)</label>
                                 <select
                                     :name="'contratos['+idx+'][cidade_id]'"
                                     x-model="cidadeId"
+                                    autocomplete="off"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    @click="refreshCidades()"
-                                >
+                                    @click="refreshCidades()">
                                     <option value="" x-show="!carregando && cidades.length === 0">Selecione...</option>
                                     <option value="" x-show="carregando">Carregando...</option>
                                     <template x-for="c in cidades" :key="c.id">
@@ -345,6 +403,7 @@
                         <div class="col-span-12 md:col-span-5">
                             <label class="text-xs text-gray-600">Arquivo (PDF)</label>
                             <input type="file" accept="application/pdf" :name="'contratos['+idx+'][arquivo]'"
+                                   autocomplete="off"
                                    class="mt-1 block w-full rounded-md border-gray-300 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-gray-700 hover:file:bg-gray-200">
                         </div>
 
@@ -353,13 +412,14 @@
                             <div class="mt-1 flex rounded-md shadow-sm">
                                 <input type="number" step="0.01" min="0" max="100"
                                        :name="'contratos['+idx+'][percentual_vendas]'"
+                                       autocomplete="off"
+                                       inputmode="decimal"
                                        class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm">%</span>
                             </div>
                             <p class="mt-1 text-[11px] text-gray-500">Se marcado <b>Ativo</b>, aplicará este percentual.</p>
                         </div>
 
-                        {{-- Esconde/omite "Ativo?" quando o tipo for contrato_cidade --}}
                         <div class="col-span-12 md:col-span-2" x-show="tipo !== 'contrato_cidade'" x-cloak>
                             <label class="text-xs text-gray-600">Ativo?</label>
                             <div class="mt-2">
@@ -368,6 +428,7 @@
                                         type="checkbox"
                                         :name="tipo !== 'contrato_cidade' ? 'contratos['+idx+'][ativo]' : null"
                                         :disabled="tipo === 'contrato_cidade'"
+                                        autocomplete="off"
                                         value="1"
                                         class="rounded border-gray-300">
                                     <span class="ml-2">Ativo</span>
@@ -378,21 +439,25 @@
                         <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Data de Assinatura</label>
                             <input type="date" :name="'contratos['+idx+'][data_assinatura]'"
+                                   autocomplete="off"
                                    class="mt-1 block w-full rounded-md border-gray-300">
                         </div>
 
                         <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Validade (meses)</label>
                             <input type="number" min="1" max="120" step="1" :name="'contratos['+idx+'][validade_meses]'"
+                                   autocomplete="off"
+                                   inputmode="numeric"
                                    class="mt-1 block w-full rounded-md border-gray-300">
                             <p class="mt-1 text-[11px] text-gray-500">Vencimento = Assinatura + Validade.</p>
                         </div>
 
                         <div class="col-span-12">
                             <input type="text" placeholder="Descrição (opcional)" :name="'contratos['+idx+'][descricao]'"
+                                   autocomplete="off"
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <label class="inline-flex items-center text-sm mt-2">
-                                <input type="checkbox" :name="'contratos['+idx+'][assinado]'" value="1" class="rounded border-gray-300">
+                                <input type="checkbox" :name="'contratos['+idx+'][assinado]'" value="1" autocomplete="off" class="rounded border-gray-300">
                                 <span class="ml-2">Assinado</span>
                             </label>
                         </div>
@@ -432,57 +497,31 @@
             </div>
         </form>
     </div>
+
     <script>
     const ROTA_CIDADES_POR_GESTOR = @js(route('admin.distribuidores.cidadesPorGestor'));
     </script>
 
-    {{-- JS: Alpine helpers + store compartilhado (gestor → cidades) --}}
+    {{-- JS (inalterado funcionalmente; só mantive) --}}
     <script>
-        // debounce simples
-        function debounce(fn, delay=400) {
-            let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), delay); }
-        }
+        function debounce(fn, delay=400) { let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), delay); } }
 
-        // Store: cacheia cidades por gestor
         document.addEventListener('alpine:init', () => {
             Alpine.store('dist', {
                 gestorId: @json(old('gestor_id', '')),
                 cidadesCacheByGestor: {},
-
-                async getCidadesOptions() {
-                    const gid = String(this.gestorId || '').trim();
-                    if (!gid) return [];
-                    if (this.cidadesCacheByGestor[gid]) return this.cidadesCacheByGestor[gid];
-
-                    try {
-                        const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gid); // apenas validação de acesso
-                    } catch(e) {}
-
-                    return [];
-                }
+                async getCidadesOptions() { return []; } // (mantido como placeholder)
             });
         });
 
-        // Picker de cidades (lista geral do distribuidor)
         function citiesPicker({searchUrl, selectedInitial=[]}) {
             return {
-                q: '',
-                uf: '',
-                results: [],
-                selected: [],
-                debouncedFetch: null,
-
-                init() {
-                    this.selected = (selectedInitial || []).map(s => ({id: s.id, name: s.name || '…', uf: s.uf || ''}));
-                    this.debouncedFetch = debounce(this.fetchList.bind(this), 350);
-                    this.fetchList();
-                },
+                q: '', uf: '', results: [], selected: [], debouncedFetch: null,
+                init() { this.selected = (selectedInitial || []).map(s => ({id: s.id, name: s.name || '…', uf: s.uf || ''}));
+                         this.debouncedFetch = debounce(this.fetchList.bind(this), 350);
+                         this.fetchList(); },
                 has(id) { return this.selected.some(s => String(s.id) === String(id)); },
-                add(item) {
-                    if (item.occupied) return;
-                    if (this.has(item.id)) return;
-                    this.selected.push({id: item.id, name: item.name, uf: item.uf || ''});
-                },
+                add(item) { if (item.occupied || this.has(item.id)) return; this.selected.push({id: item.id, name: item.name, uf: item.uf || ''}); },
                 remove(id) { this.selected = this.selected.filter(s => String(s.id) !== String(id)); },
                 async fetchList() {
                     const params = new URLSearchParams();
@@ -504,118 +543,66 @@
                             distribuidor_id: r.distribuidor_id || null,
                             distribuidor_name: r.distribuidor_name || r.distribuidor_nome || null,
                         }));
-                        // atualiza names das já selecionadas
                         const mapById = new Map(this.results.map(r => [String(r.id), r]));
                         this.selected = this.selected.map(s => {
                             const hit = mapById.get(String(s.id));
                             return hit ? {id: s.id, name: hit.name, uf: hit.uf || ''} : s;
                         });
-                    } catch(e) {
-                        console.error('[citiesPicker] fetch error:', e);
-                    }
+                    } catch(e) { console.error('[citiesPicker] fetch error:', e); }
                 }
             }
         }
 
-        // Form principal do distribuidor
         function formDist() {
             return {
                 emails: @json(old('emails', [''])),
                 telefones: @json(old('telefones', [''])),
                 loginEmail: '',
                 gestorId: @json(old('gestor_id', '')),
-
                 init() {
                     this.syncLoginEmail();
                     if (window.Alpine) Alpine.store('dist').gestorId = this.gestorId || '';
                     this.$nextTick(()=> window.dispatchEvent(new CustomEvent('gestor-updated')));
-
-                    // ---- Filtro de UFs por gestor (endereços + picker) ----
                     setupUfFiltering();
                 },
-
                 onGestorChange: async () => {
                     if (window.Alpine) Alpine.store('dist').gestorId = document.getElementById('gestor_id').value || '';
                     window.dispatchEvent(new CustomEvent('gestor-updated'));
-                    // também atualiza as UFs permitidas nas selects
                     if (typeof loadUfsForGestor === 'function') {
                         loadUfsForGestor(document.getElementById('gestor_id').value);
                     }
                 },
-
                 syncLoginEmail() { this.loginEmail = (this.emails[0] || '').trim(); },
                 removeEmail(i) { this.emails.splice(i,1); if (this.emails.length===0) this.emails.push(''); this.syncLoginEmail(); },
                 removeTelefone(i) { this.telefones.splice(i,1); if (this.telefones.length===0) this.telefones.push(''); },
             }
         }
 
-        // Componente de cada "card" de anexo com cidade dinâmica
         function anexoCidadeDist() {
             return {
-                tipo: 'contrato',
-                cidades: [],
-                cidadeId: '',
-                carregando: false,
-
+                tipo: 'contrato', cidades: [], cidadeId: '', carregando: false,
                 async refreshCidades() {
-                    // só carrega quando o tipo exigir cidade
-                    if (this.tipo !== 'contrato_cidade') {
-                        this.cidades = [];
-                        this.cidadeId = '';
-                        return;
-                    }
-
-                    // gestor atual vem do Alpine store do form principal
+                    if (this.tipo !== 'contrato_cidade') { this.cidades = []; this.cidadeId = ''; return; }
                     const gid = (window.Alpine?.store('dist')?.gestorId || '').toString().trim();
-                    if (!gid) {
-                        this.cidades = [];
-                        this.cidadeId = '';
-                        return;
-                    }
-
+                    if (!gid) { this.cidades = []; this.cidadeId = ''; return; }
                     this.carregando = true;
                     try {
                         const url = `${ROTA_CIDADES_POR_GESTOR}?gestor_id=${encodeURIComponent(gid)}`;
-                        const resp = await fetch(url, {
-                            credentials: 'same-origin',
-                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                        });
+                        const resp = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }});
                         if (!resp.ok) throw new Error('HTTP ' + resp.status);
-
-                        const rows = await resp.json(); // [{id, text, uf}]
+                        const rows = await resp.json();
                         this.cidades = rows;
-
-                        // se a cidade selecionada não pertence mais ao novo conjunto, limpa
-                        if (this.cidadeId && !this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
-                            this.cidadeId = '';
-                        }
-                    } catch (e) {
-                        console.error('[anexoCidadeDist] erro ao carregar cidades por gestor:', e);
-                        this.cidades = [];
-                        this.cidadeId = '';
-                    } finally {
-                        this.carregando = false;
-                    }
+                        if (this.cidadeId && !this.cidades.some(c => String(c.id) === String(this.cidadeId))) this.cidadeId = '';
+                    } catch (e) { console.error('[anexoCidadeDist] erro ao carregar cidades por gestor:', e); this.cidades = []; this.cidadeId = ''; }
+                    finally { this.carregando = false; }
                 },
-
                 onTipoChange() { this.refreshCidades(); },
-
-                init() {
-                    // carga inicial (considera old()) e recarrega ao trocar gestor
-                    this.refreshCidades();
-                    window.addEventListener('gestor-updated', () => this.refreshCidades());
-                }
+                init() { this.refreshCidades(); window.addEventListener('gestor-updated', () => this.refreshCidades()); }
             }
         }
 
-        // ----------------- Filtro de UFs por Gestor (endereços + picker) -----------------
-        const ufsCache = new Map(); // gestorId -> ['SP','RJ',...]
-
-        function enableAllOptions(selectEl){
-            if(!selectEl) return;
-            [...selectEl.options].forEach(opt => opt.disabled = false);
-        }
-
+        const ufsCache = new Map();
+        function enableAllOptions(selectEl){ if(!selectEl) return; [...selectEl.options].forEach(opt => opt.disabled = false); }
         function filterSelectByAllowedUFs(selectEl, allowed){
             if(!selectEl) return;
             const current = selectEl.value;
@@ -625,23 +612,13 @@
             });
             if (current && !allowed.includes(current)) selectEl.value = '';
         }
-
         function applyAllowed(allowed){
-            // Sempre manter TODOS os estados liberados nos selects de endereço
-            const uf1Sel    = document.getElementById('uf');   // endereço principal
-            const uf2Sel    = document.getElementById('uf2');  // endereço secundário
-            const ufCitySel = document.getElementById('ufFiltroCidades'); // filtro do picker (este sim é restrito)
-
-            // Endereços: liberar tudo (sem filtro por gestor)
-            enableAllOptions(uf1Sel);
-            enableAllOptions(uf2Sel);
-
-            // Picker de Cidades de Atuação: restringir às UFs do gestor
+            const uf1Sel = document.getElementById('uf');
+            const uf2Sel = document.getElementById('uf2');
+            const ufCitySel = document.getElementById('ufFiltroCidades');
+            enableAllOptions(uf1Sel); enableAllOptions(uf2Sel);
             if (ufCitySel) {
-                // permite vazio + UFs permitidas
                 filterSelectByAllowedUFs(ufCitySel, [''].concat(allowed));
-
-                // Se a UF selecionada no filtro ficou inválida, limpar e forçar nova busca
                 if (ufCitySel.value && !allowed.includes(ufCitySel.value)) {
                     ufCitySel.value = '';
                     try {
@@ -649,15 +626,12 @@
                         if (root && window.Alpine) {
                             const comp = Alpine.$data(root);
                             if (comp && typeof comp.fetchList === 'function') comp.fetchList();
-
-                            // Saneia cidades já selecionadas que estejam fora das UFs permitidas
                             if (comp && Array.isArray(comp.selected)) {
                                 comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
                             }
                         }
                     } catch(e) {}
                 } else {
-                    // Mesmo caso acima, mas sem trocar o valor do select
                     try {
                         const root = ufCitySel.closest('[x-data]');
                         if (root && window.Alpine) {
@@ -670,18 +644,12 @@
                 }
             }
         }
-
         async function loadUfsForGestor(gestorId){
-            const uf1Sel    = document.getElementById('uf');
-            const uf2Sel    = document.getElementById('uf2');
+            const uf1Sel = document.getElementById('uf');
+            const uf2Sel = document.getElementById('uf2');
             const ufCitySel = document.getElementById('ufFiltroCidades');
-
-            if (!gestorId) {
-                enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel);
-                return;
-            }
+            if (!gestorId) { enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel); return; }
             if (ufsCache.has(gestorId)) { applyAllowed(ufsCache.get(gestorId)); return; }
-
             const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gestorId);
             try {
                 const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -694,16 +662,11 @@
                 enableAllOptions(uf1Sel); enableAllOptions(uf2Sel); if (ufCitySel) enableAllOptions(ufCitySel);
             }
         }
-
         function setupUfFiltering(){
             const gestorSel = document.getElementById('gestor_id');
             if (!gestorSel) return;
-
             gestorSel.addEventListener('change', (e) => loadUfsForGestor(e.target.value));
-
-            // Primeira carga (considera old())
             if (gestorSel.value) loadUfsForGestor(gestorSel.value);
         }
-        // -------------------------------------------------------------------------------
     </script>
 </x-app-layout>

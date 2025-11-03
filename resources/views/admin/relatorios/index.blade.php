@@ -1,7 +1,7 @@
 <x-app-layout>
     <div>
         <h2 class="font-semibold text-2xl ml-4 mt-4 mb-4 text-gray-800 leading-tight">
-            {{ __('Relatórios Financeiros') }}
+            {{ $tipoRelatorio === 'geral' ? 'Relatório Geral de Notas' : 'Relatórios Financeiros' }}
         </h2>
 
         @php
@@ -20,21 +20,41 @@
             }
         @endphp
 
+        {{-- Toggle Geral x Financeiro --}}
+        @php
+            $baseParams = request()->all();
+            $linkGeral = route('admin.relatorios.index', array_merge($baseParams, ['tipo_relatorio' => 'geral']));
+            $linkFin   = route('admin.relatorios.index', array_merge($baseParams, ['tipo_relatorio' => 'financeiro']));
+        @endphp
+
+        <div class="px-4 mb-2">
+            <div class="inline-flex rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <a href="{{ $linkGeral }}"
+                   class="px-4 py-2 text-sm {{ $tipoRelatorio==='geral' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50' }}">
+                    Geral
+                </a>
+                <a href="{{ $linkFin }}"
+                   class="px-4 py-2 text-sm {{ $tipoRelatorio==='financeiro' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-50' }}">
+                    Financeiro
+                </a>
+            </div>
+        </div>
+
         {{-- 1) CARDS DO TOPO --}}
         <div class="flex flex-wrap">
-            <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'pago'])) }}"
+            <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'pago', 'tipo_relatorio' => $tipoRelatorio])) }}"
                class="bg-emerald-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
                 <h1 class="text-sm uppercase tracking-wide">Notas pagas</h1>
                 <p class="text-3xl font-bold mt-2">{{ $notasPagas->count() }}</p>
             </a>
 
-            <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'aguardando_pagamento'])) }}"
+            <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'aguardando_pagamento', 'tipo_relatorio' => $tipoRelatorio])) }}"
                class="bg-amber-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
                 <h1 class="text-sm uppercase tracking-wide">Aguardando / Parcial</h1>
                 <p class="text-3xl font-bold mt-2">{{ $notasAPagar->count() }}</p>
             </a>
 
-            <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'emitida'])) }}"
+            <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'emitida', 'tipo_relatorio' => $tipoRelatorio])) }}"
                class="bg-blue-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
                 <h1 class="text-sm uppercase tracking-wide">Notas emitidas</h1>
                 <p class="text-3xl font-bold mt-2">{{ $notasEmitidas->count() }}</p>
@@ -45,6 +65,9 @@
         <div class="mt-6 px-4">
             <form id="filtros" method="GET" action="{{ route('admin.relatorios.index') }}"
                 class="flex flex-wrap items-end gap-3 mb-4 bg-white p-4 rounded-xl border shadow-sm">
+
+                {{-- preserva o tipo de relatório escolhido --}}
+                <input type="hidden" name="tipo_relatorio" value="{{ $tipoRelatorio }}">
 
                 <input type="hidden" name="status" id="status" value="{{ $statusFiltro ?? '' }}">
                 {{-- adicionados para não quebrar o JS de auto-submit (retrocompat) --}}
@@ -152,7 +175,7 @@
                 </button>
 
                 @if($dataInicio || $dataFim || $filtroTipo || $filtroId || $statusFiltro || $advogadoId || $diretorId || $cidadeId || ($ufSelecionada ?? false))
-                    <a href="{{ route('admin.relatorios.index') }}" class="px-2 py-2 text-sm text-blue-700 hover:underline">
+                    <a href="{{ route('admin.relatorios.index', ['tipo_relatorio' => $tipoRelatorio]) }}" class="px-2 py-2 text-sm text-blue-700 hover:underline">
                         Limpar
                     </a>
                 @endif
@@ -162,6 +185,10 @@
         {{-- chips --}}
         <div class="px-4">
             <div class="flex flex-wrap gap-2 text-xs">
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
+                    Modo: <strong class="ml-1">{{ $tipoRelatorio === 'geral' ? 'Geral' : 'Financeiro' }}</strong>
+                </span>
+
                 @if($statusFiltro)
                     <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
                         Status: <strong class="ml-1">{{ str_replace('_',' ', $statusFiltro) }}</strong>

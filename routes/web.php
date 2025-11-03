@@ -97,6 +97,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/pedidos/{pedido}/exportar/{tipo}', [PedidoController::class, 'exportar'])->name('pedidos.exportar');
     Route::get('/pedidos/{pedido}/edit', [PedidoController::class, 'edit'])->name('pedidos.edit');
     Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])->name('pedidos.update');
+    Route::post('/pedidos/{pedido}/pre-visualizar-nota', [PedidoController::class, 'emitirNota'])->name('pedidos.pre-visualizar-nota');
 
     // Notas Fiscais & Pagamentos
     Route::post('/pedidos/{pedido}/emitir-nota', [NotaFiscalController::class, 'emitir'])->name('pedidos.emitir-nota');

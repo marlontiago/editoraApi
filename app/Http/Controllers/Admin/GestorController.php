@@ -46,6 +46,10 @@ class GestorController extends Controller
 
     public function store(Request $request)
     {
+        // 🔒 TRAVA AUTOFILL: Deriva 'email' a partir do primeiro item de emails[] (sem input name="email" na view)
+        $primeiroEmail = trim((string) data_get($request->input('emails', []), 0, ''));
+        $request->merge(['email' => $primeiroEmail !== '' ? $primeiroEmail : null]);
+
         // sanitiza contatos vazios (mantido)
         $rawContatos = $request->input('contatos', []);
         $contatosSan = collect($rawContatos)->filter(function ($c) {
@@ -83,7 +87,7 @@ class GestorController extends Controller
             'emails'              => ['nullable','array'],
             'emails.*'            => ['nullable','email','max:255'],
 
-            // antigos (mantidos e opcionais)
+            // antigos (mantidos)
             'telefone'            => ['nullable','string','max:20'],
 
             // UFs de atuação (MÚLTIPLAS)
@@ -130,11 +134,11 @@ class GestorController extends Controller
             // Contatos
             'contatos'                 => ['nullable','array'],
             'contratos.*.cidade_id' => [
-    'exclude_unless:contratos.*.tipo,contrato_cidade',
-    'required_if:contratos.*.tipo,contrato_cidade',
-    'integer',
-    'exists:cities,id',
-],
+                'exclude_unless:contratos.*.tipo,contrato_cidade',
+                'required_if:contratos.*.tipo,contrato_cidade',
+                'integer',
+                'exists:cities,id',
+            ],
             'contatos.*.nome'          => ['required_with:contatos.*.tipo,contatos.*.email,contatos.*.telefone,contatos.*.whatsapp','string','max:255'],
             'contatos.*.email'         => ['nullable','email','max:255'],
             'contatos.*.telefone'      => ['nullable','string','max:30'],
@@ -328,6 +332,14 @@ class GestorController extends Controller
 
     public function update(Request $request, Gestor $gestor)
     {
+        // 🔒 (Opcional) Se não veio 'email' explícito, usa o primeiro de emails[]
+        if (!$request->filled('email')) {
+            $primeiroEmail = trim((string) data_get($request->input('emails', []), 0, ''));
+            if ($primeiroEmail !== '') {
+                $request->merge(['email' => $primeiroEmail]);
+            }
+        }
+
         // sanitiza contatos vazios
         $rawContatos = $request->input('contatos', []);
         $contatosSan = collect($rawContatos)->filter(function ($c) {
@@ -400,11 +412,11 @@ class GestorController extends Controller
             'contratos'                     => ['nullable','array'],
             'contratos.*.tipo'              => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro,contrato_cidade'],
             'contratos.*.cidade_id' => [
-    'exclude_unless:contratos.*.tipo,contrato_cidade',
-    'required_if:contratos.*.tipo,contrato_cidade',
-    'integer',
-    'exists:cities,id',
-],
+                'exclude_unless:contratos.*.tipo,contrato_cidade',
+                'required_if:contratos.*.tipo,contrato_cidade',
+                'integer',
+                'exists:cities,id',
+            ],
             'contratos.*.arquivo'           => ['nullable','file','mimes:pdf','max:5120'],
             'contratos.*.descricao'         => ['nullable','string','max:255'],
             'contratos.*.assinado'          => ['nullable','boolean'],

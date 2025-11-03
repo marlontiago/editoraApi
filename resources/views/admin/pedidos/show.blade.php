@@ -22,6 +22,7 @@
         @php
             $statusMap = [
                 'em_andamento' => ['Em andamento', 'bg-yellow-100 text-yellow-800 border-yellow-200'],
+                'pre_aprovado' => ['Pré-aprovado', 'bg-blue-100 text-blue-800 border-blue-200'],
                 'finalizado'   => ['Finalizado',   'bg-green-100 text-green-800 border-green-200'],
                 'cancelado'    => ['Cancelado',    'bg-red-100 text-red-800 border-red-200'],
             ];
@@ -39,7 +40,6 @@
             [$statusLabel, $statusClasses] = $statusMap[$status]
                 ?? [ucfirst(str_replace('_',' ',$status)), 'bg-gray-100 text-gray-800 border-gray-200'];
 
-            // Defaults para evitar "Undefined variable"
             $notaLabel = null; $notaClasses = null;
             $notaFinLabel = null; $notaFinClasses = null;
 
@@ -54,7 +54,6 @@
                 }
             }
         @endphp
-
 
         {{-- Ações --}}
         <div class="flex flex-wrap gap-3">
@@ -112,15 +111,15 @@
 
             @else
                 {{-- Ainda não existe nota --}}
-                <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
-                      onsubmit="return confirm('Emitir nota interna para este pedido?');">
+                <form action="{{ route('admin.pedidos.pre-visualizar-nota', $pedido) }}" method="POST"
+                    onsubmit="return confirm('Emitir nota interna para este pedido?');">
                     @csrf
                     <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                        Emitir Nota
+                        Pré Visualização de Nota
                     </button>
                 </form>
             @endif
-        </div> {{-- <<< FECHA o bloco de ações corretamente --}}
+        </div> 
 
         {{-- Informações principais --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
@@ -163,6 +162,20 @@
                                 • Faturada em: <span class="font-medium">{{ optional($notaAtual->faturada_em)->format('d/m/Y H:i') }}</span>
                             @endif
                         </span>
+                    </div>
+                @endif
+
+                {{-- CFOP (se existir nota fiscal) --}}
+                @if(!empty($notaAtual->cfop))
+                    @php
+                        $labels = config('cfop.labels');
+                        $descricaoCfop = $labels[$notaAtual->cfop] ?? 'Descrição não encontrada';
+                    @endphp
+
+                    <div>
+                        <strong>CFOP:</strong>
+                        {{ $notaAtual->cfop }}
+                        <span class="text-sm text-gray-600">— {{ $descricaoCfop }}</span>
                     </div>
                 @endif
 
@@ -242,7 +255,9 @@
                                 $caixas       = (int) ($produto->pivot->caixas ?? 0);
                             @endphp
                             <tr class="border-t">
-                                <td class="px-4 py-2">{{ $produto->nome }}</td>
+                                <td class="px-4 py-2">
+                                    {{ $produto->titulo ?? $produto->nome ?? '—' }}
+                                </td>
                                 <td class="px-4 py-2 text-center">{{ $qtd }}</td>
                                 <td class="px-4 py-2 text-right">R$ {{ number_format($precoUnit, 2, ',', '.') }}</td>
                                 <td class="px-4 py-2 text-right">{{ number_format($percDesc, 2, ',', '.') }}%</td>

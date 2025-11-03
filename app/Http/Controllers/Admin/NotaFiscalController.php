@@ -9,14 +9,21 @@ use App\Models\NotaFiscal;
 use App\Models\NotaItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Milon\Barcode\DNS1D;
+use App\Support\CfopRules; // ✅ Regras centralizadas de CFOP
 
 class NotaFiscalController extends Controller
 {
     public function emitir(Request $request, Pedido $pedido)
     {
+        // ✅ valida CFOP (4 dígitos, opcional)
+        $dadosNota = $request->validate([
+            'cfop' => ['nullable','regex:/^\d{4}$/'],
+            // ... se tiver outros campos no seu form, valide aqui também
+        ]);
+
         $jaFaturada = NotaFiscal::where('pedido_id', $pedido->id)
             ->where('status', 'faturada')
             ->exists();
@@ -46,9 +53,13 @@ class NotaFiscalController extends Controller
             return back()->with('error', 'Já existe uma nota emitida para este pedido. Você pode faturar a atual ou emitir uma nova nota substituindo a atual.');
         }
 
+        // Próximo número sequencial (Postgres): converte numero -> int com NULLIF
         $proximoNumero = (string) (NotaFiscal::max(DB::raw("NULLIF(numero, '')::int")) + 1);
 
-        DB::transaction(function () use ($pedido, $proximoNumero, $notaEmitida, $substituir) {
+        DB::transaction(function () use ($pedido, $proximoNumero, $notaEmitida, $substituir, $dadosNota) {
+            // 👉 CFOP usado na nota: do form OU, se não vier, usa o do pedido
+            $cfopUsado = $dadosNota['cfop'] ?? $pedido->cfop ?? null;
+
             if ($notaEmitida && $substituir) {
                 $notaEmitida->update([
                     'status'              => 'cancelada',
@@ -106,6 +117,7 @@ class NotaFiscalController extends Controller
                 'pedido_id'             => $pedido->id,
                 'numero'                => $proximoNumero,
                 'serie'                 => '1',
+                'cfop'                  => $cfopUsado, // ✅ grava CFOP decidido
                 'status'                => 'emitida',
                 'valor_bruto'           => $valorBruto,
                 'desconto_total'        => $desconto,
@@ -146,13 +158,26 @@ class NotaFiscalController extends Controller
             }
 
             if ($pedido && method_exists($pedido, 'registrarLog')) {
-                $pedido->registrarLog('nota_emitida', "Nota {$nota->numero} emitida.", ['nota_id' => $nota->id]);
+                $pedido->registrarLog('nota_emitida', "Nota {$nota->numero} emitida.", [
+                    'nota_id' => $nota->id,
+                    'cfop'    => $nota->cfop,
+                ]);
             }
         });
 
+        // ✅ Mensagem conforme CFOP (considera o do pedido se o form não vier)
+        $cfop = $dadosNota['cfop'] ?? $pedido->cfop ?? null;
+        $msg  = 'Nota emitida com sucesso.';
+
+        if (CfopRules::isSimplesRemessa($cfop)) {
+            $msg = 'Nota emitida (Simples Remessa) — baixa de estoque será ignorada no faturamento.';
+        } elseif (CfopRules::isBonificacao($cfop)) {
+            $msg = 'Nota emitida (Bonificação) — baixa de estoque ocorrerá no faturamento.';
+        }
+
         return back()->with('success', $substituir
-            ? 'Nova nota emitida com sucesso (a anterior foi cancelada).'
-            : 'Nota emitida com sucesso (sem baixa de estoque).'
+            ? "Nova nota emitida com sucesso (a anterior foi cancelada). {$msg}"
+            : $msg
         );
     }
 
@@ -166,48 +191,84 @@ class NotaFiscalController extends Controller
 
         try {
             DB::transaction(function () use ($nota) {
+                // valida existência dos produtos
                 foreach ($nota->itens as $item) {
                     if (!$item->produto) {
                         throw new \RuntimeException("Produto {$item->produto_id} não encontrado.");
                     }
                 }
 
-                foreach ($nota->itens as $item) {
-                    $afetados = \App\Models\Produto::whereKey($item->produto_id)
-                        ->where('quantidade_estoque', '>=', (int) $item->quantidade)
-                        ->update([
-                            'quantidade_estoque' => DB::raw('quantidade_estoque - ' . (int) $item->quantidade),
-                        ]);
+                // 👉 Normaliza CFOP e registra decisão no log
+                $cfop = $nota->cfop !== null ? trim((string) $nota->cfop) : null;
+                Log::debug('Faturar Nota - CFOP e decisão', [
+                    'nota_id'         => $nota->id,
+                    'cfop'            => $cfop,
+                    'simples_remessa' => CfopRules::isSimplesRemessa($cfop),
+                    'altera_estoque'  => CfopRules::alteraEstoque($cfop),
+                ]);
 
-                    if ($afetados === 0) {
-                        $nome = $item->produto?->nome ?? ('ID ' . $item->produto_id);
-                        throw new \RuntimeException("Estoque insuficiente para {$nome}.");
+                // ✅ Regra de estoque por CFOP:
+                // - Simples remessa: NÃO baixa estoque (alteraEstoque=false)
+                // - Bonificação: baixa estoque
+                // - Outros: baixa estoque
+                if (CfopRules::alteraEstoque($cfop)) {
+                    foreach ($nota->itens as $item) {
+                        $afetados = Produto::whereKey($item->produto_id)
+                            ->where('quantidade_estoque', '>=', (int) $item->quantidade)
+                            ->update([
+                                'quantidade_estoque' => DB::raw('quantidade_estoque - ' . (int) $item->quantidade),
+                            ]);
+
+                        if ($afetados === 0) {
+                            $nome = $item->produto?->titulo ?? $item->produto?->nome ?? ('ID ' . $item->produto_id);
+                            throw new \RuntimeException("Estoque insuficiente para {$nome}.");
+                        }
                     }
                 }
 
                 $nota->update([
-                    'status'             => 'faturada',
-                    'faturada_em'        => now(),
-                    'status_financeiro'  => 'aguardando_pagamento',
+                    'status'            => 'faturada',
+                    'faturada_em'       => now(),
+                    // Relatórios financeiros usarão scopeParaRelatorioFinanceiro() no Model (exclui CFOPs de remessa/bonificação)
+                    'status_financeiro' => 'aguardando_pagamento',
                 ]);
 
-                if ($nota->pedido && in_array($nota->pedido->status, ['em_andamento','emitido','aprovado'])) {
+                // Mantém a finalização do pedido após faturar (ajuste se quiser lógica diferente p/ remessa)
+                if ($nota->pedido && in_array($nota->pedido->status, ['em_andamento','emitido','aprovado','pre_aprovado'])) {
                     $nota->pedido->update(['status' => 'finalizado']);
                 }
 
                 if ($nota->pedido && method_exists($nota->pedido, 'registrarLog')) {
-                    $nota->pedido->registrarLog(
-                        'nota_faturada',
-                        "Nota {$nota->numero} faturada (estoque baixado).",
-                        ['nota_id' => $nota->id]
-                    );
+                    $msg = match (true) {
+                        CfopRules::isSimplesRemessa($cfop) =>
+                            "Nota {$nota->numero} faturada (sem baixa de estoque - simples remessa).",
+                        CfopRules::isBonificacao($cfop) =>
+                            "Nota {$nota->numero} faturada (estoque baixado - bonificação).",
+                        default =>
+                            "Nota {$nota->numero} faturada (estoque baixado).",
+                    };
+
+                    $nota->pedido->registrarLog('nota_faturada', $msg, [
+                        'nota_id' => $nota->id,
+                        'cfop'    => $cfop,
+                    ]);
                 }
             });
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Nota faturada e estoque atualizado com sucesso.');
+        // Mensagem de retorno coerente com CFOP
+        $msg = match (true) {
+            CfopRules::isSimplesRemessa($nota->cfop) =>
+                'Nota faturada sem baixa de estoque (simples remessa).',
+            CfopRules::isBonificacao($nota->cfop) =>
+                'Nota faturada e estoque atualizado (bonificação).',
+            default =>
+                'Nota faturada e estoque atualizado com sucesso.',
+        };
+
+        return back()->with('success', $msg);
     }
 
     public function show(NotaFiscal $nota)

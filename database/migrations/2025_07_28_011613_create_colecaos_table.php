@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('colecoes', function (Blueprint $table) {
             $table->id();
+            $table->integer('codigo')->unique();
             $table->string('nome');
             $table->timestamps();
         });

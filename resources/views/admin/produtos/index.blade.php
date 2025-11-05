@@ -53,36 +53,157 @@
             </div>
         @endif
 
-        {{-- Toolbar: busca + novo --}}
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <form method="GET" action="{{ route('admin.produtos.index') }}" class="flex items-center gap-2">
-                <input
-                    type="text"
-                    name="q"
-                    value="{{ request('q') }}"
-                    placeholder="Buscar por nome, título, autores, coleção..."
-                    class="h-10 w-72 max-w-full rounded-md border-gray-300 px-3 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                >
-                <button type="submit"
-                        class="h-10 rounded-md border px-3 text-sm hover:bg-gray-50">
-                    Buscar
-                </button>
-                @if(request('q'))
-                    <a href="{{ route('admin.produtos.index') }}" class="text-sm text-gray-600 hover:underline">Limpar</a>
-                @endif
-            </form>
+        {{-- Toolbar: busca + novo + coleções --}}
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+    <form method="GET" action="{{ route('admin.produtos.index') }}" class="flex items-center gap-2">
+        <input
+            type="text"
+            name="q"
+            value="{{ request('q') }}"
+            placeholder="Buscar por nome, título, autores, coleção..."
+            class="h-10 w-72 max-w-full rounded-md border-gray-300 px-3 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+        >
+        <button type="submit"
+                class="h-10 rounded-md border px-3 text-sm hover:bg-gray-50">
+            Buscar
+        </button>
+        @if(request('q'))
+            <a href="{{ route('admin.produtos.index') }}" class="text-sm text-gray-600 hover:underline">Limpar</a>
+        @endif
+    </form>
 
-            <a href="{{ route('admin.produtos.create') }}"
-            class="inline-flex h-10 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
-                Novo Produto
-            </a>
+    <div class="flex items-center gap-2" x-data="{ openColecao:false }">
+        <a href="{{ route('admin.produtos.create') }}"
+           class="inline-flex h-10 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
+            Novo Produto
+        </a>
+
+        <button type="button"
+                @click="openColecao = true"
+                class="inline-flex h-10 items-center justify-center rounded-md bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-700">
+            Coleções
+        </button>
+
+        {{-- Modal Coleções --}}
+        <div x-show="openColecao" x-transition
+             class="fixed inset-0 z-50 flex items-center justify-center p-4"
+             style="display:none">
+            <div class="absolute inset-0 bg-black/40" @click="openColecao=false"></div>
+
+            <div class="relative z-10 w-full max-w-3xl rounded-xl bg-white shadow-xl">
+                <div class="flex items-center justify-between border-b px-5 py-3">
+                    <h3 class="text-lg font-semibold text-gray-800">Criar nova Coleção</h3>
+                    <button class="text-gray-500 hover:text-gray-700" @click="openColecao=false">✕</button>
+                </div>
+
+                <form action="{{ route('admin.colecoes.quickCreate') }}" method="POST" class="p-5"
+                      x-data="colecaoForm()" x-init="init()">
+                    @csrf
+
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="col-span-12 sm:col-span-4">
+                            <label class="block text-sm font-medium text-gray-700">Código <span class="text-red-500">*</span></label>
+                            <input type="text" name="codigo" x-model="codigo"
+                                   class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                   placeholder="Ex.: COL-2025-01" required>
+                        </div>
+                        <div class="col-span-12 sm:col-span-8">
+                            <label class="block text-sm font-medium text-gray-700">Nome <span class="text-red-500">*</span></label>
+                            <input type="text" name="nome" x-model="nome"
+                                   class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                   placeholder="Ex.: Coleção Matemática Fundamental" required>
+                        </div>
+
+                        <div class="col-span-12">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-sm font-medium text-gray-700">Produtos da coleção</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="text" x-model="busca" placeholder="Filtrar por título/ISBN/autor"
+                                           class="rounded-md border-gray-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <button type="button" class="text-xs px-2 py-1 rounded border"
+                                            @click="toggleAll(true)">Selecionar todos</button>
+                                    <button type="button" class="text-xs px-2 py-1 rounded border"
+                                            @click="toggleAll(false)">Limpar</button>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 max-h-72 overflow-auto rounded-md border">
+                                {{-- Lista de produtos com checkboxes --}}
+                                <template x-for="p in filtrados()" :key="p.id">
+                                    <label class="flex items-center gap-3 px-3 py-2 border-b last:border-b-0">
+                                        <input type="checkbox" class="rounded border-gray-300"
+                                               :value="p.id" name="produtos[]" x-model="selecionados">
+                                        <div class="flex-1">
+                                            <div class="text-sm font-medium text-gray-800" x-text="p.titulo ?? '—'"></div>
+                                            <div class="text-xs text-gray-500">
+                                                <span x-text="'ISBN: ' + (p.isbn ?? '—')"></span>
+                                                <span class="mx-2">•</span>
+                                                <span x-text="'Autores: ' + (p.autores ?? '—')"></span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </template>
+
+                                {{-- Caso filtro não encontre nada --}}
+                                <div class="p-4 text-center text-sm text-gray-500" x-show="filtrados().length===0">
+                                    Nenhum produto encontrado para este filtro.
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Você pode criar a coleção sem selecionar produtos agora e vincular depois.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 flex items-center justify-end gap-2 border-t pt-4">
+                        <button type="button" @click="openColecao=false"
+                                class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Cancelar</button>
+                        <button type="submit"
+                                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                            Salvar Coleção
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
+
+        {{-- Alpine data for the modal --}}
+        <script>
+            function colecaoForm(){
+                return {
+                    codigo: '',
+                    nome: '',
+                    busca: '',
+                    selecionados: [],
+                    // Recebe do backend a lista (veja seção 3)
+                    produtosBase: @json($produtosParaColecao ?? []),
+                    init(){},
+                    filtrados(){
+                        if(!this.busca) return this.produtosBase;
+                        const b = this.busca.toLowerCase();
+                        return this.produtosBase.filter(p => {
+                            return (p.titulo ?? '').toLowerCase().includes(b)
+                                || (p.isbn ?? '').toLowerCase().includes(b)
+                                || (p.autores ?? '').toLowerCase().includes(b);
+                        });
+                    },
+                    toggleAll(on){
+                        if(on){
+                            this.selecionados = this.filtrados().map(p => p.id);
+                        } else {
+                            this.selecionados = [];
+                        }
+                    }
+                }
+            }
+        </script>
+    </div>
+</div>
 
         {{-- Tabela --}}
         <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
             <table class="min-w-[1000px] w-full text-sm">
                 <thead class="bg-gray-50 text-gray-700">
                     <tr class="text-left text-xs font-semibold uppercase tracking-wide">
+                        <th class="px-3 py-2 hidden md:table-cell">Cód.</th>
                         <th class="px-3 py-2">Imagem</th>
                         <th class="px-3 py-2 hidden md:table-cell">Título</th>
                         <th class="px-3 py-2 hidden lg:table-cell">Coleção</th>
@@ -100,6 +221,8 @@
                 <tbody class="divide-y divide-gray-100">
                     @forelse ($produtos as $produto)
                         <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-100/70">
+                            {{-- Código --}}
+                            <td class="px-3 py-2 hidden md:table-cell">{{ $produto->codigo }}</td>
                             {{-- Imagem --}}
                             <td class="px-3 py-2">
                                 @if ($produto->imagem_url)

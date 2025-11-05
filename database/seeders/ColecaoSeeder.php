@@ -13,20 +13,25 @@ class ColecaoSeeder extends Seeder
      */
     public function run(): void
     {
-        $colecoes = [
-            'Conecta ENEM',
-            'Didático Profissional',
-            'Educação Financeira',
-            'Educação Trânsito',
-            'EJA - Educação Adultos',
-            'PNLD',
-            'Revisão dos Saberes',
-            'Robogarden',
-            'Sabe Brasil',
-        ];
+       
+        Colecao::create(['codigo' => '3232',
+                         'nome' => 'Conecta ENEM']);
 
-        foreach ($colecoes as $nome) {
-            Colecao::create(['nome' => $nome]);
-        }
+        Colecao::create(['codigo' => '3233',
+                         'nome' => 'Didático Profissional']);
+        Colecao::create(['codigo' => '3234',
+                         'nome' => 'Educação Financeira']);
+        Colecao::create(['codigo' => '3235',
+                         'nome' => 'Educação Trânsito']);
+        Colecao::create(['codigo' => '3236',
+                         'nome' => 'EJA - Educação Adultos']);
+        Colecao::create(['codigo' => '3237',
+                         'nome' => 'PNLD']);
+        Colecao::create(['codigo' => '3238',
+                         'nome' => 'Revisão dos Saberes']);
+        Colecao::create(['codigo' => '3239',
+                         'nome' => 'Robogarden']);
+        Colecao::create(['codigo' => '3240',
+                         'nome' => 'Sabe Brasil']);
     }
 }

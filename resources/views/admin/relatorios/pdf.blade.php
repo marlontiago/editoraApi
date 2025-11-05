@@ -202,7 +202,7 @@
                             str_starts_with($status, 'pago_parcial')  => ['parcial',  'Pago parc.'],
                             $status === 'simples_remessa'             => ['remessa',  'Simp. remessa'],
                             $status === 'brinde'                      => ['brinde',   'Brinde'],
-                            str_starts_with($status, 'aguardando')    => ['aguardando','Aguardando pagamento'],
+                            str_starts_with($status, 'aguardando')    => ['aguardando','Aguard. Pag.'],
                             default                                   => ['default',  '—'],
                         };
                     @endphp

@@ -22,6 +22,7 @@ use App\Http\Controllers\NotaFiscalPlugNotasController;
 use App\Http\Controllers\NotaFiscalPlugBridgeController;
 use App\Http\Controllers\Admin\GestorAnexoController;
 use App\Models\Gestor;
+use App\Http\Controllers\Admin\ColecaoController;
 
 Route::pattern('gestor', '[0-9]+');        // {gestor} numérico
 Route::pattern('distribuidor', '[0-9]+');  // {distribuidor} numérico
@@ -115,6 +116,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get ('notas/{nota}/plugnotas/consultar', [NotaFiscalPlugBridgeController::class, 'consultar'])->name('notas.plug.consultar');
     Route::get ('notas/{nota}/plugnotas/pdf',       [NotaFiscalPlugBridgeController::class, 'pdf'])->name('notas.plug.pdf');
     Route::get ('notas/{nota}/plugnotas/xml',       [NotaFiscalPlugBridgeController::class, 'xml'])->name('notas.plug.xml');
+
+    Route::post('colecoes/quick-create', [ColecaoController::class, 'quickCreate'])->name('colecoes.quickCreate')->middleware(['auth']);
 });
 
 Route::post('/notas/{nota}/emitir',   [NotaFiscalPlugNotasController::class, 'emitir'])->name('notas.emitir');

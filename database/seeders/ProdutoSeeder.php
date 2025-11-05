@@ -10,6 +10,7 @@ class ProdutoSeeder extends Seeder
     public function run(): void
     {
         Produto::create([
+            'codigo' => 1001,
             'titulo' => 'Algoritmos',
             'isbn' => '978-85-00012-000-0',
             'autores' => 'Bill Gates, Steve Jobs',
@@ -26,6 +27,7 @@ class ProdutoSeeder extends Seeder
         ]);
 
         Produto::create([
+            'codigo' => 1002,
             'titulo' => 'Anatomia Humana',
             'isbn' => '978-85-0000-210-0',
             'autores' => 'Paulo Muzy, Cariane',
@@ -42,6 +44,7 @@ class ProdutoSeeder extends Seeder
         ]);
 
         Produto::create([
+            'codigo' => 1003,
             'titulo' => 'Mecânica básica Industrial',
             'isbn' => '978-85-0220-210-5',
             'autores' => 'Ozzy Osbourne, Jimmy Hetfield',
@@ -58,6 +61,7 @@ class ProdutoSeeder extends Seeder
         ]);
 
         Produto::create([
+            'codigo' => 1004,
             'titulo' => 'Le Cordon Bleu',
             'isbn' => '908-85-1230-198-4',
             'autores' => 'Erick Jacquin, Paola Carosela',
@@ -74,6 +78,7 @@ class ProdutoSeeder extends Seeder
         ]);
 
         Produto::create([
+            'codigo' => 1005,
             'titulo' => 'Brasil: Uma História',
             'isbn' => '978-85-0000-999-9',
             'autores' => 'Boris Casoy, Datena',
@@ -90,6 +95,7 @@ class ProdutoSeeder extends Seeder
         ]);
 
         Produto::create([
+            'codigo' => 1006,
             'titulo' => 'Geografia Geral e do Brasil',
             'isbn' => '978-85-0000-321-0',
             'autores' => 'André Trigueiro, Carlos Nascimento',
@@ -106,6 +112,7 @@ class ProdutoSeeder extends Seeder
         ]);
 
         Produto::create([
+            'codigo' => 1007,
             'titulo' => 'Física para Cientistas e Engenheiros',
             'isbn' => '978-85-0000-654-3',
             'autores' => 'Neil deGrasse Tyson, Carl Sagan',
@@ -122,6 +129,7 @@ class ProdutoSeeder extends Seeder
         ]);
 
         Produto::create([
+            'codigo' => 1008,
             'titulo' => 'Química: A Ciência Central',
             'isbn' => '978-85-0000-987-6',
             'autores' => 'Marie Curie, Rosalind Franklin',
@@ -138,6 +146,7 @@ class ProdutoSeeder extends Seeder
         ]);
 
         Produto::create([
+            'codigo' => 1009,
             'titulo' => 'Biologia Molecular da Célula',
             'isbn' => '978-85-0000-111-2',
             'autores' => 'Charles Darwin, Gregor Mendel',

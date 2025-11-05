@@ -11,7 +11,7 @@ class Colecao extends Model
     
     protected $table = 'colecoes';
 
-    protected $fillable = ['nome'];
+    protected $fillable = ['nome', 'codigo'];
 
     public function produtos()
     {

@@ -29,6 +29,24 @@
             <div class="col-span-12">
                 <h3 class="text-sm font-semibold text-gray-700">Informações básicas</h3>
                 <div class="mt-3 grid grid-cols-12 gap-4">
+
+                    {{-- Código --}}
+                    <div class="col-span-12 md:col-span-2">
+                        <label for="codigo" class="block text-sm font-medium text-gray-700">
+                            Código <span class="text-red-600">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="codigo"
+                            name="codigo"
+                            value="{{ old('codigo', isset($produto) ? $produto->codigo : '') }}"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                            required
+                        >
+                        @error('codigo')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
                     {{-- Título (substitui "Nome") --}}
                     <div class="col-span-12 md:col-span-6">
                         <label for="titulo" class="block text-sm font-medium text-gray-700">
@@ -41,14 +59,14 @@
                         @error('titulo') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
 
-                    <div class="col-span-12 md:col-span-6">
+                    <div class="col-span-12 md:col-span-4">
                         <label for="colecao_id" class="block text-sm font-medium text-gray-700">Coleção</label>
                         <select id="colecao_id" name="colecao_id"
                                 class="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Selecione</option>
                             @foreach ($colecoes as $colecao)
                                 <option value="{{ $colecao->id }}" {{ (string) old('colecao_id', $produto->colecao_id) === (string) $colecao->id ? 'selected' : '' }}>
-                                    {{ $colecao->nome }}
+                                    {{$colecao->codigo}} - {{ $colecao->nome }}
                                 </option>
                             @endforeach
                         </select>

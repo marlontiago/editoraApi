@@ -8,6 +8,7 @@ use App\Models\Colecao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ProdutoController extends Controller
 {
@@ -51,6 +52,14 @@ class ProdutoController extends Controller
     private function rules(bool $isUpdate = false): array
     {
         return [
+            'codigo' => [
+            'required',
+            'integer',
+            'min:1',
+            $isUpdate
+                ? Rule::unique('produtos', 'codigo')->ignore(request()->route('produto'))
+                : 'unique:produtos,codigo'
+        ],
             'titulo' => ['required','string','max:255'],
             'isbn' => [
                 'nullable','string','max:17', // cabe "978-65-88702-17-8"
@@ -137,8 +146,11 @@ class ProdutoController extends Controller
 
         $produtos = $query->paginate($perPage)->withQueryString();
 
+         $produtosParaColecao = Produto::orderBy('titulo', 'asc')
+        ->get(['id', 'titulo', 'isbn', 'autores']);
+
         return view('admin.produtos.index', compact(
-            'produtos', 'q', 'sort', 'dir', 'produtosComEstoqueBaixo', 'estoqueParaPedidosEmPotencial'
+            'produtos', 'q', 'sort', 'dir', 'produtosComEstoqueBaixo', 'estoqueParaPedidosEmPotencial', 'produtosParaColecao'
         ));
     }
 

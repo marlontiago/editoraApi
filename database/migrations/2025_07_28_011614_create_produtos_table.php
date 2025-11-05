@@ -9,7 +9,6 @@ return new class extends Migration {
     {
         Schema::create('produtos', function (Blueprint $table) {
             $table->id();
-
             // FK opcional para coleções (se apagar a coleção, zera o campo)
             $table->foreignId('colecao_id')
                 ->nullable()
@@ -17,6 +16,7 @@ return new class extends Migration {
                 ->nullOnDelete();
 
             // Dados principais
+            $table->integer('codigo')->unique();  
             $table->string('titulo')->nullable();          // Controller valida como required na criação
             $table->text('descricao')->nullable();
             $table->string('isbn')->nullable()->index();   // opcional, index para busca

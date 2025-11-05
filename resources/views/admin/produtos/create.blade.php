@@ -20,8 +20,27 @@
               class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
             @csrf
 
+            {{-- Código --}}
+            <div class="col-span-12 md:col-span-2">
+                <label for="codigo" class="block text-sm font-medium text-gray-700">
+                    Código <span class="text-red-600">*</span>
+                </label>
+                <input
+                    type="number"
+                    id="codigo"
+                    name="codigo"
+                    value="{{ old('codigo', isset($produto) ? $produto->codigo : '') }}"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    required
+                >
+                @error('codigo')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+
             {{-- Título (único, substitui "Nome") --}}
-            <div class="col-span-12 md:col-span-8">
+            <div class="col-span-12 md:col-span-6">
                 <label for="titulo" class="block text-sm font-medium text-gray-700">Título <span class="text-red-600">*</span></label>
                 <input type="text" id="titulo" name="titulo" value="{{ old('titulo') }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
@@ -36,7 +55,7 @@
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                     <option value="">Selecione</option>
                     @foreach ($colecoes as $colecao)
-                        <option value="{{ $colecao->id }}" @selected(old('colecao_id') == $colecao->id)>{{ $colecao->nome }}</option>
+                        <option value="{{ $colecao->id }}" @selected(old('colecao_id') == $colecao->id)>{{ $colecao->codigo }} - {{ $colecao->nome }}</option>
                     @endforeach
                 </select>
                 @error('colecao_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror

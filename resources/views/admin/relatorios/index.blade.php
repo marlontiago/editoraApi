@@ -8,16 +8,39 @@
             $paramsBase = request()->except('status');
             function moeda_br($v) { return 'R$ ' . number_format((float)$v, 2, ',', '.'); }
             function status_badge($s) {
-                $map = [
-                    'pago'                 => 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                    'pago_parcial'         => 'bg-sky-100 text-sky-800 border-sky-200',
-                    'aguardando_pagamento' => 'bg-amber-100 text-amber-800 border-amber-200',
-                    'faturada'             => 'bg-sky-100 text-sky-800 border-sky-200',
-                    'emitida'              => 'bg-blue-100 text-blue-800 border-blue-200',
-                ];
-                $cls = $map[$s] ?? 'bg-gray-100 text-gray-700 border-gray-200';
-                return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border '.$cls.'">'.e(str_replace('_',' ',$s)).'</span>';
-            }
+        // classes exatamente como na outra view
+        $classesMap = [
+            // Financeiro
+            'aguardando_pagamento' => 'bg-amber-100 text-amber-800 border-amber-200',
+            'pago'                  => 'bg-green-100 text-green-800 border-green-200',
+            'pago_parcial'         => 'bg-sky-100 text-sky-800 border-sky-200',
+            'simples_remessa'       => 'bg-indigo-100 text-indigo-800 border-indigo-200',
+            'brinde'                => 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200',
+
+            // Status da nota (se aparecerem aqui)
+            'emitida'               => 'bg-blue-100 text-blue-800 border-blue-200',
+            'faturada'              => 'bg-emerald-100 text-emerald-800 border-emerald-200',
+            'cancelada'             => 'bg-red-100 text-red-800 border-red-200',
+        ];
+
+        // labels iguais aos da outra view
+        $labelMap = [
+            'aguardando_pagamento'  => 'Aguardando pagamento',
+            'pago'                  => 'Pago',
+            'simples_remessa'       => 'Simples remessa',
+            'brinde'                => 'Brinde',
+            'emitida'               => 'Emitida',
+            'faturada'              => 'Faturada',
+            'cancelada'             => 'Cancelada',
+        ];
+
+        $cls   = $classesMap[$s] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+        $label = $labelMap[$s]   ?? ucwords(str_replace('_', ' ', (string)$s));
+
+        return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border '.$cls.'">'
+             . e($label)
+             . '</span>';
+        }
         @endphp
 
         {{-- 1) CARDS DO TOPO --}}

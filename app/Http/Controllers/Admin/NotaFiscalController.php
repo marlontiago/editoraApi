@@ -158,22 +158,39 @@ class NotaFiscalController extends Controller
     }
 
 
-    public function faturar(NotaFiscal $nota)
-    {
-        if ($nota->status !== 'emitida') {
-            return back()->with('error', 'A nota não está no status correto para faturamento.');
-        }
+    public function faturar(NotaFiscal $nota, Request $request)
+{
+    if ($nota->status !== 'emitida') {
+        return back()->with('error', 'A nota não está no status correto para faturamento.');
+    }
 
-        $nota->load('itens.produto', 'pedido');
+    // 'normal' (default), 'simples_remessa', 'brinde'
+    $modo = $request->string('modo_faturamento')->lower()->toString();
+    if (!in_array($modo, ['normal','simples_remessa','brinde'], true)) {
+        $modo = 'normal';
+    }
 
-        try {
-            DB::transaction(function () use ($nota) {
-                foreach ($nota->itens as $item) {
-                    if (!$item->produto) {
-                        throw new \RuntimeException("Produto {$item->produto_id} não encontrado.");
-                    }
+    $nota->load('itens.produto', 'pedido');
+
+    try {
+        DB::transaction(function () use ($nota, $modo) {
+            // Validação de integridade
+            foreach ($nota->itens as $item) {
+                if (!$item->produto) {
+                    throw new \RuntimeException("Produto {$item->produto_id} não encontrado.");
                 }
+            }
 
+            // ====== Regras por modo ======
+            $deveBaixarEstoque = in_array($modo, ['normal','brinde'], true);
+            $statusFinanceiro  = match ($modo) {
+                'simples_remessa' => 'simples_remessa',
+                'brinde'          => 'brinde',
+                default           => 'aguardando_pagamento',
+            };
+
+            // Baixa de estoque (somente quando aplicável)
+            if ($deveBaixarEstoque) {
                 foreach ($nota->itens as $item) {
                     $afetados = \App\Models\Produto::whereKey($item->produto_id)
                         ->where('quantidade_estoque', '>=', (int) $item->quantidade)
@@ -182,35 +199,46 @@ class NotaFiscalController extends Controller
                         ]);
 
                     if ($afetados === 0) {
-                        $nome = $item->produto?->nome ?? ('ID ' . $item->produto_id);
+                        $nome = $item->produto?->nome ?? $item->produto?->titulo ?? ('ID ' . $item->produto_id);
                         throw new \RuntimeException("Estoque insuficiente para {$nome}.");
                     }
                 }
+            }
 
-                $nota->update([
-                    'status'             => 'faturada',
-                    'faturada_em'        => now(),
-                    'status_financeiro'  => 'aguardando_pagamento',
-                ]);
+            // Atualiza status da nota
+            $nota->update([
+                'status'            => 'faturada',
+                'faturada_em'       => now(),
+                'status_financeiro' => $statusFinanceiro,
+            ]);
 
-                if ($nota->pedido && in_array($nota->pedido->status, ['em_andamento','emitido','aprovado'])) {
-                    $nota->pedido->update(['status' => 'finalizado']);
-                }
+            // Mantém sua lógica atual de finalizar o pedido se aplicável
+            if ($nota->pedido && in_array($nota->pedido->status, ['em_andamento','emitido','aprovado'])) {
+                $nota->pedido->update(['status' => 'finalizado']);
+            }
 
-                if ($nota->pedido && method_exists($nota->pedido, 'registrarLog')) {
-                    $nota->pedido->registrarLog(
-                        'nota_faturada',
-                        "Nota {$nota->numero} faturada (estoque baixado).",
-                        ['nota_id' => $nota->id]
-                    );
-                }
-            });
-        } catch (\Throwable $e) {
-            return back()->with('error', $e->getMessage());
-        }
+            // Log
+            if ($nota->pedido && method_exists($nota->pedido, 'registrarLog')) {
+                $msg = match ($modo) {
+                    'simples_remessa' => "Nota {$nota->numero} faturada como SIMPLES REMESSA (sem baixa de estoque).",
+                    'brinde'          => "Nota {$nota->numero} faturada como BRINDE (estoque baixado).",
+                    default           => "Nota {$nota->numero} faturada (estoque baixado).",
+                };
 
-        return back()->with('success', 'Nota faturada e estoque atualizado com sucesso.');
+                $nota->pedido->registrarLog(
+                    'nota_faturada',
+                    $msg,
+                    ['nota_id' => $nota->id, 'modo' => $modo]
+                );
+            }
+        });
+    } catch (\Throwable $e) {
+        return back()->with('error', $e->getMessage());
     }
+
+    return back()->with('success', 'Nota faturada com sucesso.');
+}
+
 
     public function show(NotaFiscal $nota)
     {

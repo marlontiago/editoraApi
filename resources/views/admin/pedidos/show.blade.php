@@ -34,6 +34,8 @@
             $notaFinMap = [
                 'aguardando_pagamento' => ['Aguardando pagamento', 'bg-amber-100 text-amber-800 border-amber-200'],
                 'pago'                  => ['Pago',                 'bg-green-100 text-green-800 border-green-200'],
+                'simples_remessa'       => ['Simples remessa',     'bg-indigo-100 text-indigo-800 border-indigo-200'],
+                'brinde'                => ['Brinde',              'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200'],
             ];
 
             $status = $pedido->status;
@@ -96,13 +98,70 @@
 
     @elseif(!empty($notaEmitida))
         {{-- Existe nota emitida (ainda não faturada) --}}
-        <form action="{{ route('admin.notas.faturar', $notaEmitida) }}" method="POST"
-              onsubmit="return confirm('Faturar nota? Isto baixará o estoque.');">
-            @csrf
-            <button class="inline-flex items-center px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
-                Faturar Nota
-            </button>
-        </form>
+        {{-- ===== Faturar com Modal de Tipo ===== --}}
+<div x-data="{ openFat:false, modo:'normal' }">
+    <button type="button"
+            @click="openFat = true; modo = 'normal';"
+            class="inline-flex items-center px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+        Faturar Nota
+    </button>
+
+    {{-- Modal --}}
+    <div x-show="openFat" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {{-- backdrop --}}
+        <div class="absolute inset-0 bg-black/40" @click="openFat=false"></div>
+
+        {{-- card --}}
+        <div class="relative bg-white w-full max-w-md rounded-xl shadow-lg border border-gray-200">
+            <div class="p-4 border-b">
+                <h4 class="text-lg font-semibold text-gray-800">Tipo de faturamento</h4>
+                <p class="text-sm text-gray-600 mt-1">Escolha como essa nota será faturada.</p>
+            </div>
+
+            <form method="POST" action="{{ route('admin.notas.faturar', $notaEmitida) }}" class="p-4 space-y-4">
+                @csrf
+                <div class="space-y-2">
+                    <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="modo_faturamento" value="normal" x-model="modo" class="mt-1">
+                        <div>
+                            <div class="font-medium text-gray-900">Normal</div>
+                            <div class="text-sm text-gray-600">Baixa o estoque e define financeiro para <strong>aguardando_pagamento</strong> (fluxo atual).</div>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="modo_faturamento" value="simples_remessa" x-model="modo" class="mt-1">
+                        <div>
+                            <div class="font-medium text-gray-900">Simples Remessa</div>
+                            <div class="text-sm text-gray-600">Não baixa o estoque e define financeiro como <strong>simples_remessa</strong>.</div>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="modo_faturamento" value="brinde" x-model="modo" class="mt-1">
+                        <div>
+                            <div class="font-medium text-gray-900">Brinde</div>
+                            <div class="text-sm text-gray-600">Baixa o estoque e define financeiro como <strong>brinde</strong>.</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t">
+                    <button type="button"
+                            class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                            @click="openFat=false">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                        Confirmar faturamento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
         <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
               onsubmit="return confirm('Emitir NOVA nota com os dados atuais do pedido? A nota emitida será cancelada.');">

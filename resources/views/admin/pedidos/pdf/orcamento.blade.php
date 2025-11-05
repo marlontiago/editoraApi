@@ -2,7 +2,29 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Orçamento #{{ $pedido->id }}</title>
+
+    @php
+        $status = (string)($pedido->status ?? '');
+
+switch ($status) {
+    case 'em_andamento':
+        $docTitle = 'Estudo de Preço';
+        break;
+    case 'pre_aprovado':
+    case 'finalizado':
+        $docTitle = 'Orçamento Comercial';
+        break;
+    case 'cancelado':
+        $docTitle = 'Orçamento Cancelado';
+        break;
+    default:
+        // fallback (ajuste se quiser outro padrão)
+        $docTitle = 'Orçamento Comercial';
+        break;
+}
+
+    @endphp
+    <title>{{ $docTitle }} #{{ $pedido->id }}</title>
     <style>
         @page { margin: 120px 36px 90px 36px; }
         body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11.5px; line-height: 1.45; color:#0f172a; }
@@ -73,6 +95,8 @@
         $ext=strtolower(pathinfo($full,PATHINFO_EXTENSION)?:'png'); $mime=$ext==='jpg'?'jpeg':$ext;
         $data=@file_get_contents($full); return $data?('data:image/'.$mime.';base64,'.base64_encode($data)):'';
     }
+
+    
 @endphp
 
 {{-- Header com Informações do Pedido --}}
@@ -88,7 +112,7 @@
                                  style="height:46px; display:block; object-fit:contain; margin-top:30px">
                         @endif
                         <span style="font-size:20px; font-weight:700; color:#fff; white-space:nowrap; line-height:1;">
-                            Orçamento Comercial
+                            {{ $docTitle }}
                         </span>
                     </div>
                 </td>

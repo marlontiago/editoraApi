@@ -17,6 +17,7 @@ class NotaFiscalController extends Controller
 {
     public function emitir(Request $request, Pedido $pedido)
     {
+        // Bloqueia se já houver faturada (não pode ter outra nota após faturamento)
         $jaFaturada = NotaFiscal::where('pedido_id', $pedido->id)
             ->where('status', 'faturada')
             ->exists();
@@ -25,8 +26,7 @@ class NotaFiscalController extends Controller
             return back()->with('error', 'Este pedido já possui uma nota faturada. Não é possível emitir outra.');
         }
 
-        $substituir = $request->boolean('substituir');
-
+        // Carrega snapshots necessários do pedido
         $pedido->load([
             'produtos' => function ($q) {
                 $q->withPivot([
@@ -37,34 +37,37 @@ class NotaFiscalController extends Controller
             'cliente', 'gestor', 'distribuidor'
         ]);
 
-        $notaEmitida = NotaFiscal::where('pedido_id', $pedido->id)
-            ->where('status', 'emitida')
-            ->latest('id')
-            ->first();
-
-        if ($notaEmitida && !$substituir) {
-            return back()->with('error', 'Já existe uma nota emitida para este pedido. Você pode faturar a atual ou emitir uma nova nota substituindo a atual.');
-        }
-
+        // Próximo número (PostgreSQL-friendly)
         $proximoNumero = (string) (NotaFiscal::max(DB::raw("NULLIF(numero, '')::int")) + 1);
 
-        DB::transaction(function () use ($pedido, $proximoNumero, $notaEmitida, $substituir) {
-            if ($notaEmitida && $substituir) {
-                $notaEmitida->update([
+        DB::transaction(function () use ($pedido, $proximoNumero) {
+
+            // 🔒 Regra de unicidade no app:
+            // Se existir NOTA 'emitida' para este pedido, cancela todas antes de criar a nova
+            $notasEmitidas = NotaFiscal::where('pedido_id', $pedido->id)
+                ->where('status', 'emitida')
+                ->get();
+
+            foreach ($notasEmitidas as $old) {
+                $old->update([
                     'status'              => 'cancelada',
                     'cancelada_em'        => now(),
-                    'motivo_cancelamento' => 'Substituída por nova emissão em ' . now()->format('d/m/Y H:i'),
+                    'motivo_cancelamento' => 'Substituída automaticamente por nova emissão em ' . now()->format('d/m/Y H:i'),
                 ]);
+
+                // (Opcional) limpar itens da nota cancelada para evitar “lixo” de dados
+                // NotaItem::where('nota_fiscal_id', $old->id)->delete();
 
                 if ($pedido && method_exists($pedido, 'registrarLog')) {
                     $pedido->registrarLog(
                         'nota_cancelada',
-                        "Nota {$notaEmitida->numero} cancelada por substituição.",
-                        ['nota_id' => $notaEmitida->id]
+                        "Nota {$old->numero} cancelada por substituição automática.",
+                        ['nota_id' => $old->id]
                     );
                 }
             }
 
+            // ===== Snapshots =====
             $emitente = [
                 'razao_social' => config('empresa.razao_social', env('EMPRESA_RAZAO', 'Minha Empresa LTDA')),
                 'cnpj'         => config('empresa.cnpj',         env('EMPRESA_CNPJ',  '00.000.000/0000-00')),
@@ -102,6 +105,7 @@ class NotaFiscalController extends Controller
             $totalCaixas = (int)   ($pedido->total_caixas ?? 0);
             $tipo        = $pedido->tipo ?? '1';
 
+            // Cria a NOVA "emitida" (apenas 1 permanecerá ativa por pedido)
             $nota = NotaFiscal::create([
                 'pedido_id'             => $pedido->id,
                 'numero'                => $proximoNumero,
@@ -146,15 +150,13 @@ class NotaFiscalController extends Controller
             }
 
             if ($pedido && method_exists($pedido, 'registrarLog')) {
-                $pedido->registrarLog('nota_emitida', "Nota {$nota->numero} emitida.", ['nota_id' => $nota->id]);
+                $pedido->registrarLog('nota_emitida', "Nota {$nota->numero} emitida (substituição automática aplicada).", ['nota_id' => $nota->id]);
             }
         });
 
-        return back()->with('success', $substituir
-            ? 'Nova nota emitida com sucesso (a anterior foi cancelada).'
-            : 'Nota emitida com sucesso (sem baixa de estoque).'
-        );
+        return back()->with('success', 'Nota emitida com sucesso. Qualquer emissão anterior foi automaticamente cancelada.');
     }
+
 
     public function faturar(NotaFiscal $nota)
     {

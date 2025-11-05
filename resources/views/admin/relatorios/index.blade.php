@@ -1,7 +1,7 @@
 <x-app-layout>
     <div>
         <h2 class="font-semibold text-2xl ml-4 mt-4 mb-4 text-gray-800 leading-tight">
-            {{ __('Relatórios Financeiros') }}
+            {{ __('Relatórios') }}
         </h2>
 
         @php
@@ -34,12 +34,14 @@
                 <p class="text-3xl font-bold mt-2">{{ $notasAPagar->count() }}</p>
             </a>
 
-            <a href="{{ route('admin.relatorios.index', array_merge($paramsBase, ['status' => 'emitida'])) }}"
+            <a href="{{ route('admin.relatorios.index', $paramsBase) }}"
                class="bg-blue-500 text-white p-4 m-2 rounded-lg w-full sm:w-[calc(33.333%-1rem)] cursor-pointer hover:opacity-90 shadow">
                 <h1 class="text-sm uppercase tracking-wide">Notas emitidas</h1>
                 <p class="text-3xl font-bold mt-2">{{ $notasEmitidas->count() }}</p>
             </a>
         </div>
+
+        
 
         {{-- 2) FILTROS --}}
         <div class="mt-6 px-4">
@@ -50,6 +52,20 @@
                 {{-- adicionados para não quebrar o JS de auto-submit (retrocompat) --}}
                 <input type="hidden" name="tipo" id="tipo" value="{{ $filtroTipo ?? '' }}">
                 <input type="hidden" name="id" id="id" value="{{ $filtroId ?? '' }}">
+
+                {{-- Tipo do relatório (NOVO) --}}
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Tipo de relatório</label>
+                    <select class="w-[160px] md:w-[190px] rounded-xl border-gray-200 shadow-sm"
+                            name="tipo_relatorio" onchange="this.form.submit()">
+                        <option value="geral" @selected(($tipoRelatorio ?? 'geral') === 'geral')>
+                            Geral
+                        </option>
+                        <option value="financeiro" @selected(($tipoRelatorio ?? 'geral') === 'financeiro')>
+                            Financeiro
+                        </option>
+                    </select>
+                </div>
 
                 {{-- filtros entidade principal --}}
                 <div>
@@ -67,7 +83,7 @@
 
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Gestor</label>
-                    <select class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm"
+                    <select class="w-[150px] md:w-[140px] rounded-xl border-gray-200 shadow-sm"
                             name="gestor_select" id="select-gestor" data-tipo="gestor">
                         <option value="">--Gestor--</option>
                         @foreach ($gestores as $ges)
@@ -94,7 +110,7 @@
                 {{-- filtros adicionais --}}
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Despesas Adicionais</label>
-                    <select name="advogado_id" class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm">
+                    <select name="advogado_id" class="w-[150px] md:w-[140px] rounded-xl border-gray-200 shadow-sm">
                         <option value="">--Todos--</option>
                         @foreach ($advogados as $a)
                             <option value="{{ $a->id }}" @selected((int)($advogadoId ?? 0)===$a->id)>{{ $a->nome }}</option>
@@ -126,7 +142,7 @@
 
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Cidade</label>
-                    <select name="cidade_id" class="w-[150px] md:w-[180px] rounded-xl border-gray-200 shadow-sm">
+                    <select name="cidade_id" class="w-[150px] md:w-[140px] rounded-xl border-gray-200 shadow-sm">
                         <option value="">--Todas--</option>
                         @foreach ($cidadesOptions as $c)
                             <option value="{{ $c->id }}" @selected((int)($cidadeId ?? 0)===$c->id)>{{ $c->name }}</option>
@@ -151,7 +167,7 @@
                     Aplicar
                 </button>
 
-                @if($dataInicio || $dataFim || $filtroTipo || $filtroId || $statusFiltro || $advogadoId || $diretorId || $cidadeId || ($ufSelecionada ?? false))
+                @if($dataInicio || $dataFim || $filtroTipo || $filtroId || $statusFiltro || $advogadoId || $diretorId || $cidadeId || ($ufSelecionada ?? false) || ($tipoRelatorio ?? '') )
                     <a href="{{ route('admin.relatorios.index') }}" class="px-2 py-2 text-sm text-blue-700 hover:underline">
                         Limpar
                     </a>
@@ -162,6 +178,9 @@
         {{-- chips --}}
         <div class="px-4">
             <div class="flex flex-wrap gap-2 text-xs">
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
+                    Tipo: <strong class="ml-1">{{ $tipoRelatorio === 'financeiro' ? 'Financeiro' : 'Geral' }}</strong>
+                </span>
                 @if($statusFiltro)
                     <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gray-100 border text-gray-700">
                         Status: <strong class="ml-1">{{ str_replace('_',' ', $statusFiltro) }}</strong>
@@ -216,6 +235,7 @@
                     <table class="min-w-full text-sm">
                         <thead class="bg-gray-50 text-gray-700 sticky top-0 z-10">
                             <tr>
+                                
                                 <th class="px-4 py-3 text-left"># Nota</th>
                                 <th class="px-4 py-3 text-left">Pedido</th>
                                 <th class="px-4 py-3 text-left">Cliente</th>

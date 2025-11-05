@@ -24,7 +24,7 @@
                 </x-nav-link>
 
               <x-nav-link href="{{ route('admin.relatorios.index') }}" :active="request()->routeIs('admin.pedidos.*')">
-                    {{ __('Relatorios Financeiros') }}
+                    {{ __('Relatorios') }}
                 </x-nav-link>
             
 

@@ -2,7 +2,12 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Relatório Financeiro</title>
+    @php
+        $tituloPdf = (isset($tipoRelatorio) && $tipoRelatorio === 'financeiro')
+            ? 'Relatório Financeiro'
+            : 'Relatório Geral';
+    @endphp
+    <title>{{ $tituloPdf }}</title>
     <style>
         /* Margens padrão (header está no fluxo) */
         @page { margin: 36px 36px 90px 36px; }
@@ -37,6 +42,14 @@
         .tbl tbody td { padding:6px; border-bottom:1px solid #f1f5f9; vertical-align:top; font-size:10.5px; }
         .tbl tbody tr:nth-child(2n) td { background:#fafafa; }
         .tbl tfoot td { padding:6px; border-top:1px solid #e2e8f0; background:#f8fafc; font-weight:700; font-size:10.5px; }
+
+
+        .badge { display:inline-block; padding:0 5px; border-radius:8px; font-weight:600; font-size:10px; line-height:1.2; border:1px solid transparent; text-transform:uppercase; letter-spacing:0.3px; }
+.badge-pago { background:#86efac; color:#065f46; border-color:#16a34a; }
+.badge-parcial { background:#fde047; color:#854d0e; border-color:#ca8a04; }
+.badge-aguardando { background:#fca5a5; color:#7f1d1d; border-color:#dc2626; }
+.badge-default { background:#e5e7eb; color:#374151; border-color:#9ca3af; }
+
 
         thead { display: table-header-group; }
         tfoot { display: table-row-group; }
@@ -96,7 +109,7 @@
         <table class="brand">
             <tr>
                 <td style="width:55%;">
-                    <span class="title">Relatório Financeiro</span>
+                    <span class="title">{{ $tituloPdf }}</span>
                 </td>
                 <td style="width:45%; text-align:right; font-size:10.5px; line-height:1.4;">
                     @if(!empty($dataInicio) && !empty($dataFim))
@@ -138,6 +151,7 @@
     <table class="tbl">
         <thead>
             <tr>
+                <th class="w-nota nowrap">Pedido</th>
                 <th class="w-nota nowrap">Nota</th>
                 <th class="w-cliente wrap">Cliente</th>
                 <th class="w-gestor wrap">Gestor</th>
@@ -145,6 +159,7 @@
                 <th class="w-cidades wrap">Cidade</th>
                 <th class="w-data nowrap">Emitida</th>
                 <th class="w-data nowrap">Faturada</th>
+                <th class="w-data nowrap">Status</th>
                 <th class="w-valor right nowrap">Valor</th>
                 <th class="w-liquido right nowrap">Pago (Liq.)</th>
             </tr>
@@ -166,6 +181,7 @@
                     $cidadesStr = $pedido && $pedido->cidades ? $pedido->cidades->pluck('name')->join(', ') : '—';
                 @endphp
                 <tr>
+                    <td class="nowrap">#{{ $pedido->id }}</td>
                     <td class="nowrap">#{{ $n->id }}</td>
                     <td class="wrap">{{ $pedido->cliente->razao_social ?? '—' }}</td>
                     <td class="wrap">{{ $pedido->gestor->razao_social ?? '—' }}</td>
@@ -173,6 +189,20 @@
                     <td class="wrap">{{ $cidadesStr }}</td>
                     <td class="nowrap">{{ $n->emitida_em ? \Carbon\Carbon::parse($n->emitida_em)->format('d/m/Y') : '—' }}</td>
                     <td class="nowrap">{{ $n->faturada_em ? \Carbon\Carbon::parse($n->faturada_em)->format('d/m/Y') : '—' }}</td>
+                    <td class="nowrap">
+                    @php
+                    $statusRaw = trim((string)$n->status_financeiro);
+                    $status = mb_strtolower($statusRaw,'UTF-8');
+                    [$key,$label] = match(true){
+                    str_starts_with($status,'pago_parcial') => ['parcial','parcial'],
+                    $status === 'pago' => ['pago','Pago'],
+                    str_starts_with($status,'aguardando') => ['aguardando','pendente'],
+                    default => ['default','—'],
+                    };
+                    @endphp
+                    <span class="badge badge-{{ $key }}">{{ $label }}</span>
+                    </td>
+
                     <td class="right nowrap">{{ moeda_br_pdf($n->valor_total ?? 0) }}</td>
                     <td class="right nowrap">{{ moeda_br_pdf($liquido) }}</td>
                 </tr>

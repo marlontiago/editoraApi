@@ -9,21 +9,39 @@ return new class extends Migration {
     {
         Schema::create('produtos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('colecao_id')->nullable()->constrained('colecoes')->onDelete('set null');
+
+            // FK opcional para coleções (se apagar a coleção, zera o campo)
+            $table->foreignId('colecao_id')
+                ->nullable()
+                ->constrained('colecoes')
+                ->nullOnDelete();
+
+            // Dados principais
+            $table->string('titulo')->nullable();          // Controller valida como required na criação
             $table->text('descricao')->nullable();
-            $table->decimal('preco', 10, 2)->nullable();
-            $table->string('imagem')->nullable();
-            $table->integer('quantidade_estoque')->nullable();
-            $table->integer('quantidade_por_caixa')->default(1);
-            $table->string('titulo')->nullable();
-            $table->string('isbn')->nullable();
+            $table->string('isbn')->nullable()->index();   // opcional, index para busca
             $table->string('autores')->nullable();
             $table->string('edicao')->nullable();
-            $table->year('ano')->nullable();
+            $table->year('ano')->nullable();               // mapeado como smallint/int pelo Laravel
             $table->integer('numero_paginas')->nullable();
-            $table->decimal('peso', 8, 3)->nullable(); // Ex: 0.450 (kg)
-            $table->enum('ano_escolar', ['Ens Inf', 'Fund 1', 'Fund 2', 'EM'])->nullable();            
+
+            // Atributos comerciais/logísticos
+            $table->decimal('preco', 10, 2)->nullable();
+            $table->decimal('peso', 8, 3)->nullable();     // ex.: 0.450 (kg)
+            $table->integer('quantidade_estoque')->nullable();
+            $table->integer('quantidade_por_caixa')->default(1);
+
+            // Escolaridade (seu enum original)
+            $table->enum('ano_escolar', ['Ens Inf', 'Fund 1', 'Fund 2', 'EM'])->nullable();
+
+            // Mídia
+            $table->string('imagem')->nullable();
+
             $table->timestamps();
+            $table->softDeletes();
+
+            // Índices úteis
+            $table->index('titulo');
         });
     }
 

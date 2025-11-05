@@ -22,6 +22,7 @@
         @php
             $statusMap = [
                 'em_andamento' => ['Em andamento', 'bg-yellow-100 text-yellow-800 border-yellow-200'],
+                'pre_aprovado' => ['Pré-aprovado',  'bg-sky-100 text-sky-800 border-sky-200'],
                 'finalizado'   => ['Finalizado',   'bg-green-100 text-green-800 border-green-200'],
                 'cancelado'    => ['Cancelado',    'bg-red-100 text-red-800 border-red-200'],
             ];
@@ -55,7 +56,6 @@
             }
         @endphp
 
-
         {{-- Ações --}}
         <div class="flex flex-wrap gap-3">
             <a href="{{ route('admin.pedidos.index') }}"
@@ -63,10 +63,12 @@
                 ← Voltar
             </a>
 
-            <a href="{{ route('admin.pedidos.edit', $pedido) }}"
-               class="inline-flex items-center px-4 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600">
-                Editar
-            </a>
+            @if($pedido->status !== 'cancelado' && $pedido->status !== 'finalizado')
+                <a href="{{ route('admin.pedidos.edit', $pedido) }}"
+                class="inline-flex items-center px-4 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600">
+                    Editar
+                </a>
+            @endif
 
             <a href="{{ route('admin.pedidos.exportar', ['pedido' => $pedido->id, 'tipo' => 'relatorio']) }}"
                class="inline-flex items-center px-4 py-2 rounded-md bg-gray-700 text-white hover:bg-gray-800">
@@ -85,42 +87,45 @@
 @endif
 
             {{-- Botões de Nota Fiscal --}}
-            @if(!empty($temNotaFaturada) && $temNotaFaturada)
-                {{-- Já faturada: não mostrar mais "Emitir" --}}
-                <span class="inline-flex items-center px-3 py-2 rounded-md bg-green-100 text-green-800 border border-green-200">
-                    Nota faturada
-                </span>
+@if($pedido->status !== 'cancelado')
+    @if(!empty($temNotaFaturada) && $temNotaFaturada)
+        {{-- Já faturada: não mostrar mais "Emitir" --}}
+        <span class="inline-flex items-center px-3 py-2 rounded-md bg-green-100 text-green-800 border border-green-200">
+            Nota faturada
+        </span>
 
-            @elseif(!empty($notaEmitida))
-                {{-- Existe nota emitida (ainda não faturada) --}}
-                <form action="{{ route('admin.notas.faturar', $notaEmitida) }}" method="POST"
-                      onsubmit="return confirm('Faturar nota? Isto baixará o estoque.');">
-                    @csrf
-                    <button class="inline-flex items-center px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
-                        Faturar Nota
-                    </button>
-                </form>
+    @elseif(!empty($notaEmitida))
+        {{-- Existe nota emitida (ainda não faturada) --}}
+        <form action="{{ route('admin.notas.faturar', $notaEmitida) }}" method="POST"
+              onsubmit="return confirm('Faturar nota? Isto baixará o estoque.');">
+            @csrf
+            <button class="inline-flex items-center px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                Faturar Nota
+            </button>
+        </form>
 
-                <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
-                      onsubmit="return confirm('Emitir NOVA nota com os dados atuais do pedido? A nota emitida será cancelada.');">
-                    @csrf
-                    <input type="hidden" name="substituir" value="1">
-                    <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                        Emitir Nova Nota
-                    </button>
-                </form>
+        <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
+              onsubmit="return confirm('Emitir NOVA nota com os dados atuais do pedido? A nota emitida será cancelada.');">
+            @csrf
+            <input type="hidden" name="substituir" value="1">
+            <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                Emitir Nova Nota
+            </button>
+        </form>
 
-            @else
-                {{-- Ainda não existe nota --}}
-                <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
-                      onsubmit="return confirm('Emitir nota interna para este pedido?');">
-                    @csrf
-                    <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                        Emitir Nota
-                    </button>
-                </form>
-            @endif
-        </div> {{-- <<< FECHA o bloco de ações corretamente --}}
+    @else
+        {{-- Ainda não existe nota --}}
+        <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
+              onsubmit="return confirm('Emitir nota interna para este pedido?');">
+            @csrf
+            <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                Emitir Nota
+            </button>
+        </form>
+    @endif
+@endif
+</div>
+
 
         {{-- Informações principais --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
@@ -242,7 +247,7 @@
                                 $caixas       = (int) ($produto->pivot->caixas ?? 0);
                             @endphp
                             <tr class="border-t">
-                                <td class="px-4 py-2">{{ $produto->nome }}</td>
+                                <td class="px-4 py-2">{{ $produto->titulo }}</td>
                                 <td class="px-4 py-2 text-center">{{ $qtd }}</td>
                                 <td class="px-4 py-2 text-right">R$ {{ number_format($precoUnit, 2, ',', '.') }}</td>
                                 <td class="px-4 py-2 text-right">{{ number_format($percDesc, 2, ',', '.') }}%</td>

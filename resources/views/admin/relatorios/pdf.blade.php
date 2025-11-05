@@ -45,10 +45,12 @@
 
 
         .badge { display:inline-block; padding:0 5px; border-radius:8px; font-weight:600; font-size:10px; line-height:1.2; border:1px solid transparent; text-transform:uppercase; letter-spacing:0.3px; }
-.badge-pago { background:#86efac; color:#065f46; border-color:#16a34a; }
-.badge-parcial { background:#fde047; color:#854d0e; border-color:#ca8a04; }
-.badge-aguardando { background:#fca5a5; color:#7f1d1d; border-color:#dc2626; }
-.badge-default { background:#e5e7eb; color:#374151; border-color:#9ca3af; }
+        .badge-pago { background:#86efac; color:#065f46; border-color:#16a34a; }
+        .badge-parcial { background:#fde047; color:#854d0e; border-color:#ca8a04; }
+        .badge-aguardando { background:#fca5a5; color:#7f1d1d; border-color:#dc2626; }
+        .badge-default { background:#e5e7eb; color:#374151; border-color:#9ca3af; }
+        .badge-remessa { background:#e0e7ff; color:#3730a3; border-color:#6366f1; }  /* indigo */
+        .badge-brinde  { background:#fae8ff; color:#701a75; border-color:#d946ef; } 
 
 
         thead { display: table-header-group; }
@@ -191,14 +193,18 @@
                     <td class="nowrap">{{ $n->faturada_em ? \Carbon\Carbon::parse($n->faturada_em)->format('d/m/Y') : '—' }}</td>
                     <td class="nowrap">
                     @php
-                    $statusRaw = trim((string)$n->status_financeiro);
-                    $status = mb_strtolower($statusRaw,'UTF-8');
-                    [$key,$label] = match(true){
-                    str_starts_with($status,'pago_parcial') => ['parcial','parcial'],
-                    $status === 'pago' => ['pago','Pago'],
-                    str_starts_with($status,'aguardando') => ['aguardando','pendente'],
-                    default => ['default','—'],
-                    };
+                        $statusRaw = trim((string) $n->status_financeiro);
+                        $status = mb_strtolower($statusRaw, 'UTF-8');
+
+                        // mapeia para a chave da classe CSS e rótulo do badge
+                        [$key, $label] = match (true) {
+                            $status === 'pago'                        => ['pago',     'Pago'],
+                            str_starts_with($status, 'pago_parcial')  => ['parcial',  'Pago parc.'],
+                            $status === 'simples_remessa'             => ['remessa',  'Simp. remessa'],
+                            $status === 'brinde'                      => ['brinde',   'Brinde'],
+                            str_starts_with($status, 'aguardando')    => ['aguardando','Aguardando pagamento'],
+                            default                                   => ['default',  '—'],
+                        };
                     @endphp
                     <span class="badge badge-{{ $key }}">{{ $label }}</span>
                     </td>

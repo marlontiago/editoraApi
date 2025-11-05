@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema; 
+use Illuminate\Validation\Rule;
 
 class GestorController extends Controller
 {
@@ -91,7 +92,7 @@ class GestorController extends Controller
             'estados_uf.*'        => ['in:AC,AL,AP,AM,BA,CE,DF,ES,GO,MA,MT,MS,MG,PA,PB,PR,PE,PI,RJ,RN,RS,RO,RR,SC,SP,SE,TO'],
 
             // e-mail/senha do USER (acesso)
-            'email'               => ['nullable','email','max:255'],
+            'email'               => ['nullable','email','max:255','unique:users,email'],
             'password'            => ['nullable','string','min:8'],
 
             // Endereço principal
@@ -130,11 +131,11 @@ class GestorController extends Controller
             // Contatos
             'contatos'                 => ['nullable','array'],
             'contratos.*.cidade_id' => [
-    'exclude_unless:contratos.*.tipo,contrato_cidade',
-    'required_if:contratos.*.tipo,contrato_cidade',
-    'integer',
-    'exists:cities,id',
-],
+            'exclude_unless:contratos.*.tipo,contrato_cidade',
+            'required_if:contratos.*.tipo,contrato_cidade',
+            'integer',
+            'exists:cities,id',
+        ],
             'contatos.*.nome'          => ['required_with:contatos.*.tipo,contatos.*.email,contatos.*.telefone,contatos.*.whatsapp','string','max:255'],
             'contatos.*.email'         => ['nullable','email','max:255'],
             'contatos.*.telefone'      => ['nullable','string','max:30'],

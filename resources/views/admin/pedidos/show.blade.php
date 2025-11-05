@@ -168,7 +168,7 @@
             @csrf
             <input type="hidden" name="substituir" value="1">
             <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                Emitir Nova Nota
+                Nova Pré Visualização de Nota
             </button>
         </form>
 
@@ -178,7 +178,7 @@
               onsubmit="return confirm('Emitir nota interna para este pedido?');">
             @csrf
             <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                Emitir Nota
+               Pré Visualização de Nota
             </button>
         </form>
     @endif

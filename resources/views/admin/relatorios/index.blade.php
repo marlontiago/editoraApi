@@ -12,6 +12,7 @@
         $classesMap = [
             // Financeiro
             'aguardando_pagamento' => 'bg-amber-100 text-amber-800 border-amber-200',
+            'pre_aprovado'          => 'bg-sky-100 text-sky-800 border-sky-200',
             'pago'                  => 'bg-green-100 text-green-800 border-green-200',
             'pago_parcial'         => 'bg-sky-100 text-sky-800 border-sky-200',
             'simples_remessa'       => 'bg-indigo-100 text-indigo-800 border-indigo-200',
@@ -27,6 +28,8 @@
         $labelMap = [
             'aguardando_pagamento'  => 'Aguardando pagamento',
             'pago'                  => 'Pago',
+            'pago_parcial'          => 'Pago parcial',        
+            'pre_aprovado'          => 'Pré-aprovado',
             'simples_remessa'       => 'Simples remessa',
             'brinde'                => 'Brinde',
             'emitida'               => 'Emitida',

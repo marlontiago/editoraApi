@@ -147,10 +147,13 @@ class ProdutoController extends Controller
         $produtos = $query->paginate($perPage)->withQueryString();
 
          $produtosParaColecao = Produto::orderBy('titulo', 'asc')
-        ->get(['id', 'titulo', 'isbn', 'autores']);
+            ->get(['id', 'titulo', 'isbn', 'autores']);
+            $colecoesResumo = \App\Models\Colecao::withCount('produtos')
+        ->orderBy('nome')
+        ->get(['id','codigo','nome']);
 
         return view('admin.produtos.index', compact(
-            'produtos', 'q', 'sort', 'dir', 'produtosComEstoqueBaixo', 'estoqueParaPedidosEmPotencial', 'produtosParaColecao'
+            'produtos', 'q', 'sort', 'dir', 'produtosComEstoqueBaixo', 'estoqueParaPedidosEmPotencial', 'produtosParaColecao','colecoesResumo'
         ));
     }
 

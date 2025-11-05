@@ -35,4 +35,17 @@ class ColecaoController extends Controller
 
         return back()->with('success', 'Coleção criada e produtos vinculados com sucesso!');
     }
+
+    public function destroy(Colecao $colecao)
+    {
+        DB::transaction(function () use ($colecao) {
+            // Desvincula os produtos desta coleção
+            Produto::where('colecao_id', $colecao->id)->update(['colecao_id' => null]);
+
+            // Exclui a coleção
+            $colecao->delete();
+        });
+
+        return back()->with('success', 'Coleção excluída. Produtos vinculados foram mantidos sem coleção.');
+    }
 }

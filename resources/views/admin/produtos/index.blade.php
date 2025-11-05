@@ -85,116 +85,165 @@
         </button>
 
         {{-- Modal Coleções --}}
-        <div x-show="openColecao" x-transition
-             class="fixed inset-0 z-50 flex items-center justify-center p-4"
-             style="display:none">
-            <div class="absolute inset-0 bg-black/40" @click="openColecao=false"></div>
+<div x-show="openColecao" x-transition
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="display:none">
+    <div class="absolute inset-0 bg-black/40" @click="openColecao=false"></div>
 
-            <div class="relative z-10 w-full max-w-3xl rounded-xl bg-white shadow-xl">
-                <div class="flex items-center justify-between border-b px-5 py-3">
-                    <h3 class="text-lg font-semibold text-gray-800">Criar nova Coleção</h3>
-                    <button class="text-gray-500 hover:text-gray-700" @click="openColecao=false">✕</button>
-                </div>
-
-                <form action="{{ route('admin.colecoes.quickCreate') }}" method="POST" class="p-5"
-                      x-data="colecaoForm()" x-init="init()">
-                    @csrf
-
-                    <div class="grid grid-cols-12 gap-4">
-                        <div class="col-span-12 sm:col-span-4">
-                            <label class="block text-sm font-medium text-gray-700">Código <span class="text-red-500">*</span></label>
-                            <input type="text" name="codigo" x-model="codigo"
-                                   class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                   placeholder="Ex.: COL-2025-01" required>
-                        </div>
-                        <div class="col-span-12 sm:col-span-8">
-                            <label class="block text-sm font-medium text-gray-700">Nome <span class="text-red-500">*</span></label>
-                            <input type="text" name="nome" x-model="nome"
-                                   class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                   placeholder="Ex.: Coleção Matemática Fundamental" required>
-                        </div>
-
-                        <div class="col-span-12">
-                            <div class="flex items-center justify-between">
-                                <label class="block text-sm font-medium text-gray-700">Produtos da coleção</label>
-                                <div class="flex items-center gap-2">
-                                    <input type="text" x-model="busca" placeholder="Filtrar por título/ISBN/autor"
-                                           class="rounded-md border-gray-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    <button type="button" class="text-xs px-2 py-1 rounded border"
-                                            @click="toggleAll(true)">Selecionar todos</button>
-                                    <button type="button" class="text-xs px-2 py-1 rounded border"
-                                            @click="toggleAll(false)">Limpar</button>
-                                </div>
-                            </div>
-
-                            <div class="mt-2 max-h-72 overflow-auto rounded-md border">
-                                {{-- Lista de produtos com checkboxes --}}
-                                <template x-for="p in filtrados()" :key="p.id">
-                                    <label class="flex items-center gap-3 px-3 py-2 border-b last:border-b-0">
-                                        <input type="checkbox" class="rounded border-gray-300"
-                                               :value="p.id" name="produtos[]" x-model="selecionados">
-                                        <div class="flex-1">
-                                            <div class="text-sm font-medium text-gray-800" x-text="p.titulo ?? '—'"></div>
-                                            <div class="text-xs text-gray-500">
-                                                <span x-text="'ISBN: ' + (p.isbn ?? '—')"></span>
-                                                <span class="mx-2">•</span>
-                                                <span x-text="'Autores: ' + (p.autores ?? '—')"></span>
-                                            </div>
-                                        </div>
-                                    </label>
-                                </template>
-
-                                {{-- Caso filtro não encontre nada --}}
-                                <div class="p-4 text-center text-sm text-gray-500" x-show="filtrados().length===0">
-                                    Nenhum produto encontrado para este filtro.
-                                </div>
-                            </div>
-                            <p class="mt-1 text-xs text-gray-500">Você pode criar a coleção sem selecionar produtos agora e vincular depois.</p>
-                        </div>
-                    </div>
-
-                    <div class="mt-5 flex items-center justify-end gap-2 border-t pt-4">
-                        <button type="button" @click="openColecao=false"
-                                class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Cancelar</button>
-                        <button type="submit"
-                                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-                            Salvar Coleção
-                        </button>
-                    </div>
-                </form>
-            </div>
+    <div class="relative z-10 w-full max-w-3xl rounded-xl bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b px-5 py-3">
+            <h3 class="text-lg font-semibold text-gray-800">Gerenciar Coleções</h3>
+            <button class="text-gray-500 hover:text-gray-700" @click="openColecao=false">✕</button>
         </div>
 
-        {{-- Alpine data for the modal --}}
-        <script>
-            function colecaoForm(){
-                return {
-                    codigo: '',
-                    nome: '',
-                    busca: '',
-                    selecionados: [],
-                    // Recebe do backend a lista (veja seção 3)
-                    produtosBase: @json($produtosParaColecao ?? []),
-                    init(){},
-                    filtrados(){
-                        if(!this.busca) return this.produtosBase;
-                        const b = this.busca.toLowerCase();
-                        return this.produtosBase.filter(p => {
-                            return (p.titulo ?? '').toLowerCase().includes(b)
-                                || (p.isbn ?? '').toLowerCase().includes(b)
-                                || (p.autores ?? '').toLowerCase().includes(b);
-                        });
-                    },
-                    toggleAll(on){
-                        if(on){
-                            this.selecionados = this.filtrados().map(p => p.id);
-                        } else {
-                            this.selecionados = [];
-                        }
-                    }
-                }
+        {{-- ==== Criar nova coleção ==== --}}
+        <form action="{{ route('admin.colecoes.quickCreate') }}" method="POST" class="p-5"
+              x-data="colecaoForm()" x-init="init()">
+            @csrf
+
+            <div class="grid grid-cols-12 gap-4">
+                <div class="col-span-12 sm:col-span-4">
+                    <label class="block text-sm font-medium text-gray-700">Código <span class="text-red-500">*</span></label>
+                    <input type="text" name="codigo" x-model="codigo"
+                           class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                           placeholder="Ex.: COL-2025-01" required>
+                </div>
+                <div class="col-span-12 sm:col-span-8">
+                    <label class="block text-sm font-medium text-gray-700">Nome <span class="text-red-500">*</span></label>
+                    <input type="text" name="nome" x-model="nome"
+                           class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                           placeholder="Ex.: Coleção Matemática Fundamental" required>
+                </div>
+
+                <div class="col-span-12">
+                    
+
+                    <div class="mt-2 max-h-72 overflow-auto rounded-md border">
+                        {{-- Lista de produtos com checkboxes --}}
+                        <template x-for="p in filtrados()" :key="p.id">
+                            <label class="flex items-center gap-3 px-3 py-2 border-b last:border-b-0">
+                                <input type="checkbox" class="rounded border-gray-300"
+                                       :value="p.id" name="produtos[]" x-model="selecionados">
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-medium text-gray-800 truncate" x-text="p.titulo ?? '—'"></div>
+                                    <div class="text-xs text-gray-500 truncate">
+                                        <span x-text="'ISBN: ' + (p.isbn ?? '—')"></span>
+                                        <span class="mx-2">•</span>
+                                        <span x-text="'Autores: ' + (p.autores ?? '—')"></span>
+                                    </div>
+                                </div>
+                            </label>
+                        </template>
+
+                        {{-- Caso filtro não encontre nada --}}
+                        <div class="p-4 text-center text-sm text-gray-500" x-show="filtrados().length===0">
+                            Nenhum produto encontrado para este filtro.
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Você pode criar a coleção sem selecionar produtos agora e vincular depois.</p>
+                </div>
+            </div>
+
+            <div class="mt-5 flex items-center justify-end gap-2 border-t pt-4">
+                <button type="button" @click="openColecao=false"
+                        class="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Cancelar</button>
+                <button type="submit"
+                        class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                    Salvar Coleção
+                </button>
+            </div>
+        </form>
+
+        {{-- ==== Coleções existentes ==== --}}
+        <div class="border-t px-5 py-4" x-data="colecoesList()">
+            
+
+            <div class="max-h-56 overflow-auto rounded-md border">
+                <template x-for="c in filtradas()" :key="c.id">
+                    <div class="flex items-center justify-between px-3 py-2 border-b last:border-b-0">
+                        <div class="min-w-0">
+                            <div class="text-sm font-medium text-gray-800 truncate" x-text="c.nome"></div>
+                            <div class="text-xs text-gray-500">
+                                <span x-text="'Código: ' + c.codigo"></span>
+                                <span class="mx-2">•</span>
+                                <span x-text="(c.produtos_count ?? 0) + ' produto(s)'"></span>
+                            </div>
+                        </div>
+
+                        {{-- Excluir --}}
+                        <form :action="routeDestroy(c.id)" method="POST"
+                              onsubmit="return confirm('Excluir esta coleção? Os produtos vinculados ficarão sem coleção.');"
+                              class="shrink-0">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium text-red-700 border-red-200 hover:bg-red-50"
+                                    :disabled="(c.produtos_count ?? 0) > 0 && false">
+                                Excluir
+                            </button>
+                        </form>
+                    </div>
+                </template>
+
+                <div class="p-4 text-center text-sm text-gray-500" x-show="filtradas().length===0">
+                    Nenhuma coleção encontrada para este filtro.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Alpine data para o modal --}}
+<script>
+function colecaoForm(){
+    return {
+        codigo: '',
+        nome: '',
+        busca: '',
+        selecionados: [],
+        // recebe do backend
+        produtosBase: @json($produtosParaColecao ?? []),
+        init(){},
+        filtrados(){
+            if(!this.busca) return this.produtosBase;
+            const b = this.busca.toLowerCase();
+            return this.produtosBase.filter(p => {
+                return (p.titulo ?? '').toLowerCase().includes(b)
+                    || (p.isbn ?? '').toLowerCase().includes(b)
+                    || (p.autores ?? '').toLowerCase().includes(b);
+            });
+        },
+        toggleAll(on){
+            if(on){
+                this.selecionados = this.filtrados().map(p => p.id);
+            } else {
+                this.selecionados = [];
             }
-        </script>
+        }
+    }
+}
+
+function colecoesList(){
+    return {
+        busca: '',
+        colecoes: @json($colecoesResumo ?? []),
+        filtradas(){
+            if(!this.busca) return this.colecoes;
+            const b = this.busca.toLowerCase();
+            return this.colecoes.filter(c =>
+                (c.nome ?? '').toLowerCase().includes(b) ||
+                (c.codigo ?? '').toLowerCase().includes(b)
+            );
+        },
+        routeDestroy(id){
+            // base: /admin/colecoes/0 -> substitui 0 pelo id
+            const base = @json(route('admin.colecoes.destroy', ['colecao' => 0]));
+            return base.replace(/0$/, String(id));
+        }
+    }
+}
+</script>
+
     </div>
 </div>
 

@@ -51,8 +51,8 @@
         
         <div class="mt-4">
             <a href="{{ route('admin.pedidos.create') }}"
-               class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                + Novo Pedido
+               class="inline-block  bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Criar Pedido
             </a>
         </div>
 
@@ -116,8 +116,12 @@
                             <td class="px-4 py-2">{{ $pedido->total_caixas }}</td>
                             <td class="px-4 py-2">{{ number_format($pedido->peso_total, 2, ',', '.') }}</td>
                             <td class="px-4 py-2 capitalize">{{ str_replace('_', ' ', $pedido->status) }}</td>
-                            <td class="px-4 py-2">
-                                <a href="{{ route('admin.pedidos.show', $pedido) }}" class="inline-flex items-center px-4 py-2 rounded-md bg-cyan-400 text-black hover:bg-cyan-900">Ver</a>
+                            <td class="px-4 py-2 text-center">
+                                <a href="{{ route('admin.pedidos.show', $pedido) }}"
+                                class="inline-flex items-center justify-center p-2 rounded-md bg-blue-600 text-white hover:bg-black transition-colors"
+                                title="Ver detalhes do pedido">
+                                    <x-heroicon-o-eye class="w-5 h-5" />
+                                </a>
                             </td>
                         </tr>
                     @empty

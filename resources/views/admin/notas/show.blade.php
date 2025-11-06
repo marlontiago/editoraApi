@@ -29,7 +29,7 @@
                 📄 Exportar PDF
             </a>
 
-            @if ($nota->status === 'faturada')
+            @if ($nota->status_financeiro === 'aguardando_pagamento' || $nota->status_financeiro === 'pago_parcial')
                 <a href="{{ route('admin.notas.pagamentos.create', $nota) }}"
                    class="inline-flex items-center px-3 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
                     Registrar Pagamento
@@ -59,21 +59,24 @@
                 </span>
             @endif
 
-            <div class="flex flex-wrap gap-3">
-            <form action="{{ route('admin.notas.plug.emitir', $nota) }}" method="POST"
-                onsubmit="return confirm('Enviar esta NF para a SEFAZ (PlugNotas)?');">
-                @csrf
-                <button class="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
-                        {{ $nota->plugnotas_id ? 'disabled' : '' }}>
-                    Emitir NF-e (SEFAZ)
-                </button>
-            </form>
+            <div class="flex flex-wrap gap-3">                
+            @if ($nota->status_financeiro === 'aguardando_pagamento')                 
+                <form action="{{ route('admin.notas.plug.emitir', $nota) }}" method="POST"
+                    onsubmit="return confirm('Enviar esta NF para a SEFAZ (PlugNotas)?');">
+                    @csrf
+                    <button class="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                            {{ $nota->plugnotas_id ? 'disabled' : '' }}>
+                        Emitir NF-e (SEFAZ)
+                    </button>
+                </form>
+            
 
             <a href="{{ route('admin.notas.plug.consultar', $nota) }}"
             class="px-4 py-2 rounded-md bg-gray-700 text-white hover:bg-gray-800 {{ $nota->plugnotas_id ? '' : 'pointer-events-none opacity-50' }}">
             Consultar Status
             </a>
 
+            @endif
             @php
                 $pnHasId  = !empty($nota->plugnotas_id);
                 $pnStatus = strtoupper(trim((string) $nota->plugnotas_status));
@@ -276,7 +279,7 @@
                 @endif
             </div>
 
-            @if($nota->status === 'faturada')
+            @if($nota->status_financeiro === 'aguardando_pagamento' || $nota->status_financeiro === 'pago_parcial')
                 <div class="mt-4">
                     <a href="{{ route('admin.notas.pagamentos.create', $nota) }}"
                        class="inline-flex items-center px-3 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">

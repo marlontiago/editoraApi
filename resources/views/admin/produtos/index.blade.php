@@ -81,7 +81,7 @@
         <button type="button"
                 @click="openColecao = true"
                 class="inline-flex h-10 items-center justify-center rounded-md bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-700">
-            Coleções
+            Gerenciar Coleções
         </button>
 
         {{-- Modal Coleções --}}
@@ -312,22 +312,27 @@ function colecoesList(){
 
                             {{-- Ações --}}
                             <td class="px-3 py-2">
-                                <div class="flex items-center justify-center gap-2">
-                                    <a href="{{ route('admin.produtos.edit', $produto) }}"
-                                       class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium text-blue-700 border-blue-200 hover:bg-blue-50">
-                                        Editar
-                                    </a>
-                                    <form action="{{ route('admin.produtos.destroy', $produto) }}" method="POST" class="inline"
-                                          onsubmit="return confirm('Tem certeza que deseja excluir este produto?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                class="inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium text-red-700 border-red-200 hover:bg-red-50">
-                                            Excluir
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
+    <div class="flex items-center justify-center gap-2">
+        {{-- Editar --}}
+        <a href="{{ route('admin.produtos.edit', $produto) }}"
+           class="inline-flex items-center justify-center rounded-md border border-blue-200 p-2 text-blue-700 hover:bg-blue-50"
+           title="Editar">
+            <x-heroicon-o-pencil-square class="w-5 h-5" />
+        </a>
+
+        {{-- Excluir --}}
+        <form action="{{ route('admin.produtos.destroy', $produto) }}" method="POST" class="inline"
+              onsubmit="return confirm('Tem certeza que deseja excluir este produto?');">
+            @csrf
+            @method('DELETE')
+            <button type="submit"
+                    class="inline-flex items-center justify-center rounded-md border border-red-200 p-2 text-red-700 hover:bg-red-50"
+                    title="Excluir">
+                <x-heroicon-o-trash class="w-5 h-5" />
+            </button>
+        </form>
+    </div>
+</td>
                         </tr>
                     @empty
                         <tr>

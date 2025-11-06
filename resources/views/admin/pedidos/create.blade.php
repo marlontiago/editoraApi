@@ -96,12 +96,25 @@
       {{-- Produtos --}}
       <div class="col-span-12">
         <label class="block text-sm font-medium text-gray-700">Produtos</label>
-        <div id="produtos-container" class="space-y-4 mt-2"></div>
 
-        <button type="button" onclick="adicionarProduto()"
-                class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-          + Adicionar Produto
-        </button>
+        <div class="flex items-center gap-2 mt-2">
+          <button type="button" onclick="adicionarProduto()"
+                  class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            + Adicionar Produto
+          </button>
+
+          {{-- NOVO: botão Adicionar Coleção --}}
+          <button type="button" id="btn-add-colecao"
+                  class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+            + Adicionar Coleção
+          </button>
+        </div>
+
+        <div id="produtos-container" class="space-y-4 mt-4"></div>
+        {{-- Aviso quando não houver itens --}}
+        <div id="produtos-empty" class="mt-2 text-sm text-gray-500">
+          Nenhum produto adicionado. Use “Adicionar Produto” ou “Adicionar Coleção”.
+        </div>
       </div>
 
       {{-- Observações --}}
@@ -126,11 +139,60 @@
     </form>
   </div>
 
+  {{-- ===== MODAL: ADICIONAR COLEÇÃO ===== --}}
+  <div id="colecao-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/40" data-close></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="w-full max-w-lg rounded-xl bg-white shadow-xl border">
+        <div class="border-b px-5 py-3">
+          <h3 class="text-lg font-semibold text-gray-800">Adicionar Coleção</h3>
+        </div>
+        <div class="px-5 py-4 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Selecione a coleção</label>
+            <select id="colecao_select"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="">-- Selecione --</option>
+              @foreach(($colecoes ?? []) as $c)
+                <option value="{{ $c->id }}">{{ $c->nome ?? $c->codigo ?? ('Coleção #'.$c->id) }}</option>
+              @endforeach
+            </select>
+          </div>
+
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-6">
+              <label for="colecao_qtd" class="block text-sm font-medium text-gray-700">Quantidade por item</label>
+              <input type="number" id="colecao_qtd" min="1" value="1"
+                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div class="col-span-12 md:col-span-6">
+              <label for="colecao_desc" class="block text-sm font-medium text-gray-700">Desconto (%)</label>
+              <input type="number" id="colecao_desc" min="0" max="100" step="0.01" value="0"
+                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500">
+            Ao confirmar, todos os produtos dessa coleção serão adicionados abaixo usando a quantidade e o desconto informados.
+            Produtos já selecionados não serão duplicados.
+          </p>
+          <div id="colecao-feedback" class="hidden text-sm"></div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-5 py-3 border-t">
+          <button type="button" class="rounded-md border px-4 py-2 text-sm hover:bg-gray-50" data-close>Cancelar</button>
+          <button type="button" id="confirm-add-colecao"
+                  class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+            Adicionar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {{-- ===== DADOS PARA JS ===== --}}
   <script>
     const ALL_PRODUCTS = {!! $produtos->toJson() !!};
-
-    console.log('ALL_PRODUCTS debug:', ALL_PRODUCTS);
+    const ALL_COLECOES = @json($colecoes ?? []);
 
     const OLD_PRODUTOS     = @json(old('produtos', []));
     const OLD_DISTRIBUIDOR = @json(old('distribuidor_id'));
@@ -294,6 +356,10 @@
     }
 
     function adicionarProduto(preset = {}) {
+      // Ao adicionar o primeiro produto, esconde aviso vazio
+      const empty = document.getElementById('produtos-empty');
+      if (empty) empty.classList.add('hidden');
+
       const row = makeProdutoRow(preset);
       container.appendChild(row);
       refreshAllProductSelects();
@@ -325,16 +391,23 @@
         e.target.closest('.produto').remove();
         refreshAllProductSelects();
         calcAll();
+        // Se removeu tudo, volta a mostrar aviso vazio
+        if (container.querySelectorAll('.produto').length === 0) {
+          const empty = document.getElementById('produtos-empty');
+          if (empty) empty.classList.remove('hidden');
+        }
       }
     });
 
     document.addEventListener('DOMContentLoaded', () => {
       if (Array.isArray(OLD_PRODUTOS) && OLD_PRODUTOS.length) {
         OLD_PRODUTOS.forEach(p => adicionarProduto(p));
+        calcAll();
       } else {
-        adicionarProduto();
+        // Não cria linha automática → mantém aviso
+        const empty = document.getElementById('produtos-empty');
+        if (empty) empty.classList.remove('hidden');
       }
-      calcAll();
     });
   </script>
 
@@ -488,6 +561,94 @@
       } else {
         resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
       }
+    });
+  </script>
+
+  {{-- ===== LÓGICA: ADICIONAR COLEÇÃO ===== --}}
+  <script>
+    const modalColecao = document.getElementById('colecao-modal');
+    const btnAbrirColecao = document.getElementById('btn-add-colecao');
+    const btnConfirmColecao = document.getElementById('confirm-add-colecao');
+    const colecaoSelect = document.getElementById('colecao_select');
+    const colecaoFeedback = document.getElementById('colecao-feedback');
+    const colecaoQtd = document.getElementById('colecao_qtd');
+    const colecaoDesc = document.getElementById('colecao_desc');
+
+    function openColecaoModal() {
+      modalColecao.classList.remove('hidden');
+      // reset básico
+      colecaoFeedback.classList.add('hidden');
+      colecaoFeedback.textContent = '';
+      colecaoFeedback.className = 'hidden text-sm';
+    }
+    function closeColecaoModal() {
+      modalColecao.classList.add('hidden');
+      colecaoFeedback.classList.add('hidden');
+      colecaoFeedback.textContent = '';
+      colecaoFeedback.className = 'hidden text-sm';
+      // mantemos qtd/desc para uso consecutivo; só resetamos a seleção
+      colecaoSelect.value = '';
+    }
+
+    modalColecao.addEventListener('click', (e) => {
+      if (e.target.hasAttribute('data-close')) closeColecaoModal();
+    });
+
+    document.querySelectorAll('#colecao-modal [data-close]').forEach(btn => {
+      btn.addEventListener('click', closeColecaoModal);
+    });
+
+    btnAbrirColecao.addEventListener('click', openColecaoModal);
+
+    function getColecaoNomeById(id) {
+      const c = (ALL_COLECOES || []).find(cc => String(cc.id) === String(id));
+      return c ? (c.nome || c.codigo || c.titulo || `Coleção #${c.id}`) : `Coleção #${id}`;
+    }
+
+    function produtosDaColecao(colecaoId) {
+      return ALL_PRODUCTS.filter(p => String(p.colecao_id || '') === String(colecaoId));
+    }
+
+    btnConfirmColecao.addEventListener('click', () => {
+      const cid = colecaoSelect.value;
+      if (!cid) {
+        colecaoFeedback.className = 'text-sm text-red-600';
+        colecaoFeedback.textContent = 'Selecione uma coleção.';
+        colecaoFeedback.classList.remove('hidden');
+        return;
+      }
+
+      const qtd = Math.max(1, parseInt(colecaoQtd.value || '1', 10));
+      const desc = Math.max(0, Math.min(100, parseFloat(colecaoDesc.value || '0')));
+
+      const jaSelecionados = new Set(getSelectedProductIds().map(String));
+      const lista = produtosDaColecao(cid);
+
+      let adicionados = 0;
+      lista.forEach(p => {
+        const pid = String(p.id);
+        if (!jaSelecionados.has(pid)) {
+          adicionarProduto({ id: p.id, quantidade: qtd, desconto: desc });
+          jaSelecionados.add(pid);
+          adicionados++;
+        }
+      });
+
+      refreshAllProductSelects();
+      calcAll();
+
+      if (adicionados === 0) {
+        colecaoFeedback.className = 'text-sm text-amber-600';
+        colecaoFeedback.textContent = 'Todos os produtos desta coleção já estão adicionados.';
+        colecaoFeedback.classList.remove('hidden');
+        return;
+      }
+
+      colecaoFeedback.className = 'text-sm text-green-700';
+      colecaoFeedback.textContent = `${adicionados} produto(s) adicionados de "${getColecaoNomeById(cid)}" (qtd ${qtd}, desc ${desc}%).`;
+      colecaoFeedback.classList.remove('hidden');
+
+      setTimeout(closeColecaoModal, 700);
     });
   </script>
 </x-app-layout>

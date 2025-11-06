@@ -17,6 +17,7 @@ use Illuminate\Validation\Rule;
 use App\Models\NotaFiscal;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use App\Models\Colecao;
 
 class PedidoController extends Controller
 {
@@ -49,17 +50,24 @@ class PedidoController extends Controller
         $distribuidores = Distribuidor::with('user')->orderBy('razao_social')->get();
 
         // Seleciona apenas colunas existentes
-        $produtos = Produto::select('id', 'titulo', 'preco', 'imagem')
+        $produtos = Produto::select('id', 'titulo', 'preco', 'imagem','colecao_id')
             ->orderBy('titulo')
             ->get()
             ->map(fn ($p) => [
                 'id'     => $p->id,
                 'titulo' => $p->titulo,
                 'preco'  => (float) ($p->preco ?? 0),
-                'imagem' => $p->imagem_url, // usa o accessor
+                'imagem' => $p->imagem_url,
+                'colecao_id' => $p->colecao_id,
             ])
             ->values();
 
+            $colecoes = Colecao::select('id', 'nome', 'codigo')
+    ->whereHas('produtos')
+    ->orderByRaw("CASE WHEN nome IS NULL OR nome = '' THEN 1 ELSE 0 END") // nome vazia vai pro final
+    ->orderBy('nome')
+    ->orderBy('codigo')
+    ->get();
         $cidades   = City::orderBy('name')->get();
         $clientes  = Cliente::orderBy('razao_social')->get();
         $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
@@ -70,7 +78,8 @@ class PedidoController extends Controller
             'gestores',
             'distribuidores',
             'clientes',
-            'cidadesUF'
+            'cidadesUF',
+            'colecoes',
         ));
     }
 

@@ -118,7 +118,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get ('notas/{nota}/plugnotas/xml',       [NotaFiscalPlugBridgeController::class, 'xml'])->name('notas.plug.xml');
 
     Route::post('colecoes/quick-create', [ColecaoController::class, 'quickCreate'])->name('colecoes.quickCreate')->middleware(['auth']);
-    Route::delete('colecoes/{colecao}', [ColecaoController::class, 'destroy'])->name('colecoes.destroy')->middleware(['auth']);
+    Route::delete('colecoes/{colecao}',  [ColecaoController::class, 'destroy'])->name('colecoes.destroy')->middleware(['auth']);
 });
 
 Route::post('/notas/{nota}/emitir',   [NotaFiscalPlugNotasController::class, 'emitir'])->name('notas.emitir');

@@ -56,6 +56,12 @@
                         ?? [ucfirst(str_replace('_',' ',$finKey)), 'bg-gray-100 text-gray-800 border-gray-200'];
                 }
             }
+
+            // -------- NOVO: detectar se a PRÉVIA (nota emitida) está desatualizada em relação ao pedido
+            // Usa $notaEmitida, que você já usa no bloco de botões. Considera emitida_em (ou updated_at) como referência.
+            $notaEmitidaEm = optional($notaEmitida)->emitida_em ?? optional($notaEmitida)->updated_at;
+            $notaDesatualizada = $notaEmitida && $pedido->updated_at && $notaEmitidaEm && $pedido->updated_at->gt($notaEmitidaEm);
+            // -------------------------------------------------------------------------
         @endphp
 
         {{-- Ações --}}
@@ -67,7 +73,7 @@
 
             @if($pedido->status !== 'cancelado' && $pedido->status !== 'finalizado')
                 <a href="{{ route('admin.pedidos.edit', $pedido) }}"
-                class="inline-flex items-center px-4 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600">
+                   class="inline-flex items-center px-4 py-2 rounded-md bg-yellow-500 text-white hover:bg-yellow-600">
                     Editar
                 </a>
             @endif
@@ -81,110 +87,128 @@
                class="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">
                 Exportar Orçamento
             </a>
+
             @if($notaAtual)
-    <a href="{{ route('admin.notas.show', ['nota' => $notaAtual]) }}"
-       class="inline-flex items-center px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">
-        Ver Nota
-    </a>
-@endif
+                <a href="{{ route('admin.notas.show', ['nota' => $notaAtual]) }}"
+                   class="inline-flex items-center px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">
+                    Ver Nota
+                </a>
+            @endif
 
             {{-- Botões de Nota Fiscal --}}
-@if($pedido->status !== 'cancelado')
-    @if(!empty($temNotaFaturada) && $temNotaFaturada)
-        {{-- Já faturada: não mostrar mais "Emitir" --}}
-        <span class="inline-flex items-center px-3 py-2 rounded-md bg-green-100 text-green-800 border border-green-200">
-            Nota faturada
-        </span>
+            @if($pedido->status !== 'cancelado')
+                @if(!empty($temNotaFaturada) && $temNotaFaturada)
+                    {{-- Já faturada: não mostrar mais "Emitir" --}}
+                    <span class="inline-flex items-center px-3 py-2 rounded-md bg-green-100 text-green-800 border border-green-200">
+                        Nota faturada
+                    </span>
 
-    @elseif(!empty($notaEmitida))
-        {{-- Existe nota emitida (ainda não faturada) --}}
-        {{-- ===== Faturar com Modal de Tipo ===== --}}
-<div x-data="{ openFat:false, modo:'normal' }">
-    <button type="button"
-            @click="openFat = true; modo = 'normal';"
-            class="inline-flex items-center px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
-        Faturar Nota
-    </button>
-
-    {{-- Modal --}}
-    <div x-show="openFat" x-cloak
-         class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {{-- backdrop --}}
-        <div class="absolute inset-0 bg-black/40" @click="openFat=false"></div>
-
-        {{-- card --}}
-        <div class="relative bg-white w-full max-w-md rounded-xl shadow-lg border border-gray-200">
-            <div class="p-4 border-b">
-                <h4 class="text-lg font-semibold text-gray-800">Tipo de faturamento</h4>
-                <p class="text-sm text-gray-600 mt-1">Escolha como essa nota será faturada.</p>
-            </div>
-
-            <form method="POST" action="{{ route('admin.notas.faturar', $notaEmitida) }}" class="p-4 space-y-4">
-                @csrf
-                <div class="space-y-2">
-                    <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="modo_faturamento" value="normal" x-model="modo" class="mt-1">
-                        <div>
-                            <div class="font-medium text-gray-900">Normal</div>
-                            <div class="text-sm text-gray-600">Baixa o estoque e define financeiro para <strong>aguardando_pagamento</strong> (fluxo atual).</div>
+                @elseif(!empty($notaEmitida))
+                    {{-- Existe nota emitida (ainda não faturada) --}}
+                    @if($notaDesatualizada)
+                        {{-- PRÉVIA DESATUALIZADA: bloquear faturamento e oferecer reemissão --}}
+                        <div class="inline-flex items-center px-3 py-2 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+                            Para faturar, reemitir pré visualização de nota
                         </div>
-                    </label>
 
-                    <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="modo_faturamento" value="simples_remessa" x-model="modo" class="mt-1">
-                        <div>
-                            <div class="font-medium text-gray-900">Simples Remessa</div>
-                            <div class="text-sm text-gray-600">Não baixa o estoque e define financeiro como <strong>simples_remessa</strong>.</div>
+                        <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
+                              onsubmit="return confirm('Reemitir a PRÉ-VISUALIZAÇÃO com os dados atuais do pedido? A prévia anterior será cancelada.');"
+                              class="inline-block">
+                            @csrf
+                            <input type="hidden" name="substituir" value="1">
+                            <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                                Reemitir Pré-visualização de Nota
+                            </button>
+                        </form>
+                    @else
+                        {{-- PRÉVIA ATUAL: permite faturar --}}
+                        <div x-data="{ openFat:false, modo:'normal' }" class="inline-block">
+                            <button type="button"
+                                    @click="openFat = true; modo = 'normal';"
+                                    class="inline-flex items-center px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                                Faturar Nota
+                            </button>
+
+                            {{-- Modal --}}
+                            <div x-show="openFat" x-cloak
+                                 class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                {{-- backdrop --}}
+                                <div class="absolute inset-0 bg-black/40" @click="openFat=false"></div>
+
+                                {{-- card --}}
+                                <div class="relative bg-white w-full max-w-md rounded-xl shadow-lg border border-gray-200">
+                                    <div class="p-4 border-b">
+                                        <h4 class="text-lg font-semibold text-gray-800">Tipo de faturamento</h4>
+                                        <p class="text-sm text-gray-600 mt-1">Escolha como essa nota será faturada.</p>
+                                    </div>
+
+                                    <form method="POST" action="{{ route('admin.notas.faturar', $notaEmitida) }}" class="p-4 space-y-4">
+                                        @csrf
+                                        <div class="space-y-2">
+                                            <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                                                <input type="radio" name="modo_faturamento" value="normal" x-model="modo" class="mt-1">
+                                                <div>
+                                                    <div class="font-medium text-gray-900">Normal</div>
+                                                    <div class="text-sm text-gray-600">Baixa o estoque e define financeiro para <strong>aguardando_pagamento</strong> (fluxo atual).</div>
+                                                </div>
+                                            </label>
+
+                                            <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                                                <input type="radio" name="modo_faturamento" value="simples_remessa" x-model="modo" class="mt-1">
+                                                <div>
+                                                    <div class="font-medium text-gray-900">Simples Remessa</div>
+                                                    <div class="text-sm text-gray-600">Não baixa o estoque e define financeiro como <strong>simples_remessa</strong>.</div>
+                                                </div>
+                                            </label>
+
+                                            <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
+                                                <input type="radio" name="modo_faturamento" value="brinde" x-model="modo" class="mt-1">
+                                                <div>
+                                                    <div class="font-medium text-gray-900">Brinde</div>
+                                                    <div class="text-sm text-gray-600">Baixa o estoque e define financeiro como <strong>brinde</strong>.</div>
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <div class="flex items-center justify-end gap-2 pt-2 border-t">
+                                            <button type="button"
+                                                    class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                                    @click="openFat=false">
+                                                Cancelar
+                                            </button>
+                                            <button type="submit"
+                                                    class="px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+                                                Confirmar faturamento
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                    </label>
 
-                    <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="modo_faturamento" value="brinde" x-model="modo" class="mt-1">
-                        <div>
-                            <div class="font-medium text-gray-900">Brinde</div>
-                            <div class="text-sm text-gray-600">Baixa o estoque e define financeiro como <strong>brinde</strong>.</div>
-                        </div>
-                    </label>
-                </div>
+                        <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
+                              onsubmit="return confirm('Emitir NOVA pré-visualização com os dados atuais do pedido? A nota emitida será cancelada.');"
+                              class="inline-block">
+                            @csrf
+                            <input type="hidden" name="substituir" value="1">
+                            <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                                Nova Pré-visualização de Nota
+                            </button>
+                        </form>
+                    @endif
 
-                <div class="flex items-center justify-end gap-2 pt-2 border-t">
-                    <button type="button"
-                            class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
-                            @click="openFat=false">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
-                        Confirmar faturamento
-                    </button>
-                </div>
-            </form>
+                @else
+                    {{-- Ainda não existe nota --}}
+                    <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
+                          onsubmit="return confirm('Emitir nota interna para este pedido?');">
+                        @csrf
+                        <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                           Pré Visualização de Nota
+                        </button>
+                    </form>
+                @endif
+            @endif
         </div>
-    </div>
-</div>
-
-        <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
-              onsubmit="return confirm('Emitir NOVA nota com os dados atuais do pedido? A nota emitida será cancelada.');">
-            @csrf
-            <input type="hidden" name="substituir" value="1">
-            <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                Nova Pré Visualização de Nota
-            </button>
-        </form>
-
-    @else
-        {{-- Ainda não existe nota --}}
-        <form action="{{ route('admin.pedidos.emitir-nota', $pedido) }}" method="POST"
-              onsubmit="return confirm('Emitir nota interna para este pedido?');">
-            @csrf
-            <button class="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-               Pré Visualização de Nota
-            </button>
-        </form>
-    @endif
-@endif
-</div>
-
 
         {{-- Informações principais --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
@@ -271,7 +295,7 @@
                     @else
                         -
                     @endif
-                </div>                
+                </div>
             </div>
         </div>
 
@@ -372,15 +396,15 @@
         </div>
 
         {{-- Observações (aparece se houver) --}}
-                @php $obs = trim((string) $pedido->observacoes); @endphp
-                @if($obs !== '')
-                    <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
-                        <strong>Observações</strong>
-                        <div class="mt-1 text-gray-800 whitespace-pre-line">
-                            # {{ $obs }}
-                        </div>
-                    </div>
-                @endif
+        @php $obs = trim((string) $pedido->observacoes); @endphp
+        @if($obs !== '')
+            <div class="bg-white p-6 rounded-lg shadow border border-gray-100">
+                <strong>Observações</strong>
+                <div class="mt-1 text-gray-800 whitespace-pre-line">
+                    # {{ $obs }}
+                </div>
+            </div>
+        @endif
 
         {{-- Linha do tempo --}}
         <div class="bg-white p-6 rounded-lg shadow border border-gray-100">

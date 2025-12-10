@@ -101,22 +101,32 @@
                 <label for="peso" class="block text-sm font-medium text-gray-700">Peso</label>
                 <div class="mt-1 flex rounded-md shadow-sm">
                     <input type="number" step="0.001" id="peso" name="peso" value="{{ old('peso') }}"
-                           class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                        class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                     <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-600">kg</span>
                 </div>
                 @error('peso') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
+            @php
+                // pega a lista do config e o valor atual (old + possível edição futura)
+                $anosEscolares   = config('ano_escolar.opcoes', []);
+                $anoEscolarAtual = old('ano_escolar', isset($produto) ? $produto->ano_escolar : '');
+            @endphp
+
             <div class="col-span-12 md:col-span-8">
-                <label for="ano_escolar" class="block text-sm font-medium text-gray-700">Ano Escolar</label>
+                <label for="ano_escolar" class="block text-sm font-medium text-gray-700">Ano Escolar / Segmento</label>
                 <select id="ano_escolar" name="ano_escolar"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
                     <option value="">Selecione</option>
-                    @foreach (['Ens Inf' => 'Educação Infantil', 'Fund 1' => 'Ens. Fundamental 1', 'Fund 2' => 'Ens. Fundamental 2', 'EM' => 'Ensino Médio'] as $valor => $label)
-                        <option value="{{ $valor }}" @selected(old('ano_escolar') == $valor)>{{ $label }}</option>
+                    @foreach ($anosEscolares as $opcao)
+                        <option value="{{ $opcao }}" {{ $opcao === $anoEscolarAtual ? 'selected' : '' }}>
+                            {{ $opcao }}
+                        </option>
                     @endforeach
                 </select>
                 @error('ano_escolar') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
 
             {{-- Autores --}}
             <div class="col-span-12">

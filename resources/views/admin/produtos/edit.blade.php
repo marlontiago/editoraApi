@@ -134,25 +134,31 @@
 
                     <div class="col-span-12 md:col-span-3">
                         <label for="quantidade_por_caixa" class="block text-sm font-medium text-gray-700">Quantidade por Caixa</label>
-                        <input type="number" id="quantidade_por_caixa" name="quantidade_por_caixa" min="1"
-                               value="{{ old('quantidade_por_caixa', $produto->quantidade_por_caixa ?? 1) }}"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <input type="number" id="quantidade_por_caixa" name="quantidade_por_caixa" 
+                               value="{{ old('quantidade_por_caixa', $produto->quantidade_por_caixa ?? 0) }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                         @error('quantidade_por_caixa') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
+
+                    @php
+                        $anosEscolares   = config('ano_escolar.opcoes', []);
+                        $anoEscolarAtual = old('ano_escolar', $produto->ano_escolar);
+                    @endphp
 
                     <div class="col-span-12 md:col-span-6">
                         <label for="ano_escolar" class="block text-sm font-medium text-gray-700">Ano Escolar</label>
                         <select id="ano_escolar" name="ano_escolar"
                                 class="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Selecione</option>
-                            @foreach (['Ens Inf' => 'Educação Infantil', 'Fund 1' => 'Ens. Fundamental 1', 'Fund 2' => 'Ens. Fundamental 2', 'EM' => 'Ensino Médio'] as $valor => $label)
-                                <option value="{{ $valor }}" {{ (string) old('ano_escolar', $produto->ano_escolar) === (string) $valor ? 'selected' : '' }}>
-                                    {{ $label }}
+                            @foreach ($anosEscolares as $opcao)
+                                <option value="{{ $opcao }}" {{ (string) $anoEscolarAtual === (string) $opcao ? 'selected' : '' }}>
+                                    {{ $opcao }}
                                 </option>
                             @endforeach
                         </select>
                         @error('ano_escolar') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                     </div>
+
 
                     <div class="col-span-12">
                         <label for="descricao" class="block text-sm font-medium text-gray-700">Descrição</label>

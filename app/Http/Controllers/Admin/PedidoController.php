@@ -196,8 +196,16 @@ class PedidoController extends Controller
                 $precoDesc   = $precoUnit * (1 - ($descItem / 100));
                 $subDesc     = $precoDesc * $qtd;
                 $pesoItem    = (float) ($produto->peso ?? 0) * $qtd;
-                $porCaixa    = max(1, (int) $produto->quantidade_por_caixa);
-                $caixas      = (int) ceil($qtd / $porCaixa);
+
+                
+                $porCaixaRaw = (int) $produto->quantidade_por_caixa;
+                if ($porCaixaRaw > 0) {
+                    $porCaixa = $porCaixaRaw;
+                    $caixas   = (int) ceil($qtd / $porCaixa);
+                } else {
+                    $porCaixa = null; 
+                    $caixas   = 0;
+                }
 
                 $pedido->produtos()->attach($produto->id, [
                     'quantidade'           => $qtd,
@@ -214,6 +222,7 @@ class PedidoController extends Controller
                 $valorBruto  += $subBruto;
                 $valorFinal  += $subDesc;
             }
+
 
             $pedido->update([
                 'peso_total'   => $pesoTotal,
@@ -501,8 +510,16 @@ class PedidoController extends Controller
                 $precoDesc = $precoUnit * (1 - ($descItem / 100));
                 $subDesc   = $precoDesc * $qtd;
 
-                $pesoItem  = (float) ($produto->peso ?? 0) * $qtd;
-                $caixas    = (int) ceil($qtd / max(1, (int)$produto->quantidade_por_caixa));
+                $pesoItem = (float) ($produto->peso ?? 0) * $qtd;
+                
+                $porCaixaRaw = (int) $produto->quantidade_por_caixa;
+                if ($porCaixaRaw > 0) {
+                    $porCaixa = $porCaixaRaw;
+                    $caixas   = (int) ceil($qtd / $porCaixa);
+                } else {
+                    $porCaixa = null; 
+                    $caixas   = 0;
+                }
 
                 $sync[$pid] = [
                     'quantidade'           => $qtd,
@@ -513,6 +530,7 @@ class PedidoController extends Controller
                     'peso_total_produto'   => $pesoItem,
                     'caixas'               => $caixas,
                 ];
+
 
                 $pesoTotal   += $pesoItem;
                 $totalCaixas += $caixas;

@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
         CitiesSeeder::class,
         //CitySeeder::class,
         ColecaoSeeder::class,
-        ProdutoSeeder::class,
+        //ProdutoSeeder::class,
         CityVinculosSeeder::class,
         //GestorSeeder::class,
         //DistribuidorSeeder::class,

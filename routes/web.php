@@ -60,6 +60,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::resource('advogados', AdvogadoController::class);
     Route::resource('diretor-comercials', DiretorComercialController::class)->parameters(['diretor-comercials' => 'diretor_comercial']);
 
+    Route::post('produtos/import', [ProdutoController::class, 'import'])
+    ->name('produtos.import');
+
     Route::resource('distribuidores', DistribuidorController::class)->names('distribuidores')->parameters(['distribuidores' => 'distribuidor']);
     Route::get('distribuidores/por-gestor/{gestor}', [DistribuidorController::class, 'porGestor'])->name('distribuidores.por-gestor')->whereNumber('gestor');
     Route::get('/cidades/por-distribuidor/{distribuidor}', [CidadeController::class, 'porDistribuidor'])->name('cidades.por-distribuidor')->whereNumber('distribuidor');

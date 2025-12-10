@@ -72,7 +72,25 @@
         @endif
     </form>
 
+    
+
     <div class="flex items-center gap-2" x-data="{ openColecao:false }">
+
+         <form method="POST"
+              action="{{ route('admin.produtos.import') }}"
+              enctype="multipart/form-data"
+              class="flex items-center gap-2">
+            @csrf
+
+            <label class="inline-flex items-center justify-center rounded-md border text-white border-gray-300 bg-green-600 px-3 h-10 text-sm hover:bg-green-700  cursor-pointer">
+                Importar produtos
+                <input type="file"
+                       name="arquivo"
+                       accept=".xlsx,.xls,.csv"
+                       class="hidden"
+                       onchange="this.form.submit()">
+            </label>
+        </form>
         <a href="{{ route('admin.produtos.create') }}"
            class="inline-flex h-10 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
             Novo Produto

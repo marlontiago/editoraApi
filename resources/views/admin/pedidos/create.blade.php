@@ -142,14 +142,14 @@
   {{-- ===== MODAL: ADICIONAR COLEÇÃO ===== --}}
   <div id="colecao-modal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/40" data-close></div>
-    <div class="absolute inset-0 flex items-center justify-center p-4">
-      <div class="w-full max-w-lg rounded-xl bg-white shadow-xl border">
+    <div class="absolute inset-0 flex items-start justify-center p-4 pt-16 sm:pt-24 overflow-y-auto">
+      <div class="w-full max-w-lg rounded-xl bg-white shadow-xl border max-h-[90vh] overflow-y-auto">
         <div class="border-b px-5 py-3">
           <h3 class="text-lg font-semibold text-gray-800">Adicionar Coleção</h3>
         </div>
         <div class="px-5 py-4 space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700">Selecione a coleção</label>
+            <label class="block text-sm font-medium text-gray-700" for="colecao_select">Selecione a coleção</label>
             <select id="colecao_select"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
               <option value="">-- Selecione --</option>
@@ -189,6 +189,19 @@
     </div>
   </div>
 
+  {{-- ===== OVERLAY GLOBAL DE LOADING ===== --}}
+  <div id="loading-overlay" class="fixed inset-0 z-[9999] hidden">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="bg-white rounded-xl shadow-lg px-6 py-4 flex flex-col items-center gap-3 border">
+        <div class="h-8 w-8 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
+        <p class="text-sm text-gray-700">
+          Adicionando produtos da coleção, aguarde...
+        </p>
+      </div>
+    </div>
+  </div>
+
   {{-- ===== DADOS PARA JS ===== --}}
   <script>
     const ALL_PRODUCTS = {!! $produtos->toJson() !!};
@@ -200,7 +213,8 @@
     const OLD_CIDADE       = @json(old('cidade_id'));
   </script>
 
-  {{-- ===== PRODUTOS (sem duplicados + linha única de infos) ===== --}}
+  {{-- ===== PRODUTOS ===== --}}
+    
   <script>
     let produtoIndex = 0;
     const container = document.getElementById('produtos-container');
@@ -211,10 +225,12 @@
     function getProductById(id) {
       return ALL_PRODUCTS.find(p => String(p.id) === String(id)) || null;
     }
+
     function getSelectedProductIds() {
       return Array.from(container.querySelectorAll('select[name^="produtos["][name$="[id]"]'))
         .map(sel => sel.value).filter(v => v !== '');
     }
+
     function buildOptions(excludeIds = [], selectedId = null) {
       const frag = document.createDocumentFragment();
       frag.append(new Option('-- Selecione --', ''));
@@ -228,6 +244,7 @@
       });
       return frag;
     }
+
     function refreshAllProductSelects() {
       const chosen = getSelectedProductIds();
       const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
@@ -355,15 +372,25 @@
       container.querySelectorAll('.produto').forEach(calcRow);
     }
 
-    function adicionarProduto(preset = {}) {
-      // Ao adicionar o primeiro produto, esconde aviso vazio
+    // BASE: usada tanto pelo clique normal quanto pelo bulk da coleção
+    function adicionarProdutoBase(preset = {}, opts = {}) {
+      const { withCalc = true, withRefresh = true } = opts;
+
       const empty = document.getElementById('produtos-empty');
       if (empty) empty.classList.add('hidden');
 
       const row = makeProdutoRow(preset);
       container.appendChild(row);
-      refreshAllProductSelects();
-      calcRow(row);
+
+      if (withRefresh) refreshAllProductSelects();
+      if (withCalc) calcRow(row);
+
+      return row;
+    }
+
+    // Clique normal em “Adicionar Produto”
+    function adicionarProduto(preset = {}) {
+      return adicionarProdutoBase(preset, { withCalc: true, withRefresh: true });
     }
 
     container.addEventListener('change', (e) => {
@@ -378,6 +405,7 @@
         calcRow(e.target.closest('.produto'));
       }
     });
+
     container.addEventListener('input', (e) => {
       if (
         e.target.matches('input[name^="produtos["][name$="[quantidade]"]') ||
@@ -386,12 +414,12 @@
         calcRow(e.target.closest('.produto'));
       }
     });
+
     container.addEventListener('click', (e) => {
       if (e.target.closest('.remove-row')) {
         e.target.closest('.produto').remove();
         refreshAllProductSelects();
         calcAll();
-        // Se removeu tudo, volta a mostrar aviso vazio
         if (container.querySelectorAll('.produto').length === 0) {
           const empty = document.getElementById('produtos-empty');
           if (empty) empty.classList.remove('hidden');
@@ -404,12 +432,12 @@
         OLD_PRODUTOS.forEach(p => adicionarProduto(p));
         calcAll();
       } else {
-        // Não cria linha automática → mantém aviso
         const empty = document.getElementById('produtos-empty');
         if (empty) empty.classList.remove('hidden');
       }
     });
   </script>
+
 
   {{-- ===== GESTOR / DISTRIBUIDOR / CIDADES ===== --}}
   <script>
@@ -564,29 +592,38 @@
     });
   </script>
 
-  {{-- ===== LÓGICA: ADICIONAR COLEÇÃO ===== --}}
+    {{-- ===== LÓGICA: ADICIONAR COLEÇÃO (usa adicionarProdutoBase sem recalcular a cada item) ===== --}}
   <script>
-    const modalColecao = document.getElementById('colecao-modal');
-    const btnAbrirColecao = document.getElementById('btn-add-colecao');
+    const modalColecao      = document.getElementById('colecao-modal');
+    const btnAbrirColecao   = document.getElementById('btn-add-colecao');
     const btnConfirmColecao = document.getElementById('confirm-add-colecao');
-    const colecaoSelect = document.getElementById('colecao_select');
-    const colecaoFeedback = document.getElementById('colecao-feedback');
-    const colecaoQtd = document.getElementById('colecao_qtd');
-    const colecaoDesc = document.getElementById('colecao_desc');
+    const colecaoSelect     = document.getElementById('colecao_select');
+    const colecaoFeedback   = document.getElementById('colecao-feedback');
+    const colecaoQtd        = document.getElementById('colecao_qtd');
+    const colecaoDesc       = document.getElementById('colecao_desc');
+
+    function showLoading() {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) overlay.classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
 
     function openColecaoModal() {
       modalColecao.classList.remove('hidden');
-      // reset básico
       colecaoFeedback.classList.add('hidden');
       colecaoFeedback.textContent = '';
       colecaoFeedback.className = 'hidden text-sm';
     }
+
     function closeColecaoModal() {
       modalColecao.classList.add('hidden');
       colecaoFeedback.classList.add('hidden');
       colecaoFeedback.textContent = '';
       colecaoFeedback.className = 'hidden text-sm';
-      // mantemos qtd/desc para uso consecutivo; só resetamos a seleção
       colecaoSelect.value = '';
     }
 
@@ -618,37 +655,59 @@
         return;
       }
 
-      const qtd = Math.max(1, parseInt(colecaoQtd.value || '1', 10));
+      const qtd  = Math.max(1, parseInt(colecaoQtd.value || '1', 10));
       const desc = Math.max(0, Math.min(100, parseFloat(colecaoDesc.value || '0')));
 
       const jaSelecionados = new Set(getSelectedProductIds().map(String));
       const lista = produtosDaColecao(cid);
 
-      let adicionados = 0;
-      lista.forEach(p => {
-        const pid = String(p.id);
-        if (!jaSelecionados.has(pid)) {
-          adicionarProduto({ id: p.id, quantidade: qtd, desconto: desc });
-          jaSelecionados.add(pid);
-          adicionados++;
-        }
-      });
-
-      refreshAllProductSelects();
-      calcAll();
-
-      if (adicionados === 0) {
+      if (!lista.length) {
         colecaoFeedback.className = 'text-sm text-amber-600';
-        colecaoFeedback.textContent = 'Todos os produtos desta coleção já estão adicionados.';
+        colecaoFeedback.textContent = 'Nenhum produto encontrado para esta coleção.';
         colecaoFeedback.classList.remove('hidden');
         return;
       }
 
-      colecaoFeedback.className = 'text-sm text-green-700';
-      colecaoFeedback.textContent = `${adicionados} produto(s) adicionados de "${getColecaoNomeById(cid)}" (qtd ${qtd}, desc ${desc}%).`;
-      colecaoFeedback.classList.remove('hidden');
+      btnConfirmColecao.disabled = true;
+      btnConfirmColecao.classList.add('opacity-60', 'cursor-not-allowed');
+      showLoading();
 
-      setTimeout(closeColecaoModal, 700);
+      setTimeout(() => {
+        let adicionados = 0;
+
+        try {
+          lista.forEach(p => {
+            const pid = String(p.id);
+            if (!jaSelecionados.has(pid)) {
+              adicionarProdutoBase(
+                { id: p.id, quantidade: qtd, desconto: desc },
+                { withCalc: false, withRefresh: false }
+              );
+              jaSelecionados.add(pid);
+              adicionados++;
+            }
+          });
+
+          refreshAllProductSelects();
+          calcAll();
+        } catch (e) {
+          console.error('Erro ao adicionar coleção:', e);
+          alert('Ocorreu um erro ao adicionar a coleção. Veja o console do navegador para mais detalhes.');
+        } finally {
+          hideLoading();
+          btnConfirmColecao.disabled = false;
+          btnConfirmColecao.classList.remove('opacity-60', 'cursor-not-allowed');
+          closeColecaoModal();
+        }
+
+        if (adicionados === 0) {
+          alert('Todos os produtos desta coleção já estão adicionados.');
+        } else {
+          console.log(`${adicionados} produto(s) adicionados de "${getColecaoNomeById(cid)}" (qtd ${qtd}, desc ${desc}%).`);
+        }
+      }, 30);
     });
   </script>
+
+
 </x-app-layout>

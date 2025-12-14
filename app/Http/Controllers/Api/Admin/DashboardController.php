@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Api\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Exports\PedidosDashboardExport;
+use App\Http\Controllers\Controller;
 use App\Services\DashboardService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -13,14 +13,31 @@ class DashboardController extends Controller
 {
     public function __construct(private DashboardService $service)
     {
-        $this->middleware(['auth']);
     }
 
+    // GET /api/admin/dashboard
     public function index(Request $request)
     {
         $payload = $this->service->getDashboardPayload($request);
 
-        return view('admin.dashboard', $payload);
+        // Pra API, devolvemos só os dados (sem view):
+        // Converte pedidos paginados para array (inclui links/meta do paginator)
+        $pedidos = $payload['pedidos'];
+
+        $payload['pedidos'] = [
+            'data' => $pedidos->items(),
+            'meta' => [
+                'current_page' => $pedidos->currentPage(),
+                'per_page'     => $pedidos->perPage(),
+                'total'        => $pedidos->total(),
+                'last_page'    => $pedidos->lastPage(),
+            ],
+        ];
+
+        return response()->json([
+            'ok'   => true,
+            'data' => $payload,
+        ]);
     }
 
     public function chartNotasPagas(Request $request)

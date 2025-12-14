@@ -4,21 +4,20 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Advogado;
-use App\Models\User;
+use App\Services\AdvogadoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class AdvogadoController extends Controller
 {
-    public function __construct()
+    public function __construct(private AdvogadoService $service)
     {
         $this->middleware(['auth']);
     }
 
     public function index(Request $request)
     {
-        $advogados = Advogado::paginate(10);
+        $advogados = $this->service->paginateIndex(10);
+
         return view('admin.advogados.index', compact('advogados'));
     }
 
@@ -29,35 +28,9 @@ class AdvogadoController extends Controller
 
     public function store(Request $request)
     {
-        $dados = $request->validate([
-            'nome'              => ['required','string','max:255'],
-            'email'             => ['required','email','max:255'],
-            'telefone'          => ['nullable','string','max:50'],
-            'percentual_vendas' => ['nullable','numeric','between:0,100'],
-            'oab'               => ['required','string','max:50'],
-            'logradouro'        => ['nullable','string','max:255'],
-            'numero'            => ['nullable','string','max:50'],
-            'complemento'       => ['nullable','string','max:255'],
-            'bairro'            => ['nullable','string','max:255'],
-            'cidade'            => ['nullable','string','max:255'],
-            'estado'            => ['nullable','string','max:2'],
-            'cep'               => ['nullable','string','max:20'],
-        ]);
+        $dados = $this->service->validate($request);
 
-        $advogado = null;
-
-        DB::transaction(function () use (&$advogado, $dados) {
-
-            $user = User::create([
-                'name'     => $dados['nome'],
-                'email'    => $dados['email'],
-                'password' => bcrypt(Str::random(12)),
-            ]);
-
-            $dados['user_id'] = $user->id;
-
-            $advogado = Advogado::create($dados);
-        });
+        $advogado = $this->service->create($dados);
 
         return redirect()
             ->route('admin.advogados.show', $advogado)
@@ -76,31 +49,9 @@ class AdvogadoController extends Controller
 
     public function update(Request $request, Advogado $advogado)
     {
-        $dados = $request->validate([
-            'nome'              => ['required','string','max:255'],
-            'email'             => ['required','email','max:255'],
-            'telefone'          => ['nullable','string','max:50'],
-            'percentual_vendas' => ['nullable','numeric','between:0,100'],
-            'oab'               => ['required','string','max:50'],
-            'logradouro'        => ['nullable','string','max:255'],
-            'numero'            => ['nullable','string','max:50'],
-            'complemento'       => ['nullable','string','max:255'],
-            'bairro'            => ['nullable','string','max:255'],
-            'cidade'            => ['nullable','string','max:255'],
-            'estado'            => ['nullable','string','max:2'],
-            'cep'               => ['nullable','string','max:20'],
-        ]);
+        $dados = $this->service->validate($request);
 
-        DB::transaction(function () use ($advogado, $dados) {
-            if ($advogado->user) {
-                $advogado->user->update([
-                    'name'  => $dados['nome'],
-                    'email' => $dados['email'],
-                ]);
-            }
-
-            $advogado->update($dados);
-        });
+        $advogado = $this->service->update($advogado, $dados);
 
         return redirect()
             ->route('admin.advogados.show', $advogado)
@@ -109,7 +60,8 @@ class AdvogadoController extends Controller
 
     public function destroy(Advogado $advogado)
     {
-        $advogado->delete();
+        $this->service->delete($advogado);
+
         return redirect()
             ->route('admin.advogados.index')
             ->with('success', 'Advogado excluído.');

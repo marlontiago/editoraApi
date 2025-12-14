@@ -45,477 +45,21 @@ class GestorController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        // sanitiza contatos vazios (igual seu web)
-        $rawContatos = $request->input('contatos', []);
-        $contatosSan = collect($rawContatos)->filter(function ($c) {
-            return trim($c['nome'] ?? '') !== ''
-                || trim($c['email'] ?? '') !== ''
-                || trim($c['telefone'] ?? '') !== ''
-                || trim($c['whatsapp'] ?? '') !== ''
-                || trim($c['cargo'] ?? '') !== ''
-                || !empty($c['preferencial']);
-        })->values()->all();
-
-        [$telefones, $emails] = $this->normalizePhonesAndEmails(
-            $request->input('telefones', []),
-            $request->input('emails', [])
-        );
-
-        $request->merge([
-            'contatos'  => $contatosSan,
-            'telefones' => $telefones,
-            'emails'    => $emails,
-        ]);
-
-        $data = $request->validate([
-            'razao_social'        => ['nullable','string','max:255'],
-            'cnpj'                => ['nullable','string','max:18'],
-            'representante_legal' => ['nullable','string','max:255'],
-            'cpf'                 => ['nullable','string','max:14'],
-            'rg'                  => ['nullable','string','max:30'],
-
-            'telefones'           => ['nullable','array'],
-            'telefones.*'         => ['nullable','string','max:30'],
-            'emails'              => ['nullable','array'],
-            'emails.*'            => ['nullable','email','max:255'],
-
-            'telefone'            => ['nullable','string','max:20'],
-
-            'estados_uf'          => ['nullable','array'],
-            'estados_uf.*'        => ['in:AC,AL,AP,AM,BA,CE,DF,ES,GO,MA,MT,MS,MG,PA,PB,PR,PE,PI,RJ,RN,RS,RO,RR,SC,SP,SE,TO'],
-
-            'email'               => ['nullable','email','max:255','unique:users,email'],
-            'password'            => ['nullable','string','min:8'],
-
-            'endereco'            => ['nullable','string','max:255'],
-            'numero'              => ['nullable','string','max:20'],
-            'complemento'         => ['nullable','string','max:100'],
-            'bairro'              => ['nullable','string','max:100'],
-            'cidade'              => ['nullable','string','max:100'],
-            'uf'                  => ['nullable','string','size:2'],
-            'cep'                 => ['nullable','string','max:9'],
-
-            'endereco2'           => ['nullable','string','max:255'],
-            'numero2'             => ['nullable','string','max:20'],
-            'complemento2'        => ['nullable','string','max:100'],
-            'bairro2'             => ['nullable','string','max:100'],
-            'cidade2'             => ['nullable','string','max:100'],
-            'uf2'                 => ['nullable','string','size:2'],
-            'cep2'                => ['nullable','string','max:9'],
-
-            'percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
-
-            'contratos'                     => ['nullable','array'],
-            'contratos.*.tipo'              => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro,contrato_cidade'],
-            'contratos.*.cidade_id'         => [
-                'exclude_unless:contratos.*.tipo,contrato_cidade',
-                'required_if:contratos.*.tipo,contrato_cidade',
-                'integer',
-                'exists:cities,id',
-            ],
-            'contratos.*.arquivo'           => ['nullable','file','mimes:pdf','max:5120'],
-            'contratos.*.descricao'         => ['nullable','string','max:255'],
-            'contratos.*.assinado'          => ['nullable','boolean'],
-            'contratos.*.percentual_vendas' => ['nullable','numeric','min:0','max:100'],
-            'contratos.*.ativo'             => ['nullable','boolean'],
-            'contratos.*.data_assinatura'   => ['nullable','date'],
-            'contratos.*.validade_meses'    => ['nullable','integer','min:1','max:120'],
-
-            'contatos'                 => ['nullable','array'],
-            'contatos.*.nome'          => ['required_with:contatos.*.tipo,contatos.*.email,contatos.*.telefone,contatos.*.whatsapp','string','max:255'],
-            'contatos.*.email'         => ['nullable','email','max:255'],
-            'contatos.*.telefone'      => ['nullable','string','max:30'],
-            'contatos.*.whatsapp'      => ['nullable','string','max:30'],
-            'contatos.*.cargo'         => ['nullable','string','max:100'],
-            'contatos.*.tipo'          => ['nullable','in:principal,secundario,financeiro,comercial,outro'],
-            'contatos.*.preferencial'  => ['nullable','boolean'],
-            'contatos.*.observacoes'   => ['nullable','string','max:2000'],
-        ]);
-
-        $preferenciais = collect($data['contatos'] ?? [])->where('preferencial', true)->count();
-        if ($preferenciais > 1) {
-            throw ValidationException::withMessages([
-                'contatos' => 'Selecione no máximo um contato como preferencial.'
-            ]);
-        }
-
-        $temAssinado = false;
-        if (!empty($data['contratos']) && is_array($data['contratos'])) {
-            foreach ($data['contratos'] as $meta) {
-                if (!empty($meta['assinado'])) { $temAssinado = true; break; }
-            }
-        }
-
-        $gestor = DB::transaction(function () use ($data, $request, $temAssinado) {
-
-            $userEmail = trim((string)($data['email'] ?? ''));
-            $userPass  = (string)($data['password'] ?? '');
-
-            if ($userEmail === '') $userEmail = 'gestor+'.Str::uuid().'@placeholder.local';
-            if ($userPass === '')  $userPass  = Str::random(12);
-
-            $user = User::create([
-                'name'     => $data['razao_social'] ?? 'Gestor',
-                'email'    => $userEmail,
-                'password' => Hash::make($userPass),
-            ]);
-
-            if (method_exists($user, 'assignRole')) {
-                $user->assignRole('gestor');
-            }
-
-            $gestor = Gestor::create([
-                'user_id'             => $user->id,
-                'razao_social'        => $data['razao_social'] ?? null,
-                'cnpj'                => $data['cnpj'] ?? null,
-                'representante_legal' => $data['representante_legal'] ?? null,
-                'cpf'                 => $data['cpf'] ?? null,
-                'rg'                  => $data['rg'] ?? null,
-
-                'telefone'            => $data['telefone'] ?? null,
-                'email'               => $data['email'] ?? null,
-
-                'telefones'           => $data['telefones'] ?? null,
-                'emails'              => $data['emails'] ?? null,
-
-                'endereco'            => $data['endereco'] ?? null,
-                'numero'              => $data['numero'] ?? null,
-                'complemento'         => $data['complemento'] ?? null,
-                'bairro'              => $data['bairro'] ?? null,
-                'cidade'              => $data['cidade'] ?? null,
-                'uf'                  => $data['uf'] ?? null,
-                'cep'                 => $data['cep'] ?? null,
-
-                'endereco2'           => $data['endereco2'] ?? null,
-                'numero2'             => $data['numero2'] ?? null,
-                'complemento2'        => $data['complemento2'] ?? null,
-                'bairro2'             => $data['bairro2'] ?? null,
-                'cidade2'             => $data['cidade2'] ?? null,
-                'uf2'                 => $data['uf2'] ?? null,
-                'cep2'                => $data['cep2'] ?? null,
-
-                'percentual_vendas'   => $data['percentual_vendas'] ?? 0,
-                'vencimento_contrato' => null,
-                'contrato_assinado'   => $temAssinado,
-            ]);
-
-            $this->syncUfs($gestor, $data['estados_uf'] ?? []);
-
-            // anexos
-            if (!empty($data['contratos']) && is_array($data['contratos'])) {
-                $idAtivoEscolhido = null;
-
-                foreach ($data['contratos'] as $idx => $meta) {
-                    $file = $request->file("contratos.$idx.arquivo");
-                    if (!$file) continue;
-
-                    $path   = $file->store("gestores/{$gestor->id}", 'public');
-                    $ativo  = !empty($meta['ativo']);
-
-                    $inicio = !empty($meta['data_assinatura']) ? Carbon::parse($meta['data_assinatura']) : null;
-                    $meses  = !empty($meta['validade_meses']) ? (int)$meta['validade_meses'] : null;
-                    $dataVenc = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
-
-                    $anexo = $gestor->anexos()->create([
-                        'tipo'              => $meta['tipo'] ?? 'contrato',
-                        'cidade_id'         => ($meta['tipo'] ?? null) === 'contrato_cidade'
-                            ? (!empty($meta['cidade_id']) ? (int)$meta['cidade_id'] : null)
-                            : null,
-                        'arquivo'           => $path,
-                        'descricao'         => $meta['descricao'] ?? null,
-                        'assinado'          => !empty($meta['assinado']),
-                        'percentual_vendas' => isset($meta['percentual_vendas']) ? (float)$meta['percentual_vendas'] : null,
-                        'ativo'             => $ativo,
-                        'data_assinatura'   => $inicio,
-                        'data_vencimento'   => $dataVenc,
-                    ]);
-
-                    if ($ativo) $idAtivoEscolhido = $anexo->id;
-                }
-
-                if ($gestor->anexos()->where('ativo', true)->count() > 1) {
-                    $gestor->anexos()->where('ativo', true)
-                        ->where('id', '<>', $idAtivoEscolhido)
-                        ->update(['ativo' => false]);
-                }
-
-                $ativo = $gestor->anexos()->where('ativo', true)->latest('id')->first();
-                if ($ativo) {
-                    if ($ativo->percentual_vendas !== null) {
-                        $gestor->update(['percentual_vendas' => $ativo->percentual_vendas]);
-                    }
-                    if ($ativo->data_vencimento) {
-                        $gestor->update(['vencimento_contrato' => $ativo->data_vencimento]);
-                    }
-                }
-            }
-
-            // contatos
-            $contatos = collect($data['contatos'] ?? [])
-                ->map(function ($c) {
-                    $tel = isset($c['telefone']) ? preg_replace('/\D+/', '', (string)$c['telefone']) : null;
-                    $zap = isset($c['whatsapp']) ? preg_replace('/\D+/', '', (string)$c['whatsapp']) : null;
-
-                    return [
-                        'nome'         => $c['nome'] ?? '',
-                        'email'        => $c['email'] ?? null,
-                        'telefone'     => $tel,
-                        'whatsapp'     => $zap,
-                        'cargo'        => $c['cargo'] ?? null,
-                        'tipo'         => $c['tipo'] ?? 'outro',
-                        'preferencial' => !empty($c['preferencial']),
-                        'observacoes'  => $c['observacoes'] ?? null,
-                    ];
-                })
-                ->filter(fn ($c) => trim($c['nome']) !== '');
-
-            if ($contatos->isNotEmpty()) {
-                $gestor->contatos()->createMany($contatos->all());
-            }
-
-            return $gestor->load('user','ufs','anexos','contatos');
-        });
-
-        return response()->json([
-            'ok' => true,
-            'message' => 'Gestor criado com sucesso!',
-            'data' => $gestor,
-        ], 201);
-    }
-
-    public function update(Request $request, Gestor $gestor)
+    public function store(Request $request, \App\Services\GestorService $service)
 {
-    // sanitiza contatos vazios (igual store)
-    $rawContatos = $request->input('contatos', []);
-    $contatosSan = collect($rawContatos)->filter(function ($c) {
-        return trim($c['nome'] ?? '') !== ''
-            || trim($c['email'] ?? '') !== ''
-            || trim($c['telefone'] ?? '') !== ''
-            || trim($c['whatsapp'] ?? '') !== ''
-            || trim($c['cargo'] ?? '') !== ''
-            || !empty($c['preferencial']);
-    })->values()->all();
+    $gestor = $service->storeFromRequest($request);
 
-    // normaliza listas telefone/email
-    [$telefones, $emails] = $this->normalizePhonesAndEmails(
-        $request->input('telefones', []),
-        $request->input('emails', [])
-    );
+    return response()->json([
+        'ok' => true,
+        'message' => 'Gestor criado com sucesso!',
+        'data' => $gestor,
+    ], 201);
+}
 
-    $request->merge([
-        'contatos'  => $contatosSan,
-        'telefones' => $telefones,
-        'emails'    => $emails,
-    ]);
 
-    $data = $request->validate([
-        'razao_social'        => ['nullable','string','max:255'],
-        'cnpj'                => ['nullable','string','max:18'],
-        'representante_legal' => ['nullable','string','max:255'],
-        'cpf'                 => ['nullable','string','max:14'],
-        'rg'                  => ['nullable','string','max:30'],
-
-        'telefones'           => ['nullable','array'],
-        'telefones.*'         => ['nullable','string','max:30'],
-        'emails'              => ['nullable','array'],
-        'emails.*'            => ['nullable','email','max:255'],
-
-        'telefone'            => ['nullable','string','max:20'],
-
-        'estados_uf'          => ['nullable','array'],
-        'estados_uf.*'        => ['in:AC,AL,AP,AM,BA,CE,DF,ES,GO,MA,MT,MS,MG,PA,PB,PR,PE,PI,RJ,RN,RS,RO,RR,SC,SP,SE,TO'],
-
-        // ⚠️ no UPDATE precisa ignorar o user do próprio gestor
-        'email'               => [
-            'nullable',
-            'email',
-            'max:255',
-            Rule::unique('users','email')->ignore($gestor->user_id),
-        ],
-        'password'            => ['nullable','string','min:8'],
-
-        'endereco'            => ['nullable','string','max:255'],
-        'numero'              => ['nullable','string','max:20'],
-        'complemento'         => ['nullable','string','max:100'],
-        'bairro'              => ['nullable','string','max:100'],
-        'cidade'              => ['nullable','string','max:100'],
-        'uf'                  => ['nullable','string','size:2'],
-        'cep'                 => ['nullable','string','max:9'],
-
-        'endereco2'           => ['nullable','string','max:255'],
-        'numero2'             => ['nullable','string','max:20'],
-        'complemento2'        => ['nullable','string','max:100'],
-        'bairro2'             => ['nullable','string','max:100'],
-        'cidade2'             => ['nullable','string','max:100'],
-        'uf2'                 => ['nullable','string','size:2'],
-        'cep2'                => ['nullable','string','max:9'],
-
-        'percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
-
-        'contratos'                     => ['nullable','array'],
-        'contratos.*.tipo'              => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro,contrato_cidade'],
-        'contratos.*.cidade_id'         => [
-            'exclude_unless:contratos.*.tipo,contrato_cidade',
-            'required_if:contratos.*.tipo,contrato_cidade',
-            'integer',
-            'exists:cities,id',
-        ],
-        'contratos.*.arquivo'           => ['nullable','file','mimes:pdf','max:5120'],
-        'contratos.*.descricao'         => ['nullable','string','max:255'],
-        'contratos.*.assinado'          => ['nullable','boolean'],
-        'contratos.*.percentual_vendas' => ['nullable','numeric','min:0','max:100'],
-        'contratos.*.ativo'             => ['nullable','boolean'],
-        'contratos.*.data_assinatura'   => ['nullable','date'],
-        'contratos.*.validade_meses'    => ['nullable','integer','min:1','max:120'],
-
-        'contatos'                 => ['nullable','array'],
-        // ⚠️ no seu API controller você não validou contato id no store; aqui vamos manter simples:
-        'contatos.*.id'            => ['nullable','integer','exists:contatos,id'],
-        'contatos.*.nome'          => ['required_with:contatos.*.tipo,contatos.*.email,contatos.*.telefone,contatos.*.whatsapp','string','max:255'],
-        'contatos.*.email'         => ['nullable','email','max:255'],
-        'contatos.*.telefone'      => ['nullable','string','max:30'],
-        'contatos.*.whatsapp'      => ['nullable','string','max:30'],
-        'contatos.*.cargo'         => ['nullable','string','max:100'],
-        'contatos.*.tipo'          => ['nullable','in:principal,secundario,financeiro,comercial,outro'],
-        'contatos.*.preferencial'  => ['nullable','boolean'],
-        'contatos.*.observacoes'   => ['nullable','string','max:2000'],
-    ]);
-
-    // no máx 1 preferencial
-    $preferenciais = collect($data['contatos'] ?? [])->where('preferencial', true)->count();
-    if ($preferenciais > 1) {
-        throw ValidationException::withMessages([
-            'contatos' => 'Selecione no máximo um contato como preferencial.'
-        ]);
-    }
-
-    DB::transaction(function () use ($data, $request, $gestor) {
-
-        // 1) USER: atualiza email/senha (se enviados)
-        $user = $gestor->user;
-        if ($user) {
-            if (!empty($data['email'])) {
-                $user->email = $data['email'];
-            }
-            if (!empty($data['password'])) {
-                $user->password = Hash::make($data['password']);
-            }
-            if (!empty($data['email']) || !empty($data['password'])) {
-                $user->save();
-            }
-        }
-
-        // 2) GESTOR: atualiza campos
-        $gestor->update([
-            'razao_social'        => $data['razao_social']        ?? $gestor->razao_social,
-            'cnpj'                => $data['cnpj']                ?? $gestor->cnpj,
-            'representante_legal' => $data['representante_legal'] ?? $gestor->representante_legal,
-            'cpf'                 => $data['cpf']                 ?? $gestor->cpf,
-            'rg'                  => $data['rg']                  ?? $gestor->rg,
-
-            'telefone'            => $data['telefone']            ?? $gestor->telefone,
-            // mantém o campo email do gestor (se você usa)
-            'email'               => $data['email']               ?? $gestor->email,
-
-            'telefones'           => $data['telefones']           ?? $gestor->telefones,
-            'emails'              => $data['emails']              ?? $gestor->emails,
-
-            'endereco'            => $data['endereco']            ?? $gestor->endereco,
-            'numero'              => $data['numero']              ?? $gestor->numero,
-            'complemento'         => $data['complemento']         ?? $gestor->complemento,
-            'bairro'              => $data['bairro']              ?? $gestor->bairro,
-            'cidade'              => $data['cidade']              ?? $gestor->cidade,
-            'uf'                  => $data['uf']                  ?? $gestor->uf,
-            'cep'                 => $data['cep']                 ?? $gestor->cep,
-
-            'endereco2'           => $data['endereco2']           ?? $gestor->endereco2,
-            'numero2'             => $data['numero2']             ?? $gestor->numero2,
-            'complemento2'        => $data['complemento2']        ?? $gestor->complemento2,
-            'bairro2'             => $data['bairro2']             ?? $gestor->bairro2,
-            'cidade2'             => $data['cidade2']             ?? $gestor->cidade2,
-            'uf2'                 => $data['uf2']                 ?? $gestor->uf2,
-            'cep2'                => $data['cep2']                ?? $gestor->cep2,
-
-            'percentual_vendas'   => $data['percentual_vendas']   ?? $gestor->percentual_vendas,
-        ]);
-
-        // 3) UFs (sync)
-        $this->syncUfs($gestor, $data['estados_uf'] ?? []);
-
-        // 4) ANEXOS (append)
-        if (!empty($data['contratos']) && is_array($data['contratos'])) {
-            $idAtivoEscolhido = null;
-
-            foreach ($data['contratos'] as $idx => $meta) {
-                $file = $request->file("contratos.$idx.arquivo");
-                if (!$file) continue;
-
-                $path   = $file->store("gestores/{$gestor->id}", 'public');
-                $ativo  = !empty($meta['ativo']);
-
-                $inicio = !empty($meta['data_assinatura']) ? Carbon::parse($meta['data_assinatura']) : null;
-                $meses  = !empty($meta['validade_meses']) ? (int)$meta['validade_meses'] : null;
-                $dataVenc = ($inicio && $meses) ? (clone $inicio)->addMonthsNoOverflow($meses) : null;
-
-                $anexo = $gestor->anexos()->create([
-                    'tipo'              => $meta['tipo'] ?? 'contrato',
-                    'cidade_id'         => ($meta['tipo'] ?? null) === 'contrato_cidade'
-                        ? (!empty($meta['cidade_id']) ? (int)$meta['cidade_id'] : null)
-                        : null,
-                    'arquivo'           => $path,
-                    'descricao'         => $meta['descricao'] ?? null,
-                    'assinado'          => !empty($meta['assinado']),
-                    'percentual_vendas' => isset($meta['percentual_vendas']) ? (float)$meta['percentual_vendas'] : null,
-                    'ativo'             => $ativo,
-                    'data_assinatura'   => $inicio,
-                    'data_vencimento'   => $dataVenc,
-                ]);
-
-                if ($ativo) $idAtivoEscolhido = $anexo->id;
-            }
-
-            // no máx 1 ativo
-            if ($gestor->anexos()->where('ativo', true)->count() > 1) {
-                $gestor->anexos()->where('ativo', true)
-                    ->where('id', '<>', $idAtivoEscolhido)
-                    ->update(['ativo' => false]);
-            }
-
-            // aplica percentual/vencimento do ativo
-            $ativo = $gestor->anexos()->where('ativo', true)->latest('id')->first();
-            if ($ativo) {
-                $payload = [];
-                if ($ativo->percentual_vendas !== null) {
-                    $payload['percentual_vendas'] = $ativo->percentual_vendas;
-                }
-                if ($ativo->data_vencimento) {
-                    $payload['vencimento_contrato'] = $ativo->data_vencimento;
-                }
-                if (!empty($payload)) {
-                    $gestor->update($payload);
-                }
-            }
-        }
-
-        // 5) contrato_assinado (derivado)
-        $temAssinadoAgora = $gestor->anexos()->where('assinado', true)->exists();
-        if ($gestor->contrato_assinado !== $temAssinadoAgora) {
-            $gestor->update(['contrato_assinado' => $temAssinadoAgora]);
-        }
-
-        // 6) CONTATOS (sync completo)
-        $inputContatos = collect($data['contatos'] ?? [])->map(function ($c) {
-            $c['telefone'] = isset($c['telefone']) ? preg_replace('/\D+/', '', (string)$c['telefone']) : null;
-            $c['whatsapp'] = isset($c['whatsapp']) ? preg_replace('/\D+/', '', (string)$c['whatsapp']) : null;
-            return $c;
-        })->values()->all();
-
-        $this->syncContatos($gestor, $inputContatos);
-    });
-
-    $gestor->load('user','ufs','anexos','contatos');
+    public function update(Request $request, Gestor $gestor, \App\Services\GestorService $service)
+{
+    $gestor = $service->updateFromRequest($request, $gestor);
 
     return response()->json([
         'ok' => true,
@@ -524,20 +68,16 @@ class GestorController extends Controller
     ]);
 }
 
+    public function destroy(Gestor $gestor, \App\Services\GestorService $service)
+{
+    $service->destroyGestor($gestor);
 
-    public function destroy(Gestor $gestor)
-    {
-        DB::transaction(function () use ($gestor) {
-            $gestor->ufs()->delete();
-            $gestor->anexos()->delete();
-            $gestor->delete();
-        });
+    return response()->json([
+        'ok' => true,
+        'message' => 'Gestor removido com sucesso!',
+    ]);
+}
 
-        return response()->json([
-            'ok' => true,
-            'message' => 'Gestor removido com sucesso!',
-        ]);
-    }
 
     public function ufs(Gestor $gestor)
     {
@@ -551,47 +91,13 @@ class GestorController extends Controller
         ]);
     }
 
-    public function cidadesPorUfs(Request $request)
-    {
-        $ufs = collect(explode(',', (string)$request->query('ufs', '')))
-            ->map(fn($u) => strtoupper(trim($u)))
-            ->filter(fn($u) => in_array($u, $this->UFs, true))
-            ->unique()
-            ->values()
-            ->all();
+    public function cidadesPorUfs(Request $request, \App\Services\GestorService $service)
+{
+    $ufs = explode(',', (string)$request->query('ufs', ''));
+    $payload = $service->cidadesPorUfs($ufs);
 
-        if (empty($ufs)) {
-            return response()->json(['ok' => true, 'data' => []]);
-        }
-
-        $table = (new City)->getTable();
-        
-        $hasNome = Schema::hasColumn($table, 'nome') ? 'nome'
-        : (Schema::hasColumn($table, 'name') ? 'name' : null);
-
-        $hasUf   = Schema::hasColumn($table, 'uf') ? 'uf'
-                : (Schema::hasColumn($table, 'estado_uf') ? 'estado_uf'
-                : (Schema::hasColumn($table, 'state') ? 'state' : null));
-
-        $hasId   = Schema::hasColumn($table, 'id') ? 'id' : null;
-        if (!$hasNome || !$hasUf || !$hasId) {
-            return response()->json(['ok' => true, 'data' => []]);
-        }
-
-        $cidades = City::query()
-            ->whereIn($hasUf, $ufs)
-            ->orderBy($hasUf)
-            ->orderBy($hasNome)
-            ->get([$hasId.' as id', $hasNome.' as nome', $hasUf.' as uf']);
-
-        $payload = $cidades->map(fn($c) => [
-            'id'   => $c->id,
-            'text' => "{$c->nome} ({$c->uf})",
-            'uf'   => $c->uf,
-        ])->values();
-
-        return response()->json(['ok' => true, 'data' => $payload]);
-    }
+    return response()->json(['ok' => true, 'data' => $payload]);
+}
 
     private function normalizePhonesAndEmails($telefones, $emails): array
     {
@@ -669,25 +175,9 @@ class GestorController extends Controller
         }
     }
 
-    public function destroyAnexo(Gestor $gestor, Anexo $anexo)
+    public function destroyAnexo(Gestor $gestor, Anexo $anexo, \App\Services\GestorService $service)
     {
-        $this->assertAnexoDoGestor($gestor, $anexo);
-
-        // remove arquivo físico
-        if ($anexo->arquivo && Storage::disk('public')->exists($anexo->arquivo)) {
-            Storage::disk('public')->delete($anexo->arquivo);
-        }
-
-        $anexo->delete();
-
-        // atualiza flags derivadas
-        $temAssinadoAgora = $gestor->anexos()->where('assinado', true)->exists();
-        if ($gestor->contrato_assinado !== $temAssinadoAgora) {
-            $gestor->update(['contrato_assinado' => $temAssinadoAgora]);
-        }
-
-        // se deletou o ativo, tenta reaplicar do novo ativo (se existir)
-        $this->aplicarDadosDoAnexoAtivoNoGestor($gestor);
+        $service->destroyAnexo($gestor, $anexo);
 
         return response()->json([
             'ok' => true,
@@ -695,55 +185,14 @@ class GestorController extends Controller
         ]);
     }
 
-    public function ativarAnexo(Gestor $gestor, Anexo $anexo)
+    public function ativarAnexo(Gestor $gestor, Anexo $anexo, \App\Services\GestorService $service)
     {
-        $this->assertAnexoDoGestor($gestor, $anexo);
-
-        DB::transaction(function () use ($gestor, $anexo) {
-            $gestor->anexos()->where('ativo', true)->update(['ativo' => false]);
-            $anexo->update(['ativo' => true]);
-
-            $payload = [];
-            if ($anexo->percentual_vendas !== null) {
-                $payload['percentual_vendas'] = $anexo->percentual_vendas;
-            }
-            if ($anexo->data_vencimento) {
-                $payload['vencimento_contrato'] = $anexo->data_vencimento;
-            }
-            if (!empty($payload)) {
-                $gestor->update($payload);
-            }
-        });
+        $service->ativarAnexo($gestor, $anexo);
 
         return response()->json([
             'ok' => true,
             'message' => 'Contrato/aditivo ativado e percentual aplicado.',
         ]);
-    }
-
-
-    private function assertAnexoDoGestor(Gestor $gestor, Anexo $anexo): void
-    {
-        if ($anexo->anexavel_type !== Gestor::class || (int)$anexo->anexavel_id !== (int)$gestor->id) {
-            abort(403, 'Anexo não pertence a este gestor.');
-        }
-    }
-
-    private function aplicarDadosDoAnexoAtivoNoGestor(Gestor $gestor): void
-    {
-        $ativo = $gestor->anexos()->where('ativo', true)->latest('id')->first();
-        if (!$ativo) return;
-
-        $payload = [];
-        if ($ativo->percentual_vendas !== null) {
-            $payload['percentual_vendas'] = $ativo->percentual_vendas;
-        }
-        if ($ativo->data_vencimento) {
-            $payload['vencimento_contrato'] = $ativo->data_vencimento;
-        }
-        if (!empty($payload)) {
-            $gestor->update($payload);
-        }
     }
 
     public function vincularDistribuidores(Request $request)

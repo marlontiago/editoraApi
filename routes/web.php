@@ -26,6 +26,10 @@ use App\Http\Controllers\Admin\ColecaoController;
 Route::pattern('gestor', '[0-9]+');        // {gestor} numérico
 Route::pattern('distribuidor', '[0-9]+');  // {distribuidor} numérico
 
+Route::get('/documentacao', function () {
+    return view('documentacao');
+});
+
 Route::get('/', function () {
     return view('auth.login');
 });

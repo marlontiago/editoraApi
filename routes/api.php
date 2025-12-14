@@ -50,9 +50,9 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::delete('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorController::class, 'destroyAnexo']);
     Route::post('gestores/{gestor}/anexos/{anexo}/ativar', [ApiAdminGestorController::class, 'ativarAnexo']);
     Route::get('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorController::class, 'showAnexo']);
-    Route::put('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorController::class, 'updateAnexo']);
-    // Auxiliares 
+    Route::put('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorController::class, 'updateAnexo']);    
     Route::get('gestores/{gestor}/ufs', [ApiAdminGestorController::class, 'ufs']);
+    // Auxiliares 
     Route::get('utils/cidades-por-ufs', [ApiAdminGestorController::class, 'cidadesPorUfs']);
     // Distribuidores 
     Route::apiResource('distribuidores', ApiDistribuidorController::class)->parameters(['distribuidores' => 'distribuidor']);

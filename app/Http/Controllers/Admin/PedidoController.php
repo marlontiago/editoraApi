@@ -63,24 +63,24 @@ class PedidoController extends Controller
             ->values();
 
             $colecoes = Colecao::select('id', 'nome', 'codigo')
-    ->whereHas('produtos')
-    ->orderByRaw("CASE WHEN nome IS NULL OR nome = '' THEN 1 ELSE 0 END") // nome vazia vai pro final
-    ->orderBy('nome')
-    ->orderBy('codigo')
-    ->get();
-        $cidades   = City::orderBy('name')->get();
-        $clientes  = Cliente::orderBy('razao_social')->get();
-        $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
+                ->whereHas('produtos')
+                ->orderByRaw("CASE WHEN nome IS NULL OR nome = '' THEN 1 ELSE 0 END") // nome vazia vai pro final
+                ->orderBy('nome')
+                ->orderBy('codigo')
+                ->get();
+                    $cidades   = City::orderBy('name')->get();
+                    $clientes  = Cliente::orderBy('razao_social')->get();
+                    $cidadesUF = $cidades->pluck('state')->unique()->sort()->values();
 
-        return view('admin.pedidos.create', compact(
-            'produtos',
-            'cidades',
-            'gestores',
-            'distribuidores',
-            'clientes',
-            'cidadesUF',
-            'colecoes',
-        ));
+                    return view('admin.pedidos.create', compact(
+                        'produtos',
+                        'cidades',
+                        'gestores',
+                        'distribuidores',
+                        'clientes',
+                        'cidadesUF',
+                        'colecoes',
+                    ));
     }
 
     public function store(Request $request)

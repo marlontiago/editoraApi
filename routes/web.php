@@ -21,7 +21,6 @@ use App\Http\Controllers\RelatoriosController;
 use App\Http\Controllers\NotaFiscalPlugNotasController;
 use App\Http\Controllers\NotaFiscalPlugBridgeController;
 use App\Http\Controllers\Admin\GestorAnexoController;
-use App\Models\Gestor;
 use App\Http\Controllers\Admin\ColecaoController;
 
 Route::pattern('gestor', '[0-9]+');        // {gestor} numérico
@@ -30,8 +29,6 @@ Route::pattern('distribuidor', '[0-9]+');  // {distribuidor} numérico
 Route::get('/', function () {
     return view('auth.login');
 });
-
-
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

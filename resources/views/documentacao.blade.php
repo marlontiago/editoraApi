@@ -267,7 +267,7 @@ Content-Type: application/json
         <div class="flex flex-wrap items-center gap-2 text-sm">
             <span class="text-gray-500">Base:</span>
             <code class="bg-gray-100 border border-gray-200 rounded px-2 py-1 text-xs">
-                /api/clientes
+                /api/admin/clientes
             </code>
         </div>
 
@@ -284,31 +284,44 @@ Content-Type: application/json
                 <tbody class="divide-y divide-gray-200">
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/clientes</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/clientes</td>
                         <td class="px-4 py-2">Listar clientes (paginado)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/clientes</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/clientes</td>
                         <td class="px-4 py-2">Criar cliente</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/clientes/{cliente}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/clientes/{cliente}</td>
                         <td class="px-4 py-2">Detalhar cliente</td>
                     </tr>
                     <tr>
-                        <td class="px-4 py-2 font-mono">PUT</td>
-                        <td class="px-4 py-2 font-mono">/api/clientes/{cliente}</td>
-                        <td class="px-4 py-2">Atualizar cliente</td>
+                        <td class="px-4 py-2 font-mono">POST</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/clientes/{cliente}</td>
+                        <td class="px-4 py-2">
+                            Atualizar cliente
+                            <span class="block text-xs text-gray-500">
+                                (usar <code>_method=PUT</code>)
+                            </span>
+                        </td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">DELETE</td>
-                        <td class="px-4 py-2 font-mono">/api/clientes/{cliente}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/clientes/{cliente}</td>
                         <td class="px-4 py-2">Excluir cliente</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="rounded-md bg-blue-50 border border-blue-200 p-4 text-sm text-blue-900">
+            <strong>Observação sobre UPDATE (PUT):</strong>
+            <p class="mt-1">
+                Para requisições enviadas como <code>multipart/form-data</code>, o endpoint de atualização
+                deve ser chamado usando o método <strong>POST</strong>, informando o campo
+                <code>_method=PUT</code> no body da requisição.
+            </p>
         </div>
 
         {{-- Regras de negócio --}}
@@ -550,7 +563,7 @@ Content-Type: application/json
             {{-- ========================= --}}
             {{-- ABAS PLACEHOLDER --}}
             {{-- ========================= --}}
-           <section x-show="active === 'gestores'" x-cloak>
+          <section x-show="active === 'gestores'" x-cloak>
     <div class="rounded-lg border border-gray-200 bg-white p-6 space-y-8">
 
         {{-- Cabeçalho --}}
@@ -559,7 +572,8 @@ Content-Type: application/json
                 Gestores (Admin)
             </h2>
             <p class="text-sm text-gray-500">
-                Cadastro completo de gestores, contratos, UFs, contatos e vínculo com distribuidores.
+                Cadastro completo de gestores com usuário automático, UFs (gestor_ufs), contatos, contratos/anexos
+                e vínculo com distribuidores.
             </p>
         </div>
 
@@ -567,11 +581,11 @@ Content-Type: application/json
         <div class="text-sm">
             <span class="text-gray-500">Base:</span>
             <code class="bg-gray-100 border rounded px-2 py-1 text-xs">
-                /api/gestores
+                /api/admin/gestores
             </code>
         </div>
 
-        {{-- Rotas --}}
+        {{-- Rotas (apiResource) --}}
         <div class="overflow-auto border border-gray-200 rounded-lg">
             <table class="min-w-full text-sm">
                 <thead class="bg-gray-50">
@@ -582,28 +596,95 @@ Content-Type: application/json
                     </tr>
                 </thead>
                 <tbody class="divide-y">
-                    <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/gestores</td><td>Listar gestores</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">POST</td><td class="px-4 py-2 font-mono">/api/gestores</td><td>Criar gestor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/gestores/{gestor}</td><td>Detalhar gestor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">PUT</td><td class="px-4 py-2 font-mono">/api/gestores/{gestor}</td><td>Atualizar gestor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">DELETE</td><td class="px-4 py-2 font-mono">/api/gestores/{gestor}</td><td>Excluir gestor</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/admin/gestores</td><td>Listar gestores (paginado)</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">POST</td><td class="px-4 py-2 font-mono">/api/admin/gestores</td><td>Criar gestor</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Detalhar gestor</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">PUT</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Atualizar gestor</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">DELETE</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Excluir gestor</td></tr>
                 </tbody>
             </table>
         </div>
 
-          <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800">
-                <strong>Atenção:</strong>
-                Endpoints que enviam <code>contratos[*].arquivo</code> devem usar
-                <code>multipart/form-data</code>.
-                <br>
-                Endpoints sem upload continuam aceitando <code>application/json</code>.
-            </div>
-        {{-- CREATE --}}
+        {{-- Rotas extras --}}
+        <div class="overflow-auto border border-gray-200 rounded-lg">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Método</th>
+                        <th class="px-4 py-2 text-left">Endpoint</th>
+                        <th class="px-4 py-2 text-left">Descrição</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+
+                    {{-- ANEXOS / CONTRATOS DO GESTOR --}}
+                    <tr>
+                        <td class="px-4 py-2 font-mono">DELETE</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
+                        <td>Excluir anexo (remove arquivo do storage e registro)</td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-2 font-mono">POST</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}/ativar</td>
+                        <td>Marcar anexo como ativo (aplica percentual/vencimento do ativo)</td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-2 font-mono">GET</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
+                        <td>Detalhar anexo (controller separado)</td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-2 font-mono">PUT</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
+                        <td>Atualizar anexo (controller separado)</td>
+                    </tr>
+
+                    {{-- VÍNCULO DISTRIBUIDORES (se existir no seu api.php) --}}
+                    <tr>
+                        <td class="px-4 py-2 font-mono">POST</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/gestores/vincular</td>
+                        <td>Vincular distribuidores a gestores (batch)</td>
+                    </tr>
+
+                    {{-- UFS (se existir no seu api.php) --}}
+                    <tr>
+                        <td class="px-4 py-2 font-mono">GET</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/ufs</td>
+                        <td>Listar UFs vinculadas ao gestor</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Atenção multipart --}}
+        <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800">
+            <strong>Atenção:</strong>
+            Se você enviar <code>contratos[*].arquivo</code> ou <code>arquivo</code> no update de anexo (PDF),
+            o request deve ser <code>multipart/form-data</code>. Sem upload, pode usar <code>application/json</code>.
+        </div>
+
+        {{-- Regras importantes --}}
+        <div class="space-y-2 text-sm text-gray-700">
+            <h3 class="font-semibold text-gray-900">Regras de negócio</h3>
+            <ul class="list-disc pl-6 space-y-1">
+                <li>Ao criar, se <code>email</code> estiver vazio, o sistema cria um e-mail placeholder automaticamente.</li>
+                <li>Se <code>password</code> estiver vazio, uma senha aleatória é gerada automaticamente.</li>
+                <li>O gestor possui UFs vinculadas (ex.: <code>gestor_ufs</code>) via <code>estados_uf</code>.</li>
+                <li>Apenas <strong>um</strong> contato pode ser marcado como <code>preferencial</code>.</li>
+                <li>Apenas um anexo pode ficar com <code>ativo=true</code>; o ativo aplica automaticamente <code>percentual_vendas</code> e <code>vencimento_contrato</code> no gestor.</li>
+                <li>Ao ativar um anexo, os demais anexos ativos do mesmo gestor são desativados.</li>
+            </ul>
+        </div>
+
+        {{-- CREATE (payload completo) --}}
         <div>
             <h3 class="font-semibold text-gray-900 mb-2">
                 Exemplo — Criar Gestor (payload completo)
             </h3>
-          
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
   "razao_social": "Editora Alfa LTDA",
@@ -643,40 +724,18 @@ Content-Type: application/json
       "nome": "Maria Financeiro",
       "email": "maria@empresa.com",
       "telefone": "11988887777",
+      "whatsapp": "11988887777",
       "cargo": "Financeiro",
       "tipo": "financeiro",
-      "preferencial": true
+      "preferencial": true,
+      "observacoes": "Contato principal do financeiro"
     }
-  ]
-}</code></pre>
-        </div>
+  ],
 
-        {{-- UPDATE --}}
-        <div>
-            <h3 class="font-semibold text-gray-900 mb-2">
-                Exemplo — Atualizar Gestor
-            </h3>
-
-<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
-  "razao_social": "Editora Alfa (Atualizada)",
-  "email": "novoemail@empresa.com",
-  "percentual_vendas": 7,
-  "estados_uf": ["SP", "RJ"]
-}</code></pre>
-        </div>
-
-        
-        {{-- ANEXOS --}}
-        <div>
-            <h3 class="font-semibold text-gray-900 mb-2">
-                Contratos / Anexos
-            </h3>
-
-<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
   "contratos": [
     {
       "tipo": "contrato",
-      "arquivo": "PDF",
+      "descricao": "Contrato principal",
       "assinado": true,
       "percentual_vendas": 6,
       "ativo": true,
@@ -687,8 +746,74 @@ Content-Type: application/json
 }</code></pre>
 
             <p class="text-sm text-gray-600 mt-2">
-                Apenas um contrato pode ficar <code>ativo</code>. O ativo define percentual e vencimento.
+                Se enviar <code>contratos[0][arquivo]</code>, troque o request para <code>multipart/form-data</code> e envie o PDF no campo.
             </p>
+        </div>
+
+        {{-- UPDATE (payload completo) --}}
+        <div>
+            <h3 class="font-semibold text-gray-900 mb-2">
+                Exemplo — Atualizar Gestor (payload completo)
+            </h3>
+
+<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
+  "razao_social": "Editora Alfa (Atualizada)",
+  "email": "novoemail@empresa.com",
+  "percentual_vendas": 7,
+  "estados_uf": ["SP", "RJ"],
+
+  "contatos": [
+    {
+      "nome": "Maria Financeiro",
+      "email": "maria@empresa.com",
+      "telefone": "11988887777",
+      "cargo": "Financeiro",
+      "tipo": "financeiro",
+      "preferencial": true
+    }
+  ],
+
+  "contratos": [
+    {
+      "tipo": "aditivo",
+      "descricao": "Aditivo 2025",
+      "assinado": true,
+      "percentual_vendas": 8,
+      "ativo": false,
+      "data_assinatura": "2025-01-01",
+      "validade_meses": 12
+    }
+  ]
+}</code></pre>
+        </div>
+
+        {{-- Exemplo multipart/form-data (contratos[*].arquivo) --}}
+        <div>
+            <h3 class="font-semibold text-gray-900 mb-2">
+                Exemplo — Envio de contrato com arquivo (multipart/form-data)
+            </h3>
+
+<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>razao_social: Editora Alfa LTDA
+email: gestor@empresa.com
+password: 12345678
+percentual_vendas: 5
+estados_uf[0]: SP
+estados_uf[1]: RJ
+
+contatos[0][nome]: Maria Financeiro
+contatos[0][email]: maria@empresa.com
+contatos[0][telefone]: 11988887777
+contatos[0][tipo]: financeiro
+contatos[0][preferencial]: 1
+
+contratos[0][tipo]: contrato
+contratos[0][descricao]: Contrato principal
+contratos[0][assinado]: 1
+contratos[0][percentual_vendas]: 6
+contratos[0][ativo]: 1
+contratos[0][data_assinatura]: 2024-01-01
+contratos[0][validade_meses]: 24
+contratos[0][arquivo]: (PDF)</code></pre>
         </div>
 
         {{-- VÍNCULO DISTRIBUIDORES --}}
@@ -697,7 +822,7 @@ Content-Type: application/json
                 Vincular Distribuidores
             </h3>
 
-            <code class="text-xs">POST /api/gestores/vincular</code>
+            <code class="text-xs">POST /api/admin/gestores/vincular</code>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
   "12": 5,
@@ -716,7 +841,7 @@ Content-Type: application/json
                 UFs do Gestor
             </h3>
 
-            <code class="text-xs">GET /api/gestores/{gestor}/ufs</code>
+            <code class="text-xs">GET /api/admin/gestores/{gestor}/ufs</code>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>[
   "SP",
@@ -727,6 +852,8 @@ Content-Type: application/json
 
     </div>
 </section>
+
+
 
             <section x-show="active === 'distribuidores'" x-cloak>
     <div class="rounded-lg border border-gray-200 bg-white p-6 space-y-8">
@@ -746,7 +873,7 @@ Content-Type: application/json
         <div class="text-sm">
             <span class="text-gray-500">Base:</span>
             <code class="bg-gray-100 border rounded px-2 py-1 text-xs">
-                /api/distribuidores
+                /api/admin/distribuidores
             </code>
         </div>
 
@@ -761,11 +888,31 @@ Content-Type: application/json
                     </tr>
                 </thead>
                 <tbody class="divide-y">
-                    <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/distribuidores</td><td>Listar distribuidores (paginado)</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">POST</td><td class="px-4 py-2 font-mono">/api/distribuidores</td><td>Criar distribuidor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/distribuidores/{distribuidor}</td><td>Detalhar distribuidor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">PUT</td><td class="px-4 py-2 font-mono">/api/distribuidores/{distribuidor}</td><td>Atualizar distribuidor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">DELETE</td><td class="px-4 py-2 font-mono">/api/distribuidores/{distribuidor}</td><td>Excluir distribuidor</td></tr>
+                    <tr>
+                        <td class="px-4 py-2 font-mono">GET</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores</td>
+                        <td>Listar distribuidores (paginado)</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2 font-mono">POST</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores</td>
+                        <td>Criar distribuidor</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2 font-mono">GET</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/{distribuidor}</td>
+                        <td>Detalhar distribuidor</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2 font-mono">PUT</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/{distribuidor}</td>
+                        <td>Atualizar distribuidor</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2 font-mono">DELETE</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/{distribuidor}</td>
+                        <td>Excluir distribuidor</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -781,53 +928,55 @@ Content-Type: application/json
                     </tr>
                 </thead>
                 <tbody class="divide-y">
+
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/distribuidores/por-gestor/{gestor}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/por-gestor/{gestor}</td>
                         <td>Lista distribuidores por gestor (retorna <code>id</code> e <code>razao_social</code>)</td>
                     </tr>
 
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/cidades/por-distribuidor/{distribuidor}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/cidades/por-distribuidor/{distribuidor}</td>
                         <td>Lista cidades vinculadas ao distribuidor</td>
                     </tr>
 
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/distribuidores/cidades-por-ufs?ufs=SP,RJ</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/cidades-por-ufs?ufs=SP,RJ</td>
                         <td>Lista cidades filtrando por UFs (query <code>ufs</code> separado por vírgula)</td>
                     </tr>
 
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/distribuidores/cidades-por-gestor?gestor_id=5</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/cidades-por-gestor?gestor_id=5</td>
                         <td>Lista cidades filtrando pelas UFs do gestor</td>
                     </tr>
 
                     <tr>
                         <td class="px-4 py-2 font-mono">DELETE</td>
-                        <td class="px-4 py-2 font-mono">/api/distribuidores/{distribuidor}/anexos/{anexo}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/{distribuidor}/anexos/{anexo}</td>
                         <td>Excluir anexo (remove arquivo do storage e registro)</td>
                     </tr>
 
                     <tr>
                         <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/distribuidores/{distribuidor}/anexos/{anexo}/ativar</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/{distribuidor}/anexos/{anexo}/ativar</td>
                         <td>Marcar anexo como ativo (aplica percentual/vencimento do ativo)</td>
                     </tr>
 
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/distribuidores/{distribuidor}/anexos/{anexo}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/{distribuidor}/anexos/{anexo}</td>
                         <td>Detalhar anexo (controller separado)</td>
                     </tr>
 
                     <tr>
                         <td class="px-4 py-2 font-mono">PUT</td>
-                        <td class="px-4 py-2 font-mono">/api/distribuidores/{distribuidor}/anexos/{anexo}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/distribuidores/{distribuidor}/anexos/{anexo}</td>
                         <td>Atualizar anexo (controller separado)</td>
                     </tr>
+
                 </tbody>
             </table>
         </div>
@@ -848,7 +997,7 @@ Content-Type: application/json
                 <li>Se <code>password</code> estiver vazio, uma senha aleatória é gerada automaticamente.</li>
                 <li>As cidades (<code>cities</code>) devem estar dentro das UFs do gestor (<code>gestor_ufs</code>).</li>
                 <li>Uma cidade não pode estar vinculada a outro distribuidor (validação de “ocupada”).</li>
-                <li>No <strong>update</strong>, <code>percentual_vendas</code> é <strong>required</strong> (regra atual do seu service).</li>
+                <li>No <strong>update</strong>, <code>percentual_vendas</code> é <strong>required</strong> (regra atual do service).</li>
                 <li>O anexo <code>ativo=true</code> aplica automaticamente <code>percentual_vendas</code> e <code>vencimento_contrato</code> no distribuidor.</li>
             </ul>
         </div>
@@ -909,7 +1058,7 @@ Content-Type: application/json
 }</code></pre>
 
             <p class="text-sm text-gray-600 mt-2">
-                Se enviar <code>contratos[0][arquivo]</code>, troque o request para <code>multipart/form-data</code> e envie o PDF no campo.
+                Se enviar <code>contratos[0][arquivo]</code>, troque o request para <code>multipart/form-data</code>.
             </p>
         </div>
 
@@ -926,31 +1075,10 @@ Content-Type: application/json
   "password": "12345678",
 
   "razao_social": "Distribuidora Beta (Atualizada)",
-  "cnpj": "12.345.678/0001-90",
-  "representante_legal": "Fulano de Tal",
-  "cpf": "123.456.789-00",
-  "rg": "12.345.678-9",
 
   "emails": ["novo@beta.com"],
   "telefones": ["11911112222"],
 
-  "endereco": "Rua Nova",
-  "numero": "150",
-  "complemento": "Sala 10",
-  "bairro": "Centro",
-  "cidade": "São Paulo",
-  "uf": "SP",
-  "cep": "01000-000",
-
-  "endereco2": null,
-  "numero2": null,
-  "complemento2": null,
-  "bairro2": null,
-  "cidade2": null,
-  "uf2": null,
-  "cep2": null,
-
-  "uf_cidades": "SP",
   "cities": [1, 2],
 
   "percentual_vendas": 7,
@@ -969,7 +1097,7 @@ Content-Type: application/json
 }</code></pre>
         </div>
 
-        {{-- Exemplo multipart/form-data (contratos[*].arquivo) --}}
+        {{-- Exemplo multipart/form-data --}}
         <div>
             <h3 class="font-semibold text-gray-900 mb-2">
                 Exemplo — Envio de contrato com arquivo (multipart/form-data)
@@ -993,54 +1121,9 @@ contratos[0][validade_meses]: 24
 contratos[0][arquivo]: (PDF)</code></pre>
         </div>
 
-        {{-- Filtros / auxiliares --}}
-        <div class="space-y-4">
-            <div>
-                <h3 class="font-semibold text-gray-900 mb-2">
-                    GET /api/distribuidores?per_page=20
-                </h3>
-<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
-  "per_page": "1..100 (default 20)"
-}</code></pre>
-                <p class="text-sm text-gray-600 mt-2">
-                    O <code>per_page</code> é limitado entre 1 e 100.
-                </p>
-            </div>
-
-            <div>
-                <h3 class="font-semibold text-gray-900 mb-2">
-                    GET /api/distribuidores/por-gestor/{gestor}
-                </h3>
-<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>[
-  { "id": 12, "razao_social": "Distribuidora Beta LTDA" },
-  { "id": 15, "razao_social": "Distribuidora Gama LTDA" }
-]</code></pre>
-            </div>
-
-            <div>
-                <h3 class="font-semibold text-gray-900 mb-2">
-                    GET /api/distribuidores/cidades-por-ufs?ufs=SP,RJ
-                </h3>
-<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>[
-  { "id": 1, "text": "São Paulo (SP)", "uf": "SP" },
-  { "id": 2, "text": "Campinas (SP)", "uf": "SP" }
-]</code></pre>
-            </div>
-
-            <div>
-                <h3 class="font-semibold text-gray-900 mb-2">
-                    GET /api/distribuidores/cidades-por-gestor?gestor_id=5
-                </h3>
-<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>[
-  { "id": 1, "text": "São Paulo (SP)", "uf": "SP" },
-  { "id": 10, "text": "Rio de Janeiro (RJ)", "uf": "RJ" }
-]</code></pre>
-            </div>
-
-        </div>
-
     </div>
 </section>
+
 
 {{-- ========================= --}}
 {{-- ABA: PRODUTOS --}}
@@ -1063,7 +1146,7 @@ contratos[0][arquivo]: (PDF)</code></pre>
         <div class="text-sm">
             <span class="text-gray-500">Base:</span>
             <code class="bg-gray-100 border rounded px-2 py-1 text-xs">
-                /api/produtos
+                /api/admin/produtos
             </code>
         </div>
 
@@ -1080,27 +1163,27 @@ contratos[0][arquivo]: (PDF)</code></pre>
                 <tbody class="divide-y">
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/produtos</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/produtos</td>
                         <td>Listar produtos (com busca/ordenação/paginação)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/produtos</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/produtos</td>
                         <td>Criar produto</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">PUT</td>
-                        <td class="px-4 py-2 font-mono">/api/produtos/{produto}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/produtos/{produto}</td>
                         <td>Atualizar produto</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">DELETE</td>
-                        <td class="px-4 py-2 font-mono">/api/produtos/{produto}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/produtos/{produto}</td>
                         <td>Excluir produto (remove imagem do storage, se existir)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/produtos/import</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/produtos/import</td>
                         <td>Importar produtos via XLSX/XLS/CSV</td>
                     </tr>
                 </tbody>
@@ -1130,7 +1213,7 @@ contratos[0][arquivo]: (PDF)</code></pre>
                 <li><code>dir</code> (string): <code>asc</code> ou <code>desc</code> (default: <code>asc</code>)</li>
             </ul>
 
-<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>GET /api/produtos?q=matematica&sort=preco&dir=desc</code></pre>
+<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>GET /api/admin/produtos?q=matematica&sort=preco&dir=desc</code></pre>
         </div>
 
         {{-- Campos (rules) --}}
@@ -1226,7 +1309,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
         {{-- Importação --}}
         <div class="space-y-3">
             <h3 class="font-semibold text-gray-900">
-                Importação — POST /api/produtos/import
+                Importação — POST /api/admin/produtos/import
             </h3>
 
             <div class="text-sm text-gray-700 space-y-2">
@@ -1263,6 +1346,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
     </div>
 </section>
 
+
 {{-- ========================= --}}
 {{-- ABA: ADVOGADOS --}}
 {{-- ========================= --}}
@@ -1285,7 +1369,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
         <div class="flex flex-wrap items-center gap-2 text-sm">
             <span class="text-gray-500">Base:</span>
             <code class="bg-gray-100 border border-gray-200 rounded px-2 py-1 text-xs">
-                /api/advogados
+                /api/admin/advogados
             </code>
         </div>
 
@@ -1302,27 +1386,27 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
                 <tbody class="divide-y divide-gray-200">
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/advogados</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/advogados</td>
                         <td class="px-4 py-2">Listar advogados (paginado)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/advogados</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/advogados</td>
                         <td class="px-4 py-2">Criar advogado</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/advogados/{advogado}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/advogados/{advogado}</td>
                         <td class="px-4 py-2">Detalhar advogado</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">PUT</td>
-                        <td class="px-4 py-2 font-mono">/api/advogados/{advogado}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/advogados/{advogado}</td>
                         <td class="px-4 py-2">Atualizar advogado</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">DELETE</td>
-                        <td class="px-4 py-2 font-mono">/api/advogados/{advogado}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/advogados/{advogado}</td>
                         <td class="px-4 py-2">Excluir advogado</td>
                     </tr>
                 </tbody>
@@ -1341,113 +1425,10 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
             </ul>
         </div>
 
-        {{-- Campos --}}
-        <div class="space-y-2 text-sm text-gray-700">
-            <h3 class="font-semibold text-gray-900">Campos do Advogado</h3>
-
-            <div class="overflow-auto border border-gray-200 rounded-lg">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-2 text-left">Campo</th>
-                            <th class="px-4 py-2 text-left">Tipo</th>
-                            <th class="px-4 py-2 text-left">Obrigatório</th>
-                            <th class="px-4 py-2 text-left">Regras / Observações</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        <tr>
-                            <td class="px-4 py-2 font-mono">nome</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Sim</td>
-                            <td class="px-4 py-2">max 255</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">email</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Sim</td>
-                            <td class="px-4 py-2">email válido, max 255</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">telefone</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">max 50</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">percentual_vendas</td>
-                            <td class="px-4 py-2">number</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">numeric, entre 0 e 100</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">oab</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Sim</td>
-                            <td class="px-4 py-2">max 50</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">logradouro</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">max 255</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">numero</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">max 50</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">complemento</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">max 255</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">bairro</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">max 255</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">cidade</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">max 255</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">estado</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">UF (2 letras), max 2</td>
-                        </tr>
-
-                        <tr>
-                            <td class="px-4 py-2 font-mono">cep</td>
-                            <td class="px-4 py-2">string</td>
-                            <td class="px-4 py-2">Não</td>
-                            <td class="px-4 py-2">max 20</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
         {{-- Exemplo — Criar --}}
         <div>
             <h3 class="font-semibold text-gray-900 mb-2">
-                Exemplo — Criar Advogado (POST /api/advogados)
+                Exemplo — Criar Advogado (POST /api/admin/advogados)
             </h3>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
@@ -1469,7 +1450,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
         {{-- Exemplo — Atualizar --}}
         <div>
             <h3 class="font-semibold text-gray-900 mb-2">
-                Exemplo — Atualizar Advogado (PUT /api/advogados/{advogado})
+                Exemplo — Atualizar Advogado (PUT /api/admin/advogados/{advogado})
             </h3>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
@@ -1485,6 +1466,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
 
     </div>
 </section>
+
 
 {{-- ========================= --}}
 {{-- ABA: PEDIDOS --}}
@@ -1507,7 +1489,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
         <div class="flex flex-wrap items-center gap-2 text-sm">
             <span class="text-gray-500">Base:</span>
             <code class="bg-gray-100 border border-gray-200 rounded px-2 py-1 text-xs">
-                /api/pedidos
+                /api/admin/pedidos
             </code>
         </div>
 
@@ -1524,27 +1506,27 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
                 <tbody class="divide-y divide-gray-200">
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/pedidos/create</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/pedidos/create</td>
                         <td class="px-4 py-2">Payload para criação (listas: produtos, cidades, gestores, distribuidores, clientes, coleções)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/pedidos</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/pedidos</td>
                         <td class="px-4 py-2">Listar pedidos (ordenado por mais recentes)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/pedidos</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/pedidos</td>
                         <td class="px-4 py-2">Criar pedido (status inicial: <code>em_andamento</code>)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/pedidos/{pedido}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/pedidos/{pedido}</td>
                         <td class="px-4 py-2">Detalhar pedido (itens, pivots, cliente, gestor, distribuidor, cidades, logs e notas fiscais)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">PUT</td>
-                        <td class="px-4 py-2 font-mono">/api/pedidos/{pedido}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/pedidos/{pedido}</td>
                         <td class="px-4 py-2">Atualizar pedido (recalcula totais, valida estoque, valida cidade e registra logs)</td>
                     </tr>
                 </tbody>
@@ -1818,6 +1800,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
     </div>
 </section>
 
+
 {{-- ========================= --}}
 {{-- ABA: NOTAS FISCAIS --}}
 {{-- ========================= --}}
@@ -1847,22 +1830,22 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
                 <tbody class="divide-y divide-gray-200">
                     <tr>
                         <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/pedidos/{pedido}/emitir-nota</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/pedidos/{pedido}/emitir-nota</td>
                         <td class="px-4 py-2">Emite uma nota (pré-visualização) para o pedido</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/notas/{nota}</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/notas/{nota}</td>
                         <td class="px-4 py-2">Detalha uma nota fiscal</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/notas/{nota}/faturar</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/notas/{nota}/faturar</td>
                         <td class="px-4 py-2">Fatura uma nota emitida (normal / simples_remessa / brinde)</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/notas/{nota}/pdf</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/notas/{nota}/pdf</td>
                         <td class="px-4 py-2">Baixa o PDF da nota</td>
                     </tr>
                 </tbody>
@@ -1893,7 +1876,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
         <div class="space-y-3">
             <h3 class="font-semibold text-gray-900">Emitir Nota (pré-visualização)</h3>
             <p class="text-sm text-gray-700">
-                <span class="font-mono">POST /api/pedidos/{pedido}/emitir-nota</span>
+                <span class="font-mono">POST /api/admin/pedidos/{pedido}/emitir-nota</span>
             </p>
 
             <div class="text-sm text-gray-700 space-y-2">
@@ -1937,7 +1920,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
         <div class="space-y-3">
             <h3 class="font-semibold text-gray-900">Detalhar Nota</h3>
             <p class="text-sm text-gray-700">
-                <span class="font-mono">GET /api/notas/{nota}</span>
+                <span class="font-mono">GET /api/admin/notas/{nota}</span>
             </p>
 
             <p class="text-sm text-gray-700">
@@ -1968,7 +1951,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
         <div class="space-y-3">
             <h3 class="font-semibold text-gray-900">Faturar Nota</h3>
             <p class="text-sm text-gray-700">
-                <span class="font-mono">POST /api/notas/{nota}/faturar</span>
+                <span class="font-mono">POST /api/admin/notas/{nota}/faturar</span>
             </p>
 
             <div class="overflow-auto border border-gray-200 rounded-lg">
@@ -2025,7 +2008,7 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
         <div class="space-y-3">
             <h3 class="font-semibold text-gray-900">PDF da Nota</h3>
             <p class="text-sm text-gray-700">
-                <span class="font-mono">GET /api/notas/{nota}/pdf</span>
+                <span class="font-mono">GET /api/admin/notas/{nota}/pdf</span>
             </p>
 
             <p class="text-sm text-gray-700">

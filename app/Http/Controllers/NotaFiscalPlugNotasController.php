@@ -44,7 +44,7 @@ class NotaFiscalPlugNotasController extends Controller
                 'cep'          => $this->onlyDigits(env('EMPRESA_CEP', '87000000')),
                 'cidade'       => env('EMPRESA_MUNICIPIO', 'Maringa'),
                 'estado'       => env('EMPRESA_UF', 'PR'),
-                'codigoCidade' => (int) (env('EMPRESA_CODIGO_CIDADE', 4115200)),
+                'codigoCidade' => (int) (env('EMPRESA_CODIGO_CIDADE', 4106902)),
             ],
             'nfe' => ['habilitado' => true, 'config' => ['serie' => $serie]],
         ];

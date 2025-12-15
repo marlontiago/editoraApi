@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\Admin\DiretorComercialController as ApiAdminDiretor
 use App\Http\Controllers\Api\Admin\ColecaoController as ApiAdminColecaoController;
 use App\Http\Controllers\Api\Admin\DashboardController as ApiAdminDashboardController;
 use App\Http\Controllers\Api\Admin\UserController as ApiAdminUserController;
+use App\Http\Controllers\Api\Admin\GestorAnexoController as ApiAdminGestorAnexoController;
 
 
 // Autenticação
@@ -49,8 +50,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::post('gestores/vincular', [ApiAdminGestorController::class, 'storeVinculo']);
     Route::delete('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorController::class, 'destroyAnexo']);
     Route::post('gestores/{gestor}/anexos/{anexo}/ativar', [ApiAdminGestorController::class, 'ativarAnexo']);
-    Route::get('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorController::class, 'showAnexo']);
-    Route::put('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorController::class, 'updateAnexo']);    
+    Route::get('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorAnexoController::class, 'show']);
+    Route::put('gestores/{gestor}/anexos/{anexo}', [ApiAdminGestorAnexoController::class, 'update']);    
     Route::get('gestores/{gestor}/ufs', [ApiAdminGestorController::class, 'ufs']);
     // Auxiliares 
     Route::get('utils/cidades-por-ufs', [ApiAdminGestorController::class, 'cidadesPorUfs']);

@@ -19,7 +19,6 @@ class GestorAnexoController extends Controller
             'data' => [
                 'gestor' => $payload['gestor']->only(['id','razao_social']),
                 'anexo' => $payload['anexo'],
-                'cidades' => $payload['cidades'],
             ],
         ]);
     }

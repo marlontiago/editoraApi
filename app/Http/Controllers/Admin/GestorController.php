@@ -8,6 +8,7 @@ use App\Models\Distribuidor;
 use App\Models\Gestor;
 use App\Services\GestorService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -147,4 +148,30 @@ class GestorController extends Controller
 
         return response()->json($payload->values());
     }
+
+
+    public function importar(Request $request, GestorService $service)
+    {
+        $request->validate([
+            'arquivo' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+            'atualizar_existentes' => ['nullable', 'boolean'],
+        ]);
+
+        /** @var UploadedFile $file */
+        $file = $request->file('arquivo');
+
+        $atualizar = (bool) $request->boolean('atualizar_existentes', true);
+
+        $resumo = $service->importarGestoresDaPlanilha($file, $atualizar);
+
+        $msg = "Importação concluída: {$resumo['criados']} criado(s), {$resumo['atualizados']} atualizado(s), {$resumo['pulados']} pulado(s).";
+        if (!empty($resumo['erros'])) {
+            $msg .= " (Com ".count($resumo['erros'])." erro(s) — veja detalhes abaixo.)";
+        }
+
+        return back()
+            ->with('success', $msg)
+            ->with('import_erros', $resumo['erros'] ?? []);
+}
+
 }

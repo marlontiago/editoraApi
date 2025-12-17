@@ -154,4 +154,29 @@ class DistribuidorController extends Controller
             );
         }
 
+        public function importar(Request $request, \App\Services\DistribuidorService $service)
+        {
+            $data = $request->validate([
+                'arquivo' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+                'atualizar_existentes' => ['nullable', 'boolean'],
+            ]);
+
+            $resultado = $service->importarDistribuidoresDaPlanilha(
+                $request->file('arquivo'),
+                (bool) ($request->boolean('atualizar_existentes', true))
+            );
+
+            // mensagem
+            $msg = "Importação finalizada: {$resultado['criados']} criado(s), {$resultado['atualizados']} atualizado(s), {$resultado['pulados']} pulado(s).";
+
+            // se tiver erros, volta com erros na sessão (pra UI do modal)
+            if (!empty($resultado['erros'])) {
+                return back()
+                    ->with('success', $msg)
+                    ->with('import_erros', $resultado['erros']);
+            }
+
+            return back()->with('success', $msg);
+        }
+
 }

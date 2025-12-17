@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Http\UploadedFile;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class DistribuidorService
 {
@@ -42,13 +44,28 @@ class DistribuidorService
 
         $data = $this->validateStore($request);
 
+        $gestorId = !empty($data['gestor_id']) ? (int) $data['gestor_id'] : null;
+
         $cityIds = $this->extractCityIds($data);
-        $this->validateCitiesAgainstGestorUfs((int)$data['gestor_id'], $cityIds);
+
+        // Se não tem gestor, não pode selecionar cidades (senão quebra a regra de UF/escopo)
+        if (!$gestorId && $cityIds->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'cities' => ['Selecione um gestor antes de selecionar cidades.']
+            ]);
+        }
+
+        // Valida escopo UF do gestor (somente se tiver gestor)
+        if ($gestorId) {
+            $this->validateCitiesAgainstGestorUfs($gestorId, $cityIds);
+        }
+
+        // Valida ocupação das cidades (independe de gestor)
         $this->validateCitiesNotOccupied($cityIds, null);
 
         $temAssinado = $this->deriveContratoAssinadoFromMeta($data);
 
-        $distribuidor = DB::transaction(function () use ($data, $request, $cityIds, $emailsReq, $telefonesReq, $temAssinado) {
+        $distribuidor = DB::transaction(function () use ($data, $request, $cityIds, $emailsReq, $telefonesReq, $temAssinado, $gestorId) {
             // USER
             $userEmail = trim((string)($data['email'] ?? ''));
             $userPass  = (string)($data['password'] ?? '');
@@ -70,7 +87,7 @@ class DistribuidorService
             // DISTRIBUIDOR
             $distribuidor = Distribuidor::create([
                 'user_id'             => $user->id,
-                'gestor_id'           => $data['gestor_id'],
+                'gestor_id'           => $gestorId, // pode ser null
 
                 'razao_social'        => $data['razao_social'],
                 'cnpj'                => $data['cnpj'] ?? null,
@@ -98,6 +115,7 @@ class DistribuidorService
                 'cep2'                => $data['cep2'] ?? null,
 
                 'percentual_vendas'   => $data['percentual_vendas'] ?? null,
+
                 'vencimento_contrato' => null,
                 'contrato_assinado'   => $temAssinado,
             ]);
@@ -132,11 +150,27 @@ class DistribuidorService
 
         $data = $this->validateUpdate($request, $distribuidor);
 
+        $gestorId = array_key_exists('gestor_id', $data) && $data['gestor_id'] !== null && $data['gestor_id'] !== ''
+            ? (int) $data['gestor_id']
+            : null;
+
         $cityIds = $this->extractCityIds($data);
-        $this->validateCitiesAgainstGestorUfs((int)$data['gestor_id'], $cityIds);
+
+        // Se não tem gestor, não pode selecionar cidades
+        if (!$gestorId && $cityIds->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'cities' => ['Selecione um gestor antes de selecionar cidades.']
+            ]);
+        }
+
+        // Valida escopo UF do gestor (somente se tiver gestor)
+        if ($gestorId) {
+            $this->validateCitiesAgainstGestorUfs($gestorId, $cityIds);
+        }
+
         $this->validateCitiesNotOccupied($cityIds, $distribuidor->id);
 
-        DB::transaction(function () use ($data, $request, $distribuidor, $cityIds, $emailsReq, $telefonesReq) {
+        DB::transaction(function () use ($data, $request, $distribuidor, $cityIds, $emailsReq, $telefonesReq, $gestorId) {
             // USER
             $user = $distribuidor->user;
             if (!empty($data['email'])) $user->email = $data['email'];
@@ -145,7 +179,7 @@ class DistribuidorService
 
             // DISTRIBUIDOR
             $distribuidor->update([
-                'gestor_id'           => $data['gestor_id'],
+                'gestor_id'           => $gestorId, // pode ser null
 
                 'razao_social'        => $data['razao_social'] ?? $distribuidor->razao_social,
                 'cnpj'                => $data['cnpj'] ?? null,
@@ -172,8 +206,9 @@ class DistribuidorService
                 'uf2'                 => $data['uf2'] ?? null,
                 'cep2'                => $data['cep2'] ?? null,
 
-                // aqui eu mantenho sua regra: no update é required
-                'percentual_vendas'   => $data['percentual_vendas'],
+                // mantém sua regra: no update é required
+                'percentual_vendas'   => $data['percentual_vendas'] ?? $distribuidor->percentual_vendas,
+
             ]);
 
             // Cities: sincroniza
@@ -309,7 +344,7 @@ class DistribuidorService
     private function validateStore(Request $request): array
     {
         return $request->validate([
-            'gestor_id'           => ['required','exists:gestores,id'],
+            'gestor_id'           => ['nullable','exists:gestores,id'],
 
             'email'               => ['nullable','email','max:255','unique:users,email'],
             'password'            => ['nullable','string','min:8'],
@@ -368,7 +403,7 @@ class DistribuidorService
     private function validateUpdate(Request $request, Distribuidor $distribuidor): array
     {
         return $request->validate([
-            'gestor_id'           => ['required','exists:gestores,id'],
+            'gestor_id'           => ['nullable','exists:gestores,id'],
 
             'email'               => ['nullable','email','max:255','unique:users,email,'.$distribuidor->user_id],
             'password'            => ['nullable','string','min:8'],
@@ -404,7 +439,7 @@ class DistribuidorService
             'cities'              => ['nullable','array'],
             'cities.*'            => ['integer','exists:cities,id'],
 
-            'percentual_vendas'   => ['required','numeric','min:0','max:100'],
+            'percentual_vendas'   => ['nullable','numeric','min:0','max:100'],
 
             'contratos'                     => ['nullable','array'],
             'contratos.*.tipo'              => ['required_with:contratos.*.arquivo','in:contrato,aditivo,outro,contrato_cidade'],
@@ -573,5 +608,290 @@ class DistribuidorService
             if (Schema::hasColumn('cities', $col)) return $col;
         }
         return null;
+    }
+
+    public function importarDistribuidoresDaPlanilha(\Illuminate\Http\UploadedFile $file, bool $atualizarExistentes = true): array
+{
+    $ext = strtolower($file->getClientOriginalExtension());
+
+    // Carregar planilha (XLSX/XLS ou CSV)
+    if (in_array($ext, ['csv', 'txt'], true)) {
+        $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
+
+        $sample = @file_get_contents($file->getPathname());
+        $firstLine = $sample ? strtok($sample, "\r\n") : '';
+
+        $countSemicolon = substr_count((string)$firstLine, ';');
+        $countComma     = substr_count((string)$firstLine, ',');
+
+        $delimiter = ($countSemicolon >= $countComma) ? ';' : ',';
+
+        $reader->setDelimiter($delimiter);
+        $reader->setEnclosure('"');
+        $reader->setEscapeCharacter('\\');
+        $reader->setInputEncoding('UTF-8'); // se quebrar acentos, mude pra Windows-1252
+
+        $spreadsheet = $reader->load($file->getPathname());
+    } else {
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getPathname());
+    }
+
+    $sheet = $spreadsheet->getActiveSheet();
+    $highestRow = $sheet->getHighestRow();
+
+    $criados = 0;
+    $atualizados = 0;
+    $pulados = 0;
+    $erros = [];
+
+    $driver = DB::connection()->getDriverName();
+
+    for ($row = 2; $row <= $highestRow; $row++) {
+        try {
+            // ======= Mapeamento (colunas da sua planilha) =======
+            $gestorNome = trim((string) $sheet->getCell([1, $row])->getValue());
+            $razao      = trim((string) $sheet->getCell([6, $row])->getValue());
+            $represent  = trim((string) $sheet->getCell([7, $row])->getValue());
+            $cnpj       = trim((string) $sheet->getCell([8, $row])->getValue());
+            $cpf        = trim((string) $sheet->getCell([9, $row])->getValue());
+            $rg         = trim((string) $sheet->getCell([10, $row])->getValue());
+            $telRaw     = (string) $sheet->getCell([11, $row])->getValue();
+            $emailRaw   = (string) $sheet->getCell([12, $row])->getValue();
+            $senha      = (string) $sheet->getCell([13, $row])->getValue();
+
+            // Endereço 1
+            $endereco   = trim((string) $sheet->getCell([14, $row])->getValue());
+            $numero     = trim((string) $sheet->getCell([15, $row])->getValue());
+            $compl      = trim((string) $sheet->getCell([16, $row])->getValue());
+            $bairro     = trim((string) $sheet->getCell([17, $row])->getValue());
+            $cidade     = trim((string) $sheet->getCell([18, $row])->getValue());
+            $uf         = strtoupper(trim((string) $sheet->getCell([19, $row])->getValue()));
+            $cep        = (string) $sheet->getCell([20, $row])->getValue();
+            $percentRaw = $sheet->getCell([30, $row])->getValue() ?? null; 
+            $percentual = is_numeric($percentRaw) ? (float) $percentRaw : null;
+            if ($percentual !== null) {
+                $percentual = max(0, min(100, $percentual));
+            }
+
+            // Endereço 2
+            $endereco2  = trim((string) $sheet->getCell([21, $row])->getValue());
+            $numero2    = trim((string) $sheet->getCell([22, $row])->getValue());
+            $compl2     = trim((string) $sheet->getCell([23, $row])->getValue());
+            $bairro2    = trim((string) $sheet->getCell([24, $row])->getValue());
+            $cidade2    = trim((string) $sheet->getCell([25, $row])->getValue());
+            $uf2        = strtoupper(trim((string) $sheet->getCell([26, $row])->getValue()));
+            $cep2       = (string) $sheet->getCell([27, $row])->getValue();
+
+            // Linha vazia
+            if ($razao === '' && trim($cnpj) === '') {
+                $pulados++;
+                continue;
+            }
+
+            // ======= Normalizações robustas =======
+
+            // CNPJ/CPF só dígitos (evita hífen estranho “‐” e afins)
+            $cnpjDigits = preg_replace('/\D+/', '', (string)$cnpj);
+            $cpfDigits  = preg_replace('/\D+/', '', (string)$cpf);
+            $rg         = trim((string)$rg);
+
+            // CEP só dígitos, máx 8
+            $cep  = preg_replace('/\D+/', '', (string)$cep);
+            $cep  = $cep ? substr($cep, 0, 8) : null;
+            $cep2 = preg_replace('/\D+/', '', (string)$cep2);
+            $cep2 = $cep2 ? substr($cep2, 0, 8) : null;
+
+            // Telefones: quebra e LIMPA -> só dígitos, remove >30 e vazios
+            $telefones = $this->splitLista($telRaw);
+            $telefones = collect($telefones)
+                ->map(fn($t) => preg_replace('/\D+/', '', (string)$t))
+                ->filter(fn($t) => $t !== '' && strlen($t) <= 30)
+                ->values()
+                ->all();
+
+            // Emails: quebra e limpa (tira lixo, pega só válidos)
+            $emails = $this->splitLista($emailRaw);
+            $emails = collect($emails)
+                ->map(fn($e) => trim(mb_strtolower((string)$e)))
+                ->map(function ($e) {
+                    // remove espaços e caracteres comuns colados
+                    $e = str_replace([' ', "\t", "\r", "\n"], '', $e);
+                    // se tiver "email:" ou coisa junto
+                    $e = preg_replace('/^email:/i', '', $e);
+                    return $e;
+                })
+                ->filter(fn($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+                ->unique()
+                ->values()
+                ->all();
+
+            // Se não tiver email válido, não manda email (pra não estourar validação)
+            $emailLogin = $emails[0] ?? null;
+
+            // Se CPF ficou gigante, corta/zera (pra não travar)
+            if ($cpfDigits !== '' && strlen($cpfDigits) > 11) {
+                // Se veio CPF+outras coisas, pega os 11 primeiros
+                $cpfDigits = substr($cpfDigits, 0, 11);
+            }
+
+            // ======= Resolver gestor_id pelo nome (opcional) =======
+            $gestorId = null;
+            if ($gestorNome !== '') {
+                $q = Gestor::query();
+                if ($driver === 'pgsql') {
+                    $q->where('razao_social', 'ILIKE', $gestorNome);
+                } else {
+                    $q->whereRaw('LOWER(razao_social) = ?', [mb_strtolower($gestorNome)]);
+                }
+                $gestorId = optional($q->first(['id']))->id;
+            }
+
+            // ======= Procura existente por CNPJ =======
+            $distribuidorExistente = null;
+            if ($cnpjDigits) {
+                $q = Distribuidor::query();
+
+                if ($driver === 'pgsql') {
+                    $q->whereRaw("REGEXP_REPLACE(cnpj, '[^0-9]', '', 'g') = ?", [$cnpjDigits]);
+                } else {
+                    // MySQL: remove ., -, /
+                    $q->whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(cnpj,'.',''),'-',''),'/',''),' ','') = ?", [$cnpjDigits]);
+                }
+
+                $distribuidorExistente = $q->first();
+            }
+
+            // ======= Payload =======
+            $payload = [
+                'gestor_id'           => $gestorId,
+
+                'razao_social'        => $razao ?: null,
+                'cnpj'                => $cnpj ?: null,
+                'representante_legal' => $represent ?: null,
+                'cpf'                 => $cpfDigits ? $cpfDigits : null,
+                'rg'                  => $rg ?: null,
+
+                'emails'              => $emails,
+                'telefones'           => $telefones,
+
+                // Só envia email se for válido
+                'email'               => $emailLogin,
+                'password'            => $senha ?: null,
+
+                'endereco'            => $endereco ?: null,
+                'numero'              => $numero ?: null,
+                'complemento'         => $compl ?: null,
+                'bairro'              => $bairro ?: null,
+                'cidade'              => $cidade ?: null,
+                'uf'                  => $uf ?: null,
+                'cep'                 => $cep,
+
+                'endereco2'           => $endereco2 ?: null,
+                'numero2'             => $numero2 ?: null,
+                'complemento2'        => $compl2 ?: null,
+                'bairro2'             => $bairro2 ?: null,
+                'cidade2'             => $cidade2 ?: null,
+                'uf2'                 => $uf2 ?: null,
+                'cep2'                => $cep2,
+
+                // sem cities e sem anexos via planilha
+                'percentual_vendas' => $percentual,
+
+                'cities'              => [],
+                'contratos'           => [],
+            ];
+
+            // ======= Criar/Atualizar (conta update só se mudou) =======
+            if ($distribuidorExistente) {
+                if (!$atualizarExistentes) {
+                    $pulados++;
+                    continue;
+                }
+
+                // snapshot ANTES
+                $antes = $distribuidorExistente->only([
+                    'gestor_id','razao_social','cnpj','representante_legal','cpf','rg',
+                    'emails','telefones',
+                    'endereco','numero','complemento','bairro','cidade','uf','cep',
+                    'endereco2','numero2','complemento2','bairro2','cidade2','uf2','cep2',
+                    'percentual_vendas',
+                ]);
+
+                $antesUser = $distribuidorExistente->user
+                    ? $distribuidorExistente->user->only(['email'])
+                    : ['email' => null];
+
+                $fakeRequest = Request::create('/fake', 'POST', $payload);
+                $this->updateFromRequest($fakeRequest, $distribuidorExistente);
+
+                // snapshot DEPOIS
+                $distribuidorExistente->refresh()->load('user');
+
+                $depois = $distribuidorExistente->only([
+                    'gestor_id','razao_social','cnpj','representante_legal','cpf','rg',
+                    'emails','telefones',
+                    'endereco','numero','complemento','bairro','cidade','uf','cep',
+                    'endereco2','numero2','complemento2','bairro2','cidade2','uf2','cep2',
+                    'percentual_vendas',
+                ]);
+
+                $depoisUser = $distribuidorExistente->user
+                    ? $distribuidorExistente->user->only(['email'])
+                    : ['email' => null];
+
+                // normaliza arrays pra comparar direito
+                $changed = false;
+
+                if ($antes != $depois) {
+                    $changed = true;
+                }
+
+                if (($antesUser['email'] ?? null) !== ($depoisUser['email'] ?? null)) {
+                    $changed = true;
+                }
+
+                if ($changed) {
+                    $atualizados++;
+                } else {
+                    $pulados++;
+                }
+            } else {
+                $fakeRequest = Request::create('/fake', 'POST', $payload);
+                $this->createFromRequest($fakeRequest);
+                $criados++;
+            }
+
+
+        } catch (\Throwable $e) {
+            $erros[] = [
+                'linha' => $row,
+                'distribuidor' => (string) $sheet->getCell([6, $row])->getValue(),
+                'cnpj' => (string) $sheet->getCell([8, $row])->getValue(),
+                'erro' => $e->getMessage(),
+            ];
+        }
+    }
+
+    return [
+        'criados' => $criados,
+        'atualizados' => $atualizados,
+        'pulados' => $pulados,
+        'erros' => $erros,
+    ];
+}
+
+
+    /**
+     * Divide listas: separa por vírgula, ponto-e-vírgula ou quebra de linha.
+     */
+    private function splitLista(?string $raw): array
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') return [];
+
+        $parts = preg_split('/[;,\\n\\r]+/', $raw) ?: [];
+        $parts = array_values(array_filter(array_map(fn($v) => trim((string)$v), $parts), fn($v) => $v !== ''));
+
+        return $parts;
     }
 }

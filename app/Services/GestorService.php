@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Http\UploadedFile;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class GestorService
 {
@@ -669,4 +671,198 @@ class GestorService
             'uf'   => $c->uf,
         ])->values();
     }
+
+    public function importarGestoresDaPlanilha(UploadedFile $file, bool $atualizarExistentes = true): array
+{
+    $ext = strtolower($file->getClientOriginalExtension());
+
+    // Carregar planilha (XLSX/XLS ou CSV)
+    if (in_array($ext, ['csv', 'txt'], true)) {
+        $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
+
+        // Auto-detect de delimitador: tenta ; depois ,
+        $sample = file_get_contents($file->getPathname());
+        $firstLine = $sample ? strtok($sample, "\r\n") : '';
+
+        $countSemicolon = substr_count((string) $firstLine, ';');
+        $countComma     = substr_count((string) $firstLine, ',');
+
+        $delimiter = ($countSemicolon >= $countComma) ? ';' : ',';
+
+        $reader->setDelimiter($delimiter);
+        $reader->setEnclosure('"');
+        $reader->setEscapeCharacter('\\');
+
+        // CSVs brasileiros às vezes vêm em ISO-8859-1/Windows-1252
+        // Se vier estranho, troque pra 'Windows-1252'
+        $reader->setInputEncoding('UTF-8');
+
+        $spreadsheet = $reader->load($file->getPathname());
+    } else {
+        $spreadsheet = IOFactory::load($file->getPathname());
+    }
+
+    $sheet = $spreadsheet->getActiveSheet();
+    $highestRow = $sheet->getHighestRow();
+
+    $criados = 0;
+    $atualizados = 0;
+    $pulados = 0;
+    $erros = [];
+
+    for ($row = 2; $row <= $highestRow; $row++) {
+        try {
+            $razao = trim((string) $sheet->getCell([1, $row])->getValue());
+            $cnpj  = trim((string) $sheet->getCell([2, $row])->getValue());
+
+            if ($razao === '' && $cnpj === '') {
+                $pulados++;
+                continue;
+            }
+
+            $representante = trim((string) $sheet->getCell([3, $row])->getValue());
+            $cpf           = trim((string) $sheet->getCell([4, $row])->getValue());
+            $rg            = trim((string) $sheet->getCell([5, $row])->getValue());
+
+            $telefonesRaw  = (string) $sheet->getCell([6, $row])->getValue();
+            $emailsRaw     = (string) $sheet->getCell([7, $row])->getValue();
+            $senha         = (string) $sheet->getCell([8, $row])->getValue();
+
+            $ufsRaw        = (string) $sheet->getCell([9, $row])->getValue();
+            $percentRaw    = $sheet->getCell([10, $row])->getValue();
+
+            // Endereço 1
+            $endereco    = trim((string) $sheet->getCell([11, $row])->getValue());
+            $numero      = trim((string) $sheet->getCell([12, $row])->getValue());
+            $complemento = trim((string) $sheet->getCell([13, $row])->getValue());
+            $bairro      = trim((string) $sheet->getCell([14, $row])->getValue());
+            $cidade      = trim((string) $sheet->getCell([15, $row])->getValue());
+            $uf          = strtoupper(trim((string) $sheet->getCell([16, $row])->getValue()));
+
+            $cep = (string) $sheet->getCell([17, $row])->getValue();
+            $cep = preg_replace('/\D+/', '', $cep);
+            $cep = $cep ? substr($cep, 0, 8) : null;
+
+            // Endereço 2
+            $endereco2    = trim((string) $sheet->getCell([18, $row])->getValue());
+            $numero2      = trim((string) $sheet->getCell([19, $row])->getValue());
+            $complemento2 = trim((string) $sheet->getCell([20, $row])->getValue());
+            $bairro2      = trim((string) $sheet->getCell([21, $row])->getValue());
+            $cidade2      = trim((string) $sheet->getCell([22, $row])->getValue());
+            $uf2          = strtoupper(trim((string) $sheet->getCell([23, $row])->getValue()));
+
+            $cep2 = (string) $sheet->getCell([24, $row])->getValue();
+            $cep2 = preg_replace('/\D+/', '', $cep2);
+            $cep2 = $cep2 ? substr($cep2, 0, 8) : null;
+
+            // Normalizações
+            $cnpjDigits = preg_replace('/\D+/', '', $cnpj);
+            $cpfDigits  = preg_replace('/\D+/', '', $cpf);
+
+            $telefones = $this->splitLista($telefonesRaw);
+            $emails    = $this->splitLista($emailsRaw);
+
+            $ufs = collect($this->splitLista($ufsRaw))
+                ->map(fn($u) => strtoupper(trim($u)))
+                ->filter(fn($u) => in_array($u, $this->UFs, true))
+                ->unique()
+                ->values()
+                ->all();
+
+            $percentual = is_numeric($percentRaw) ? (float) $percentRaw : null;
+            if ($percentual !== null) {
+                $percentual = max(0, min(100, $percentual));
+            }
+
+            // Procura existente por CNPJ (se tiver CNPJ)
+            $gestorExistente = null;
+            if ($cnpjDigits) {
+                $gestorExistente = Gestor::query()
+                    ->whereRaw("REGEXP_REPLACE(cnpj, '[^0-9]', '') = ?", [$cnpjDigits])
+                    ->first();
+            }
+
+            $payload = [
+                'razao_social'        => $razao ?: null,
+                'cnpj'                => $cnpj ?: null,
+                'representante_legal' => $representante ?: null,
+                'cpf'                 => $cpf ?: null,
+                'rg'                  => $rg ?: null,
+
+                'telefones'           => $telefones ?: [],
+                'emails'              => $emails ?: [],
+                'email'               => $emails[0] ?? null,
+                'password'            => $senha ?: null,
+
+                'estados_uf'          => $ufs ?: [],
+                'percentual_vendas'   => $percentual,
+
+                'endereco'            => $endereco ?: null,
+                'numero'              => $numero ?: null,
+                'complemento'         => $complemento ?: null,
+                'bairro'              => $bairro ?: null,
+                'cidade'              => $cidade ?: null,
+                'uf'                  => $uf ?: null,
+                'cep'                 => $cep,
+
+                'endereco2'           => $endereco2 ?: null,
+                'numero2'             => $numero2 ?: null,
+                'complemento2'        => $complemento2 ?: null,
+                'bairro2'             => $bairro2 ?: null,
+                'cidade2'             => $cidade2 ?: null,
+                'uf2'                 => $uf2 ?: null,
+                'cep2'                => $cep2,
+
+                'contratos'           => [],
+                'contatos'            => [],
+            ];
+
+            if ($gestorExistente) {
+                if (!$atualizarExistentes) {
+                    $pulados++;
+                    continue;
+                }
+
+                $fakeRequest = Request::create('/fake', 'POST', $payload);
+                $this->updateFromRequest($fakeRequest, $gestorExistente);
+                $atualizados++;
+            } else {
+                $fakeRequest = Request::create('/fake', 'POST', $payload);
+                $this->storeFromRequest($fakeRequest);
+                $criados++;
+            }
+        } catch (\Throwable $e) {
+            $erros[] = [
+                'linha' => $row,
+                'gestor' => $sheet->getCell([1, $row])->getValue(),
+                'cnpj' => $sheet->getCell([2, $row])->getValue(),
+                'erro' => $e->getMessage(),
+            ];
+        }
+    }
+
+    return [
+        'criados' => $criados,
+        'atualizados' => $atualizados,
+        'pulados' => $pulados,
+        'erros' => $erros,
+    ];
+}
+
+
+/**
+ * Divide listas do Excel: separa por vírgula, ponto-e-vírgula ou quebra de linha.
+ */
+private function splitLista(?string $raw): array
+{
+    $raw = trim((string) $raw);
+    if ($raw === '') return [];
+
+    $parts = preg_split('/[;,\\n\\r]+/', $raw) ?: [];
+    $parts = array_values(array_filter(array_map(fn($v) => trim((string)$v), $parts), fn($v) => $v !== ''));
+
+    return $parts;
+}
+
+
 }

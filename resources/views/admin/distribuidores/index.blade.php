@@ -129,7 +129,7 @@
                 {{-- /MODAL --}}
             </div>
         </div>
-    </x-slot>
+    </x-slot>    
 
     <div class="max-w-7xl mx-auto p-6">
         @if (session('success'))
@@ -137,6 +137,53 @@
                 {{ session('success') }}
             </div>
         @endif
+
+        {{-- FILTRO --}}
+        <div class="bg-white shadow rounded-lg p-4">
+            <form method="GET" action="{{ route('admin.distribuidores.index') }}" class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div class="md:col-span-6">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Buscar</label>
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ $q ?? request('q') }}"
+                        placeholder="Razão social, CNPJ, e-mail…"
+                        class="w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    />
+                </div>
+
+                <div class="md:col-span-4">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Gestor</label>
+                    <select
+                        name="gestor_id"
+                        class="w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm"
+                    >
+                        <option value="">Todos</option>
+                        @foreach ($gestores as $g)
+                            <option value="{{ $g->id }}" @selected((int)($gestorId ?? request('gestor_id')) === (int)$g->id)>
+                                {{ $g->razao_social }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="md:col-span-2 flex items-end gap-2">
+                    <button
+                        type="submit"
+                        class="inline-flex h-9 w-full items-center justify-center rounded-md bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-900"
+                    >
+                        Filtrar
+                    </button>
+
+                    <a
+                        href="{{ route('admin.distribuidores.index') }}"
+                        class="inline-flex h-9 w-full items-center justify-center rounded-md border bg-white px-3 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                        Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
 
         <div class="bg-white shadow rounded-lg overflow-hidden">
             <table class="min-w-full text-sm">

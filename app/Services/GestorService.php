@@ -33,6 +33,12 @@ class GestorService
 
     public function storeFromRequest(Request $request): Gestor
     {
+        dd([
+        'content_type' => $request->header('Content-Type'),
+        'all'          => $request->all(),
+        'files'        => $request->allFiles(),
+        'raw'          => $request->getContent(), // útil quando vem JSON puro
+    ]);
         $request = $this->sanitizeAndMergeInputs($request);
 
         $data = $this->validateStore($request);
@@ -116,11 +122,13 @@ class GestorService
 
     public function updateFromRequest(Request $request, Gestor $gestor): Gestor
     {
+        
         $request = $this->sanitizeAndMergeInputs($request);
 
         $data = $this->validateUpdate($request, $gestor);
 
         $this->assertOnePreferencial($data);
+
 
         DB::transaction(function () use ($data, $request, $gestor) {
 

@@ -563,128 +563,330 @@ Content-Type: application/json
             {{-- ========================= --}}
             {{-- ABAS PLACEHOLDER --}}
             {{-- ========================= --}}
-          <section x-show="active === 'gestores'" x-cloak>
-    <div class="rounded-lg border border-gray-200 bg-white p-6 space-y-8">
+          <<section x-show="active === 'gestores'" x-cloak>
+  <div class="rounded-lg border border-gray-200 bg-white p-6 space-y-8">
 
-        {{-- Cabeçalho --}}
-        <div>
-            <h2 class="text-lg font-semibold text-gray-900">
-                Gestores (Admin)
-            </h2>
-            <p class="text-sm text-gray-500">
-                Cadastro completo de gestores com usuário automático, UFs (gestor_ufs), contatos, contratos/anexos
-                e vínculo com distribuidores.
-            </p>
-        </div>
+    {{-- Cabeçalho --}}
+    <div>
+      <h2 class="text-lg font-semibold text-gray-900">
+        Gestores (Admin)
+      </h2>
+      <p class="text-sm text-gray-500">
+        Cadastro completo de gestores com usuário automático, UFs (gestor_ufs), contratos/anexos
+        e vínculo com distribuidores.
+      </p>
+    </div>
 
-        {{-- Base --}}
-        <div class="text-sm">
-            <span class="text-gray-500">Base:</span>
-            <code class="bg-gray-100 border rounded px-2 py-1 text-xs">
-                /api/admin/gestores
-            </code>
-        </div>
+    {{-- Base --}}
+    <div class="text-sm">
+      <span class="text-gray-500">Base:</span>
+      <code class="bg-gray-100 border rounded px-2 py-1 text-xs">
+        /api/admin/gestores
+      </code>
+    </div>
 
-        {{-- Rotas (apiResource) --}}
-        <div class="overflow-auto border border-gray-200 rounded-lg">
-            <table class="min-w-full text-sm">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-2 text-left">Método</th>
-                        <th class="px-4 py-2 text-left">Endpoint</th>
-                        <th class="px-4 py-2 text-left">Descrição</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/admin/gestores</td><td>Listar gestores (paginado)</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">POST</td><td class="px-4 py-2 font-mono">/api/admin/gestores</td><td>Criar gestor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Detalhar gestor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">PUT</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Atualizar gestor</td></tr>
-                    <tr><td class="px-4 py-2 font-mono">DELETE</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Excluir gestor</td></tr>
-                </tbody>
-            </table>
-        </div>
+    {{-- Rotas (apiResource) --}}
+    <div class="overflow-auto border border-gray-200 rounded-lg">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-2 text-left">Método</th>
+            <th class="px-4 py-2 text-left">Endpoint</th>
+            <th class="px-4 py-2 text-left">Descrição</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/admin/gestores</td><td>Listar gestores (paginado)</td></tr>
+          <tr><td class="px-4 py-2 font-mono">POST</td><td class="px-4 py-2 font-mono">/api/admin/gestores</td><td>Criar gestor</td></tr>
+          <tr><td class="px-4 py-2 font-mono">GET</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Detalhar gestor</td></tr>
+          <tr><td class="px-4 py-2 font-mono">PUT</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Atualizar gestor</td></tr>
+          <tr><td class="px-4 py-2 font-mono">DELETE</td><td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}</td><td>Excluir gestor</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-        {{-- Rotas extras --}}
-        <div class="overflow-auto border border-gray-200 rounded-lg">
-            <table class="min-w-full text-sm">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-2 text-left">Método</th>
-                        <th class="px-4 py-2 text-left">Endpoint</th>
-                        <th class="px-4 py-2 text-left">Descrição</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
+    {{-- Rotas extras --}}
+    <div class="overflow-auto border border-gray-200 rounded-lg">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-4 py-2 text-left">Método</th>
+            <th class="px-4 py-2 text-left">Endpoint</th>
+            <th class="px-4 py-2 text-left">Descrição</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
 
-                    {{-- ANEXOS / CONTRATOS DO GESTOR --}}
-                    <tr>
-                        <td class="px-4 py-2 font-mono">DELETE</td>
-                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
-                        <td>Excluir anexo (remove arquivo do storage e registro)</td>
-                    </tr>
+          {{-- ANEXOS / CONTRATOS DO GESTOR --}}
+          <tr>
+            <td class="px-4 py-2 font-mono">DELETE</td>
+            <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
+            <td>Excluir anexo (remove arquivo do storage e registro)</td>
+          </tr>
 
-                    <tr>
-                        <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}/ativar</td>
-                        <td>Marcar anexo como ativo (aplica percentual/vencimento do ativo)</td>
-                    </tr>
+          <tr>
+            <td class="px-4 py-2 font-mono">POST</td>
+            <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}/ativar</td>
+            <td>Marcar anexo como ativo (aplica percentual/vencimento do ativo)</td>
+          </tr>
 
-                    <tr>
-                        <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
-                        <td>Detalhar anexo (controller separado)</td>
-                    </tr>
+          <tr>
+            <td class="px-4 py-2 font-mono">GET</td>
+            <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
+            <td>Detalhar anexo (controller separado)</td>
+          </tr>
 
-                    <tr>
-                        <td class="px-4 py-2 font-mono">PUT</td>
-                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
-                        <td>Atualizar anexo (controller separado)</td>
-                    </tr>
+          <tr>
+            <td class="px-4 py-2 font-mono">PUT</td>
+            <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/anexos/{anexo}</td>
+            <td>Atualizar anexo (controller separado)</td>
+          </tr>
 
-                    {{-- VÍNCULO DISTRIBUIDORES (se existir no seu api.php) --}}
-                    <tr>
-                        <td class="px-4 py-2 font-mono">POST</td>
-                        <td class="px-4 py-2 font-mono">/api/admin/gestores/vincular</td>
-                        <td>Vincular distribuidores a gestores (batch)</td>
-                    </tr>
+          {{-- VÍNCULO DISTRIBUIDORES (se existir no seu api.php) --}}
+          <tr>
+            <td class="px-4 py-2 font-mono">POST</td>
+            <td class="px-4 py-2 font-mono">/api/admin/gestores/vincular</td>
+            <td>Vincular distribuidores a gestores (batch)</td>
+          </tr>
 
-                    {{-- UFS (se existir no seu api.php) --}}
-                    <tr>
-                        <td class="px-4 py-2 font-mono">GET</td>
-                        <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/ufs</td>
-                        <td>Listar UFs vinculadas ao gestor</td>
-                    </tr>
+          {{-- UFS (se existir no seu api.php) --}}
+          <tr>
+            <td class="px-4 py-2 font-mono">GET</td>
+            <td class="px-4 py-2 font-mono">/api/admin/gestores/{gestor}/ufs</td>
+            <td>Listar UFs vinculadas ao gestor</td>
+          </tr>
 
-                </tbody>
-            </table>
-        </div>
+        </tbody>
+      </table>
+    </div>
 
-        {{-- Atenção multipart --}}
-        <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800">
-            <strong>Atenção:</strong>
-            Se você enviar <code>contratos[*].arquivo</code> ou <code>arquivo</code> no update de anexo (PDF),
-            o request deve ser <code>multipart/form-data</code>. Sem upload, pode usar <code>application/json</code>.
-        </div>
+    {{-- Atenção multipart --}}
+    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800">
+      <strong>Atenção:</strong>
+      Se você enviar <code>contratos[*].arquivo</code> (PDF),
+      o request deve ser <code>multipart/form-data</code>. Sem upload, pode usar <code>application/json</code>.
+    </div>
 
-        {{-- Regras importantes --}}
-        <div class="space-y-2 text-sm text-gray-700">
-            <h3 class="font-semibold text-gray-900">Regras de negócio</h3>
-            <ul class="list-disc pl-6 space-y-1">
-                <li>Ao criar, se <code>email</code> estiver vazio, o sistema cria um e-mail placeholder automaticamente.</li>
-                <li>Se <code>password</code> estiver vazio, uma senha aleatória é gerada automaticamente.</li>
-                <li>O gestor possui UFs vinculadas (ex.: <code>gestor_ufs</code>) via <code>estados_uf</code>.</li>
-                <li>Apenas <strong>um</strong> contato pode ser marcado como <code>preferencial</code>.</li>
-                <li>Apenas um anexo pode ficar com <code>ativo=true</code>; o ativo aplica automaticamente <code>percentual_vendas</code> e <code>vencimento_contrato</code> no gestor.</li>
-                <li>Ao ativar um anexo, os demais anexos ativos do mesmo gestor são desativados.</li>
-            </ul>
-        </div>
+    {{-- Regras importantes --}}
+    <div class="space-y-2 text-sm text-gray-700">
+      <h3 class="font-semibold text-gray-900">Regras de negócio</h3>
+      <ul class="list-disc pl-6 space-y-1">
+        <li>Ao criar, se <code>email</code> estiver vazio, o sistema cria um e-mail placeholder automaticamente.</li>
+        <li>Se <code>password</code> estiver vazio, uma senha aleatória é gerada automaticamente.</li>
+        <li>O gestor possui UFs vinculadas (ex.: <code>gestor_ufs</code>) via <code>estados_uf</code>.</li>
+        <li>Apenas um anexo pode ficar com <code>ativo=true</code>; o ativo aplica automaticamente <code>percentual_vendas</code> e <code>vencimento_contrato</code> no gestor.</li>
+        <li>Ao ativar um anexo, os demais anexos ativos do mesmo gestor são desativados.</li>
+      </ul>
+    </div>
 
-        {{-- CREATE (payload completo) --}}
-        <div>
-            <h3 class="font-semibold text-gray-900 mb-2">
-                Exemplo — Criar Gestor (payload completo)
-            </h3>
+    {{-- Campos --}}
+    <div class="space-y-2 text-sm text-gray-700">
+      <h3 class="font-semibold text-gray-900">Campos do Gestor</h3>
+
+      <div class="overflow-auto border border-gray-200 rounded-lg">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-2 text-left">Campo</th>
+              <th class="px-4 py-2 text-left">Tipo</th>
+              <th class="px-4 py-2 text-left">Obrigatório</th>
+              <th class="px-4 py-2 text-left">Regras / Observações</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y">
+            {{-- DADOS PRINCIPAIS --}}
+            <tr>
+              <td class="px-4 py-2 font-mono">razao_social</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Sim</td>
+              <td class="px-4 py-2">max 255</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">cnpj</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Geralmente Sim</td>
+              <td class="px-4 py-2">max 18; validar formato; pode ser único (se você aplicou unique)</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">representante_legal</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">max 255</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">cpf</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">max 14</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">rg</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">max 30</td>
+            </tr>
+
+            {{-- LOGIN / USUÁRIO --}}
+            <tr>
+              <td class="px-4 py-2 font-mono">email</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">
+                email válido, max 255, único em users.email;
+                se vazio, o sistema cria um placeholder automaticamente
+              </td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">password</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">se vazio, o sistema gera uma senha aleatória automaticamente</td>
+            </tr>
+
+            {{-- CONTATO BÁSICO --}}
+            <tr>
+              <td class="px-4 py-2 font-mono">telefone</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">max 20</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">telefones</td>
+              <td class="px-4 py-2">array</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">lista de strings; itens vazios removidos; salva null se vier vazio</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">emails</td>
+              <td class="px-4 py-2">array</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">lista de emails válidos; itens vazios removidos; salva null se vier vazio</td>
+            </tr>
+
+            {{-- ENDEREÇO 1 --}}
+            <tr><td class="px-4 py-2 font-mono">endereco</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 255</td></tr>
+            <tr><td class="px-4 py-2 font-mono">numero</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 20</td></tr>
+            <tr><td class="px-4 py-2 font-mono">complemento</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+            <tr><td class="px-4 py-2 font-mono">bairro</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+            <tr><td class="px-4 py-2 font-mono">cidade</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+            <tr><td class="px-4 py-2 font-mono">uf</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">size 2; normalizado para maiúsculo</td></tr>
+            <tr><td class="px-4 py-2 font-mono">cep</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 9</td></tr>
+
+            {{-- ENDEREÇO 2 --}}
+            <tr><td class="px-4 py-2 font-mono">endereco2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 255</td></tr>
+            <tr><td class="px-4 py-2 font-mono">numero2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 20</td></tr>
+            <tr><td class="px-4 py-2 font-mono">complemento2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+            <tr><td class="px-4 py-2 font-mono">bairro2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+            <tr><td class="px-4 py-2 font-mono">cidade2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+            <tr><td class="px-4 py-2 font-mono">uf2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">size 2; normalizado para maiúsculo</td></tr>
+            <tr><td class="px-4 py-2 font-mono">cep2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 9</td></tr>
+
+            {{-- COMISSÃO / CONTRATO --}}
+            <tr>
+              <td class="px-4 py-2 font-mono">percentual_vendas</td>
+              <td class="px-4 py-2">number</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">ex: 5; pode ser sobrescrito ao ativar anexo/contrato</td>
+            </tr>
+
+            {{-- UFS --}}
+            <tr>
+              <td class="px-4 py-2 font-mono">estados_uf</td>
+              <td class="px-4 py-2">array</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">lista de UFs (ex: ["SP","RJ"]); normaliza maiúsculo; salva em gestor_ufs</td>
+            </tr>
+
+            {{-- CONTRATOS/ANEXOS --}}
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos</td>
+              <td class="px-4 py-2">array</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">lista de objetos; ao ativar um, desativa os demais</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].tipo</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Depende</td>
+              <td class="px-4 py-2">ex: contrato, aditivo</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].descricao</td>
+              <td class="px-4 py-2">string</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">texto livre</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].assinado</td>
+              <td class="px-4 py-2">boolean</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">1/0 no form-data</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].percentual_vendas</td>
+              <td class="px-4 py-2">number</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">se ativo=true, aplica no gestor automaticamente</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].ativo</td>
+              <td class="px-4 py-2">boolean</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">apenas 1 ativo=true por gestor</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].data_assinatura</td>
+              <td class="px-4 py-2">date (Y-m-d)</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">ex: 2025-01-01</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].validade_meses</td>
+              <td class="px-4 py-2">int</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">ex: 12, 24</td>
+            </tr>
+
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].arquivo</td>
+              <td class="px-4 py-2">file (PDF)</td>
+              <td class="px-4 py-2">Não</td>
+              <td class="px-4 py-2">requer multipart/form-data</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="rounded-md bg-gray-50 border border-gray-200 p-3 text-xs text-gray-700">
+        <strong>Observações:</strong>
+        <ul class="list-disc pl-6 mt-1 space-y-1">
+          <li>Campos em <code>telefones</code> / <code>emails</code>: o service remove itens vazios e salva <code>null</code> se a lista ficar vazia.</li>
+          <li><code>uf</code>, <code>uf2</code> e <code>estados_uf[*]</code> são normalizados para maiúsculo.</li>
+          <li>Em <code>contratos</code>: apenas 1 item pode ficar com <code>ativo</code>.</li>
+        </ul>
+      </div>
+    </div>
+
+    {{-- CREATE (payload completo) --}}
+    <div>
+      <h3 class="font-semibold text-gray-900 mb-2">
+        Exemplo — Criar Gestor (payload completo)
+      </h3>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
   "razao_social": "Editora Alfa LTDA",
@@ -719,19 +921,6 @@ Content-Type: application/json
 
   "estados_uf": ["SP", "RJ", "MG"],
 
-  "contatos": [
-    {
-      "nome": "Maria Financeiro",
-      "email": "maria@empresa.com",
-      "telefone": "11988887777",
-      "whatsapp": "11988887777",
-      "cargo": "Financeiro",
-      "tipo": "financeiro",
-      "preferencial": true,
-      "observacoes": "Contato principal do financeiro"
-    }
-  ],
-
   "contratos": [
     {
       "tipo": "contrato",
@@ -745,33 +934,22 @@ Content-Type: application/json
   ]
 }</code></pre>
 
-            <p class="text-sm text-gray-600 mt-2">
-                Se enviar <code>contratos[0][arquivo]</code>, troque o request para <code>multipart/form-data</code> e envie o PDF no campo.
-            </p>
-        </div>
+      <p class="text-sm text-gray-600 mt-2">
+        Se enviar <code>contratos[0][arquivo]</code>, troque o request para <code>multipart/form-data</code> e envie o PDF no campo.
+      </p>
+    </div>
 
-        {{-- UPDATE (payload completo) --}}
-        <div>
-            <h3 class="font-semibold text-gray-900 mb-2">
-                Exemplo — Atualizar Gestor (payload completo)
-            </h3>
+    {{-- UPDATE (payload completo) --}}
+    <div>
+      <h3 class="font-semibold text-gray-900 mb-2">
+        Exemplo — Atualizar Gestor (payload completo)
+      </h3>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
   "razao_social": "Editora Alfa (Atualizada)",
   "email": "novoemail@empresa.com",
   "percentual_vendas": 7,
   "estados_uf": ["SP", "RJ"],
-
-  "contatos": [
-    {
-      "nome": "Maria Financeiro",
-      "email": "maria@empresa.com",
-      "telefone": "11988887777",
-      "cargo": "Financeiro",
-      "tipo": "financeiro",
-      "preferencial": true
-    }
-  ],
 
   "contratos": [
     {
@@ -785,13 +963,13 @@ Content-Type: application/json
     }
   ]
 }</code></pre>
-        </div>
+    </div>
 
-        {{-- Exemplo multipart/form-data (contratos[*].arquivo) --}}
-        <div>
-            <h3 class="font-semibold text-gray-900 mb-2">
-                Exemplo — Envio de contrato com arquivo (multipart/form-data)
-            </h3>
+    {{-- Exemplo multipart/form-data (contratos[*].arquivo) --}}
+    <div>
+      <h3 class="font-semibold text-gray-900 mb-2">
+        Exemplo — Envio de contrato com arquivo (multipart/form-data)
+      </h3>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>razao_social: Editora Alfa LTDA
 email: gestor@empresa.com
@@ -799,12 +977,6 @@ password: 12345678
 percentual_vendas: 5
 estados_uf[0]: SP
 estados_uf[1]: RJ
-
-contatos[0][nome]: Maria Financeiro
-contatos[0][email]: maria@empresa.com
-contatos[0][telefone]: 11988887777
-contatos[0][tipo]: financeiro
-contatos[0][preferencial]: 1
 
 contratos[0][tipo]: contrato
 contratos[0][descricao]: Contrato principal
@@ -814,15 +986,15 @@ contratos[0][ativo]: 1
 contratos[0][data_assinatura]: 2024-01-01
 contratos[0][validade_meses]: 24
 contratos[0][arquivo]: (PDF)</code></pre>
-        </div>
+    </div>
 
-        {{-- VÍNCULO DISTRIBUIDORES --}}
-        <div>
-            <h3 class="font-semibold text-gray-900 mb-2">
-                Vincular Distribuidores
-            </h3>
+    {{-- VÍNCULO DISTRIBUIDORES --}}
+    <div>
+      <h3 class="font-semibold text-gray-900 mb-2">
+        Vincular Distribuidores
+      </h3>
 
-            <code class="text-xs">POST /api/admin/gestores/vincular</code>
+      <code class="text-xs">POST /api/admin/gestores/vincular</code>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
   "12": 5,
@@ -830,28 +1002,29 @@ contratos[0][arquivo]: (PDF)</code></pre>
   "18": null
 }</code></pre>
 
-            <p class="text-sm text-gray-600 mt-2">
-                Chave = ID do distribuidor • Valor = ID do gestor ou <code>null</code>
-            </p>
-        </div>
+      <p class="text-sm text-gray-600 mt-2">
+        Chave = ID do distribuidor • Valor = ID do gestor ou <code>null</code>
+      </p>
+    </div>
 
-        {{-- UFS --}}
-        <div>
-            <h3 class="font-semibold text-gray-900 mb-2">
-                UFs do Gestor
-            </h3>
+    {{-- UFS --}}
+    <div>
+      <h3 class="font-semibold text-gray-900 mb-2">
+        UFs do Gestor
+      </h3>
 
-            <code class="text-xs">GET /api/admin/gestores/{gestor}/ufs</code>
+      <code class="text-xs">GET /api/admin/gestores/{gestor}/ufs</code>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>[
   "SP",
   "RJ",
   "MG"
 ]</code></pre>
-        </div>
-
     </div>
+
+  </div>
 </section>
+
 
 
 
@@ -1001,6 +1174,221 @@ contratos[0][arquivo]: (PDF)</code></pre>
                 <li>O anexo <code>ativo=true</code> aplica automaticamente <code>percentual_vendas</code> e <code>vencimento_contrato</code> no distribuidor.</li>
             </ul>
         </div>
+
+        {{-- Campos --}}
+<div class="space-y-2 text-sm text-gray-700">
+    <h3 class="font-semibold text-gray-900">Campos do Distribuidor</h3>
+
+    <div class="overflow-auto border border-gray-200 rounded-lg">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-left">Campo</th>
+                    <th class="px-4 py-2 text-left">Tipo</th>
+                    <th class="px-4 py-2 text-left">Obrigatório</th>
+                    <th class="px-4 py-2 text-left">Regras / Observações</th>
+                </tr>
+            </thead>
+
+            <tbody class="divide-y">
+                {{-- VÍNCULO --}}
+                <tr>
+                    <td class="px-4 py-2 font-mono">gestor_id</td>
+                    <td class="px-4 py-2">int</td>
+                    <td class="px-4 py-2">Sim</td>
+                    <td class="px-4 py-2">obrigatório no create e update; deve existir em <code>gestores.id</code></td>
+                </tr>
+
+                {{-- LOGIN / USUÁRIO --}}
+                <tr>
+                    <td class="px-4 py-2 font-mono">email</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">
+                        email válido, max 255, único em <code>users.email</code>;
+                        se vazio, o sistema cria um placeholder automaticamente
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">password</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">se vazio, o sistema gera uma senha aleatória automaticamente</td>
+                </tr>
+
+                {{-- DADOS PRINCIPAIS --}}
+                <tr>
+                    <td class="px-4 py-2 font-mono">razao_social</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Sim</td>
+                    <td class="px-4 py-2">max 255</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">cnpj</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Geralmente Sim</td>
+                    <td class="px-4 py-2">max 18; validar formato; pode ser único (se você aplicou unique)</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">representante_legal</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">max 255</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">cpf</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">max 14</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">rg</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">max 30</td>
+                </tr>
+
+                {{-- CONTATOS (LISTAS) --}}
+                <tr>
+                    <td class="px-4 py-2 font-mono">telefones</td>
+                    <td class="px-4 py-2">array</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">lista de strings; itens vazios removidos; salva null se vier vazio</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">emails</td>
+                    <td class="px-4 py-2">array</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">lista de emails válidos; itens vazios removidos; salva null se vier vazio</td>
+                </tr>
+
+                {{-- ENDEREÇO 1 --}}
+                <tr><td class="px-4 py-2 font-mono">endereco</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 255</td></tr>
+                <tr><td class="px-4 py-2 font-mono">numero</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 20</td></tr>
+                <tr><td class="px-4 py-2 font-mono">complemento</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                <tr><td class="px-4 py-2 font-mono">bairro</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                <tr><td class="px-4 py-2 font-mono">cidade</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                <tr><td class="px-4 py-2 font-mono">uf</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">size 2; normalizado para maiúsculo</td></tr>
+                <tr><td class="px-4 py-2 font-mono">cep</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 9</td></tr>
+
+                {{-- ENDEREÇO 2 --}}
+                <tr><td class="px-4 py-2 font-mono">endereco2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 255</td></tr>
+                <tr><td class="px-4 py-2 font-mono">numero2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 20</td></tr>
+                <tr><td class="px-4 py-2 font-mono">complemento2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                <tr><td class="px-4 py-2 font-mono">bairro2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                <tr><td class="px-4 py-2 font-mono">cidade2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                <tr><td class="px-4 py-2 font-mono">uf2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">size 2; normalizado para maiúsculo</td></tr>
+                <tr><td class="px-4 py-2 font-mono">cep2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 9</td></tr>
+
+                {{-- CIDADES / FILTRO --}}
+                <tr>
+                    <td class="px-4 py-2 font-mono">uf_cidades</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">auxiliar para UI/filtro; ex: "SP"</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">cities</td>
+                    <td class="px-4 py-2">array[int]</td>
+                    <td class="px-4 py-2">Não (depende)</td>
+                    <td class="px-4 py-2">
+                        lista de IDs de cidades; devem estar nas UFs do gestor; uma cidade não pode estar ocupada por outro distribuidor
+                    </td>
+                </tr>
+
+                {{-- COMISSÃO / CONTRATO --}}
+                <tr>
+                    <td class="px-4 py-2 font-mono">percentual_vendas</td>
+                    <td class="px-4 py-2">number</td>
+                    <td class="px-4 py-2">Update: Sim</td>
+                    <td class="px-4 py-2">no update é required (regra atual do service); pode ser aplicado via anexo ativo</td>
+                </tr>
+
+                {{-- CONTRATOS/ANEXOS --}}
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos</td>
+                    <td class="px-4 py-2">array</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">lista de objetos; ao ativar um, desativa os demais</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos[*].tipo</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Depende</td>
+                    <td class="px-4 py-2">ex: contrato, aditivo</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos[*].descricao</td>
+                    <td class="px-4 py-2">string</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">texto livre</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos[*].assinado</td>
+                    <td class="px-4 py-2">boolean</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">1/0 no form-data</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos[*].percentual_vendas</td>
+                    <td class="px-4 py-2">number</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">se ativo=true, aplica no distribuidor automaticamente</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos[*].ativo</td>
+                    <td class="px-4 py-2">boolean</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">apenas 1 ativo=true por distribuidor</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos[*].data_assinatura</td>
+                    <td class="px-4 py-2">date (Y-m-d)</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">ex: 2025-01-01</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos[*].validade_meses</td>
+                    <td class="px-4 py-2">int</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">ex: 12, 24</td>
+                </tr>
+
+                <tr>
+                    <td class="px-4 py-2 font-mono">contratos[*].arquivo</td>
+                    <td class="px-4 py-2">file (PDF)</td>
+                    <td class="px-4 py-2">Não</td>
+                    <td class="px-4 py-2">requer multipart/form-data</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="rounded-md bg-gray-50 border border-gray-200 p-3 text-xs text-gray-700">
+        <strong>Observações:</strong>
+        <ul class="list-disc pl-6 mt-1 space-y-1">
+            <li><code>uf</code>, <code>uf2</code> são normalizadas para maiúsculo.</li>
+            <li>Campos em <code>telefones</code> / <code>emails</code>: o service remove itens vazios e salva <code>null</code> se a lista ficar vazia.</li>
+            <li><code>cities</code>: valida “cidade ocupada” e se a cidade pertence às UFs do gestor.</li>
+            <li>Contrato/anexo com <code>ativo=true</code> aplica <code>percentual_vendas</code> e <code>vencimento_contrato</code> automaticamente.</li>
+        </ul>
+    </div>
+</div>
+
 
         {{-- CREATE (payload completo) --}}
         <div>

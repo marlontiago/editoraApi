@@ -15,11 +15,46 @@ use Illuminate\Support\Facades\DB;
 
 class GestorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $gestores = Gestor::with('user')->latest()->paginate(20);
-        return view('admin.gestores.index', compact('gestores'));
+        $q = trim((string) $request->query('q', ''));
+        $uf = strtoupper(trim((string) $request->query('uf', '')));
+
+        $query = Gestor::query()
+            ->with(['user'])
+            ->latest();
+
+        if ($q !== '') {
+            $qDigits = preg_replace('/\D+/', '', $q);
+
+            $query->where(function ($w) use ($q, $qDigits) {
+                $w->where('razao_social', 'ilike', "%{$q}%")
+                ->orWhere('cnpj', 'ilike', "%{$q}%")
+                ->orWhere('representante_legal', 'ilike', "%{$q}%")
+                ->orWhereHas('user', fn($u) => $u->where('email', 'ilike', "%{$q}%"));
+
+                if ($qDigits !== '') {
+                    $w->orWhereRaw(
+                        "REPLACE(REPLACE(REPLACE(REPLACE(cnpj,'.',''),'-',''),'/',''),' ','') like ?",
+                        ["%{$qDigits}%"]
+                    );
+                }
+            });
+        }
+
+        // UF (se você usa relação gestor_ufs)
+        if ($uf !== '' && preg_match('/^[A-Z]{2}$/', $uf)) {
+            $query->whereHas('ufs', fn($u) => $u->where('uf', $uf));
+        }
+
+        $gestores = $query->paginate(20)->appends($request->query());
+
+        // lista de UFs para o select
+        $ufs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+        return view('admin.gestores.index', compact('gestores', 'q', 'uf', 'ufs'));
     }
+
 
     public function create(GestorService $service)
     {

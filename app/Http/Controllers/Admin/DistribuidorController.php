@@ -19,11 +19,43 @@ use App\Services\DistribuidorService;
 
 class DistribuidorController extends Controller
 {
-    public function index()
+   public function index(Request $request)
     {
-        $distribuidores = Distribuidor::with(['user','gestor'])->latest()->paginate(20);
-        return view('admin.distribuidores.index', compact('distribuidores'));
+        $q = trim((string) $request->query('q', ''));
+        $gestorId = (int) $request->query('gestor_id', 0);
+
+        $query = Distribuidor::query()
+            ->with(['user','gestor'])
+            ->latest();
+
+        if ($q !== '') {
+            $qDigits = preg_replace('/\D+/', '', $q);
+
+            $query->where(function ($w) use ($q, $qDigits) {
+                $w->where('razao_social', 'ilike', "%{$q}%")
+                ->orWhere('cnpj', 'ilike', "%{$q}%")
+                ->orWhereHas('user', fn($u) => $u->where('email', 'like', "%{$q}%"));
+
+                if ($qDigits !== '') {
+                    $w->orWhereRaw(
+                        "REPLACE(REPLACE(REPLACE(REPLACE(cnpj,'.',''),'-',''),'/',''),' ','') like ?",
+                        ["%{$qDigits}%"]
+                    );
+                }
+            });
+        }
+
+        if ($gestorId > 0) {
+            $query->where('gestor_id', $gestorId);
+        }
+
+        $distribuidores = $query->paginate(20)->appends($request->query());
+
+        $gestores = Gestor::orderBy('razao_social')->get(['id','razao_social']);
+
+        return view('admin.distribuidores.index', compact('distribuidores', 'gestores', 'q', 'gestorId'));
     }
+
 
     public function create()
     {

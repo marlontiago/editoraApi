@@ -150,7 +150,6 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
         ->whereNumber('distribuidor');
 
     Route::put('distribuidores/{distribuidor}/anexos/{anexo}', [ApiDistribuidorAnexoController::class, 'update'])
-        ->name('admin.distribuidores.anexos.update')
         ->whereNumber('distribuidor');
 
     // Resource por último (para não “capturar” rotas fixas)

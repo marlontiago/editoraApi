@@ -15,7 +15,6 @@ return new class extends Migration {
                 ->constrained('colecoes')
                 ->nullOnDelete();
 
-            // Dados principais
             $table->integer('codigo')->unique();
             $table->string('titulo')->nullable();
             $table->text('descricao')->nullable();
@@ -25,17 +24,17 @@ return new class extends Migration {
             $table->year('ano')->nullable();
             $table->integer('numero_paginas')->nullable();
 
-            // Atributos comerciais/logísticos
             $table->decimal('preco', 10, 2)->nullable();
             $table->decimal('peso', 8, 3)->nullable();
             $table->integer('quantidade_estoque')->nullable();
             $table->integer('quantidade_por_caixa')->default(1);
 
-            // *** AQUI MUDOU ***
-            // Antes era enum, agora string para caber qualquer descrição de segmento / ano escolar
             $table->string('ano_escolar', 255)->nullable();
 
-            // Mídia
+            $table->string('ncm', 10)->nullable()->index();     
+            $table->string('cest', 7)->nullable()->index();    
+            $table->unsignedTinyInteger('origem')->nullable(); 
+
             $table->string('imagem')->nullable();
 
             $table->timestamps();
@@ -50,4 +49,3 @@ return new class extends Migration {
         Schema::dropIfExists('produtos');
     }
 };
-

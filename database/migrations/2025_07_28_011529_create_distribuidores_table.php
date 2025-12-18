@@ -20,8 +20,8 @@ return new class extends Migration {
             $table->string('cpf')->nullable();
             $table->string('rg')->nullable();
 
-            $table->json('emails')->nullable();     
-            $table->json('telefones')->nullable();  
+            $table->json('emails')->nullable();
+            $table->json('telefones')->nullable();
 
             // Endereço principal
             $table->string('endereco', 255)->nullable();
@@ -41,8 +41,14 @@ return new class extends Migration {
             $table->string('uf2', 2)->nullable();
             $table->string('cep2', 9)->nullable();
 
-            // Contrato
-            $table->decimal('percentual_vendas', 5, 2)->default(0)->nullable();
+            /**
+             * Contratuais / Comissão
+             * - percentual_vendas_base: valor do cadastro (nunca deveria ser “perdido”)
+             * - percentual_vendas: valor vigente (pode ser sobrescrito por contrato ativo)
+             */
+            $table->decimal('percentual_vendas_base', 5, 2)->default(0);
+            $table->decimal('percentual_vendas', 5, 2)->default(0);
+
             $table->date('vencimento_contrato')->nullable();
             $table->boolean('contrato_assinado')->default(false);
 

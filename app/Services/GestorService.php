@@ -33,7 +33,6 @@ class GestorService
 
     public function storeFromRequest(Request $request): Gestor
     {
-        
         $request = $this->sanitizeAndMergeInputs($request);
 
         $data = $this->validateStore($request);
@@ -61,6 +60,8 @@ class GestorService
             if (method_exists($user, 'assignRole')) {
                 $user->assignRole('gestor');
             }
+
+            $basePercent = isset($data['percentual_vendas']) ? (float)$data['percentual_vendas'] : 0.0;
 
             /** @var Gestor $gestor */
             $gestor = Gestor::create([
@@ -97,9 +98,10 @@ class GestorService
                 'cep2'                => $data['cep2'] ?? null,
 
                 // contratuais
-                'percentual_vendas'   => $data['percentual_vendas'] ?? 0,
-                'vencimento_contrato' => null, // será definido pelo anexo ativo
-                'contrato_assinado'   => $temAssinado,
+                'percentual_vendas_base' => $basePercent,
+                'percentual_vendas'      => $basePercent, // vigente começa igual ao base
+                'vencimento_contrato'    => null, // será definido pelo anexo ativo
+                'contrato_assinado'      => $temAssinado,
             ]);
 
             // UFs
@@ -111,19 +113,20 @@ class GestorService
             // CONTATOS
             $this->createContatosOnStore($gestor, $data);
 
+            // garante que o vigente reflita contrato ativo (se existir) ou base
+            $this->applyActiveAnexoToGestor($gestor);
+
             return $gestor->load('user','ufs','anexos','contatos');
         });
     }
 
     public function updateFromRequest(Request $request, Gestor $gestor): Gestor
     {
-        
         $request = $this->sanitizeAndMergeInputs($request);
 
         $data = $this->validateUpdate($request, $gestor);
 
         $this->assertOnePreferencial($data);
-
 
         DB::transaction(function () use ($data, $request, $gestor) {
 
@@ -140,6 +143,11 @@ class GestorService
                     $user->save();
                 }
             }
+
+            // percentual base (do cadastro)
+            $basePercent = array_key_exists('percentual_vendas', $data)
+                ? (float)($data['percentual_vendas'] ?? 0)
+                : $gestor->percentual_vendas_base;
 
             // GESTOR
             $gestor->update([
@@ -171,7 +179,9 @@ class GestorService
                 'uf2'                 => $data['uf2']                 ?? $gestor->uf2,
                 'cep2'                => $data['cep2']                ?? $gestor->cep2,
 
-                'percentual_vendas'   => $data['percentual_vendas']   ?? $gestor->percentual_vendas,
+                // IMPORTANTÍSSIMO:
+                // aqui você edita o BASE, e o vigente será recalculado pelo contrato ativo
+                'percentual_vendas_base' => $basePercent,
             ]);
 
             // UFs
@@ -186,7 +196,7 @@ class GestorService
                 $gestor->update(['contrato_assinado' => $temAssinadoAgora]);
             }
 
-            // aplica do ativo
+            // aplica contrato ativo válido (ou volta pro base)
             $this->applyActiveAnexoToGestor($gestor);
 
             // CONTATOS (sync completo)
@@ -222,6 +232,7 @@ class GestorService
             $gestor->update(['contrato_assinado' => $temAssinadoAgora]);
         }
 
+        // aplica contrato ativo válido (ou volta pro base)
         $this->applyActiveAnexoToGestor($gestor);
     }
 
@@ -233,7 +244,8 @@ class GestorService
             $gestor->anexos()->where('ativo', true)->update(['ativo' => false]);
             $anexo->update(['ativo' => true]);
 
-            $this->applyAnexoDataToGestor($gestor, $anexo);
+            // aplica (se estiver vencido, vai cair no fallback pro base no applyActive)
+            $this->applyActiveAnexoToGestor($gestor);
         });
     }
 
@@ -532,26 +544,50 @@ class GestorService
         }
     }
 
+    /**
+     * Aplica o contrato ativo "válido" (não vencido).
+     * Se não houver, volta para percentual_vendas_base e limpa vencimento_contrato.
+     */
     private function applyActiveAnexoToGestor(Gestor $gestor): void
     {
-        $ativo = $gestor->anexos()->where('ativo', true)->latest('id')->first();
-        if (!$ativo) return;
+        $hoje = now()->startOfDay();
 
-        $this->applyAnexoDataToGestor($gestor, $ativo);
+        $ativoValido = $gestor->anexos()
+            ->where('ativo', true)
+            ->where(function ($q) use ($hoje) {
+                $q->whereNull('data_vencimento')
+                  ->orWhereDate('data_vencimento', '>=', $hoje);
+            })
+            ->latest('id')
+            ->first();
+
+        if (!$ativoValido) {
+            $gestor->update([
+                'percentual_vendas'   => $gestor->percentual_vendas_base ?? 0,
+                'vencimento_contrato' => null,
+            ]);
+            return;
+        }
+
+        $this->applyAnexoDataToGestor($gestor, $ativoValido);
     }
 
+    /**
+     * Aplica os dados do anexo no gestor.
+     * - Se o anexo não tiver percentual, usa o base.
+     * - Sempre atualiza percentual_vendas (vigente) e vencimento_contrato.
+     */
     private function applyAnexoDataToGestor(Gestor $gestor, Anexo $anexo): void
     {
-        $payload = [];
-        if ($anexo->percentual_vendas !== null) {
-            $payload['percentual_vendas'] = $anexo->percentual_vendas;
+        $vigente = $anexo->percentual_vendas;
+        if ($vigente === null) {
+            $vigente = $gestor->percentual_vendas_base ?? 0;
         }
-        if ($anexo->data_vencimento) {
-            $payload['vencimento_contrato'] = $anexo->data_vencimento;
-        }
-        if (!empty($payload)) {
-            $gestor->update($payload);
-        }
+
+        $gestor->update([
+            'percentual_vendas'   => $vigente,
+            'vencimento_contrato' => $anexo->data_vencimento,
+        ]);
     }
 
     private function appendContratos(Request $request, Gestor $gestor, array $data): void
@@ -595,7 +631,7 @@ class GestorService
                 ->update(['ativo' => false]);
         }
 
-        // aplica do ativo (se existir)
+        // aplica contrato ativo válido (ou volta pro base)
         $this->applyActiveAnexoToGestor($gestor);
     }
 
@@ -676,196 +712,189 @@ class GestorService
     }
 
     public function importarGestoresDaPlanilha(UploadedFile $file, bool $atualizarExistentes = true): array
-{
-    $ext = strtolower($file->getClientOriginalExtension());
+    {
+        $ext = strtolower($file->getClientOriginalExtension());
 
-    // Carregar planilha (XLSX/XLS ou CSV)
-    if (in_array($ext, ['csv', 'txt'], true)) {
-        $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
+        // Carregar planilha (XLSX/XLS ou CSV)
+        if (in_array($ext, ['csv', 'txt'], true)) {
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Csv();
 
-        // Auto-detect de delimitador: tenta ; depois ,
-        $sample = file_get_contents($file->getPathname());
-        $firstLine = $sample ? strtok($sample, "\r\n") : '';
+            // Auto-detect de delimitador: tenta ; depois ,
+            $sample = file_get_contents($file->getPathname());
+            $firstLine = $sample ? strtok($sample, "\r\n") : '';
 
-        $countSemicolon = substr_count((string) $firstLine, ';');
-        $countComma     = substr_count((string) $firstLine, ',');
+            $countSemicolon = substr_count((string) $firstLine, ';');
+            $countComma     = substr_count((string) $firstLine, ',');
 
-        $delimiter = ($countSemicolon >= $countComma) ? ';' : ',';
+            $delimiter = ($countSemicolon >= $countComma) ? ';' : ',';
 
-        $reader->setDelimiter($delimiter);
-        $reader->setEnclosure('"');
-        $reader->setEscapeCharacter('\\');
+            $reader->setDelimiter($delimiter);
+            $reader->setEnclosure('"');
+            $reader->setEscapeCharacter('\\');
+            $reader->setInputEncoding('UTF-8');
 
-        // CSVs brasileiros às vezes vêm em ISO-8859-1/Windows-1252
-        // Se vier estranho, troque pra 'Windows-1252'
-        $reader->setInputEncoding('UTF-8');
+            $spreadsheet = $reader->load($file->getPathname());
+        } else {
+            $spreadsheet = IOFactory::load($file->getPathname());
+        }
 
-        $spreadsheet = $reader->load($file->getPathname());
-    } else {
-        $spreadsheet = IOFactory::load($file->getPathname());
-    }
+        $sheet = $spreadsheet->getActiveSheet();
+        $highestRow = $sheet->getHighestRow();
 
-    $sheet = $spreadsheet->getActiveSheet();
-    $highestRow = $sheet->getHighestRow();
+        $criados = 0;
+        $atualizados = 0;
+        $pulados = 0;
+        $erros = [];
 
-    $criados = 0;
-    $atualizados = 0;
-    $pulados = 0;
-    $erros = [];
+        for ($row = 2; $row <= $highestRow; $row++) {
+            try {
+                $razao = trim((string) $sheet->getCell([1, $row])->getValue());
+                $cnpj  = trim((string) $sheet->getCell([2, $row])->getValue());
 
-    for ($row = 2; $row <= $highestRow; $row++) {
-        try {
-            $razao = trim((string) $sheet->getCell([1, $row])->getValue());
-            $cnpj  = trim((string) $sheet->getCell([2, $row])->getValue());
-
-            if ($razao === '' && $cnpj === '') {
-                $pulados++;
-                continue;
-            }
-
-            $representante = trim((string) $sheet->getCell([3, $row])->getValue());
-            $cpf           = trim((string) $sheet->getCell([4, $row])->getValue());
-            $rg            = trim((string) $sheet->getCell([5, $row])->getValue());
-
-            $telefonesRaw  = (string) $sheet->getCell([6, $row])->getValue();
-            $emailsRaw     = (string) $sheet->getCell([7, $row])->getValue();
-            $senha         = (string) $sheet->getCell([8, $row])->getValue();
-
-            $ufsRaw        = (string) $sheet->getCell([9, $row])->getValue();
-            $percentRaw    = $sheet->getCell([10, $row])->getValue();
-
-            // Endereço 1
-            $endereco    = trim((string) $sheet->getCell([11, $row])->getValue());
-            $numero      = trim((string) $sheet->getCell([12, $row])->getValue());
-            $complemento = trim((string) $sheet->getCell([13, $row])->getValue());
-            $bairro      = trim((string) $sheet->getCell([14, $row])->getValue());
-            $cidade      = trim((string) $sheet->getCell([15, $row])->getValue());
-            $uf          = strtoupper(trim((string) $sheet->getCell([16, $row])->getValue()));
-
-            $cep = (string) $sheet->getCell([17, $row])->getValue();
-            $cep = preg_replace('/\D+/', '', $cep);
-            $cep = $cep ? substr($cep, 0, 8) : null;
-
-            // Endereço 2
-            $endereco2    = trim((string) $sheet->getCell([18, $row])->getValue());
-            $numero2      = trim((string) $sheet->getCell([19, $row])->getValue());
-            $complemento2 = trim((string) $sheet->getCell([20, $row])->getValue());
-            $bairro2      = trim((string) $sheet->getCell([21, $row])->getValue());
-            $cidade2      = trim((string) $sheet->getCell([22, $row])->getValue());
-            $uf2          = strtoupper(trim((string) $sheet->getCell([23, $row])->getValue()));
-
-            $cep2 = (string) $sheet->getCell([24, $row])->getValue();
-            $cep2 = preg_replace('/\D+/', '', $cep2);
-            $cep2 = $cep2 ? substr($cep2, 0, 8) : null;
-
-            // Normalizações
-            $cnpjDigits = preg_replace('/\D+/', '', $cnpj);
-            $cpfDigits  = preg_replace('/\D+/', '', $cpf);
-
-            $telefones = $this->splitLista($telefonesRaw);
-            $emails    = $this->splitLista($emailsRaw);
-
-            $ufs = collect($this->splitLista($ufsRaw))
-                ->map(fn($u) => strtoupper(trim($u)))
-                ->filter(fn($u) => in_array($u, $this->UFs, true))
-                ->unique()
-                ->values()
-                ->all();
-
-            $percentual = is_numeric($percentRaw) ? (float) $percentRaw : null;
-            if ($percentual !== null) {
-                $percentual = max(0, min(100, $percentual));
-            }
-
-            // Procura existente por CNPJ (se tiver CNPJ)
-            $gestorExistente = null;
-            if ($cnpjDigits) {
-                $gestorExistente = Gestor::query()
-                    ->whereRaw("REGEXP_REPLACE(cnpj, '[^0-9]', '') = ?", [$cnpjDigits])
-                    ->first();
-            }
-
-            $payload = [
-                'razao_social'        => $razao ?: null,
-                'cnpj'                => $cnpj ?: null,
-                'representante_legal' => $representante ?: null,
-                'cpf'                 => $cpf ?: null,
-                'rg'                  => $rg ?: null,
-
-                'telefones'           => $telefones ?: [],
-                'emails'              => $emails ?: [],
-                'email'               => $emails[0] ?? null,
-                'password'            => $senha ?: null,
-
-                'estados_uf'          => $ufs ?: [],
-                'percentual_vendas'   => $percentual,
-
-                'endereco'            => $endereco ?: null,
-                'numero'              => $numero ?: null,
-                'complemento'         => $complemento ?: null,
-                'bairro'              => $bairro ?: null,
-                'cidade'              => $cidade ?: null,
-                'uf'                  => $uf ?: null,
-                'cep'                 => $cep,
-
-                'endereco2'           => $endereco2 ?: null,
-                'numero2'             => $numero2 ?: null,
-                'complemento2'        => $complemento2 ?: null,
-                'bairro2'             => $bairro2 ?: null,
-                'cidade2'             => $cidade2 ?: null,
-                'uf2'                 => $uf2 ?: null,
-                'cep2'                => $cep2,
-
-                'contratos'           => [],
-                'contatos'            => [],
-            ];
-
-            if ($gestorExistente) {
-                if (!$atualizarExistentes) {
+                if ($razao === '' && $cnpj === '') {
                     $pulados++;
                     continue;
                 }
 
-                $fakeRequest = Request::create('/fake', 'POST', $payload);
-                $this->updateFromRequest($fakeRequest, $gestorExistente);
-                $atualizados++;
-            } else {
-                $fakeRequest = Request::create('/fake', 'POST', $payload);
-                $this->storeFromRequest($fakeRequest);
-                $criados++;
+                $representante = trim((string) $sheet->getCell([3, $row])->getValue());
+                $cpf           = trim((string) $sheet->getCell([4, $row])->getValue());
+                $rg            = trim((string) $sheet->getCell([5, $row])->getValue());
+
+                $telefonesRaw  = (string) $sheet->getCell([6, $row])->getValue();
+                $emailsRaw     = (string) $sheet->getCell([7, $row])->getValue();
+                $senha         = (string) $sheet->getCell([8, $row])->getValue();
+
+                $ufsRaw        = (string) $sheet->getCell([9, $row])->getValue();
+                $percentRaw    = $sheet->getCell([10, $row])->getValue();
+
+                // Endereço 1
+                $endereco    = trim((string) $sheet->getCell([11, $row])->getValue());
+                $numero      = trim((string) $sheet->getCell([12, $row])->getValue());
+                $complemento = trim((string) $sheet->getCell([13, $row])->getValue());
+                $bairro      = trim((string) $sheet->getCell([14, $row])->getValue());
+                $cidade      = trim((string) $sheet->getCell([15, $row])->getValue());
+                $uf          = strtoupper(trim((string) $sheet->getCell([16, $row])->getValue()));
+
+                $cep = (string) $sheet->getCell([17, $row])->getValue();
+                $cep = preg_replace('/\D+/', '', $cep);
+                $cep = $cep ? substr($cep, 0, 8) : null;
+
+                // Endereço 2
+                $endereco2    = trim((string) $sheet->getCell([18, $row])->getValue());
+                $numero2      = trim((string) $sheet->getCell([19, $row])->getValue());
+                $complemento2 = trim((string) $sheet->getCell([20, $row])->getValue());
+                $bairro2      = trim((string) $sheet->getCell([21, $row])->getValue());
+                $cidade2      = trim((string) $sheet->getCell([22, $row])->getValue());
+                $uf2          = strtoupper(trim((string) $sheet->getCell([23, $row])->getValue()));
+
+                $cep2 = (string) $sheet->getCell([24, $row])->getValue();
+                $cep2 = preg_replace('/\D+/', '', $cep2);
+                $cep2 = $cep2 ? substr($cep2, 0, 8) : null;
+
+                // Normalizações
+                $cnpjDigits = preg_replace('/\D+/', '', $cnpj);
+
+                $telefones = $this->splitLista($telefonesRaw);
+                $emails    = $this->splitLista($emailsRaw);
+
+                $ufs = collect($this->splitLista($ufsRaw))
+                    ->map(fn($u) => strtoupper(trim($u)))
+                    ->filter(fn($u) => in_array($u, $this->UFs, true))
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $percentual = is_numeric($percentRaw) ? (float) $percentRaw : null;
+                if ($percentual !== null) {
+                    $percentual = max(0, min(100, $percentual));
+                }
+
+                // Procura existente por CNPJ (se tiver CNPJ)
+                $gestorExistente = null;
+                if ($cnpjDigits) {
+                    $gestorExistente = Gestor::query()
+                        ->whereRaw("REGEXP_REPLACE(cnpj, '[^0-9]', '') = ?", [$cnpjDigits])
+                        ->first();
+                }
+
+                $payload = [
+                    'razao_social'        => $razao ?: null,
+                    'cnpj'                => $cnpj ?: null,
+                    'representante_legal' => $representante ?: null,
+                    'cpf'                 => $cpf ?: null,
+                    'rg'                  => $rg ?: null,
+
+                    'telefones'           => $telefones ?: [],
+                    'emails'              => $emails ?: [],
+                    'email'               => $emails[0] ?? null,
+                    'password'            => $senha ?: null,
+
+                    'estados_uf'          => $ufs ?: [],
+                    'percentual_vendas'   => $percentual,
+
+                    'endereco'            => $endereco ?: null,
+                    'numero'              => $numero ?: null,
+                    'complemento'         => $complemento ?: null,
+                    'bairro'              => $bairro ?: null,
+                    'cidade'              => $cidade ?: null,
+                    'uf'                  => $uf ?: null,
+                    'cep'                 => $cep,
+
+                    'endereco2'           => $endereco2 ?: null,
+                    'numero2'             => $numero2 ?: null,
+                    'complemento2'        => $complemento2 ?: null,
+                    'bairro2'             => $bairro2 ?: null,
+                    'cidade2'             => $cidade2 ?: null,
+                    'uf2'                 => $uf2 ?: null,
+                    'cep2'                => $cep2,
+
+                    'contratos'           => [],
+                    'contatos'            => [],
+                ];
+
+                if ($gestorExistente) {
+                    if (!$atualizarExistentes) {
+                        $pulados++;
+                        continue;
+                    }
+
+                    $fakeRequest = Request::create('/fake', 'POST', $payload);
+                    $this->updateFromRequest($fakeRequest, $gestorExistente);
+                    $atualizados++;
+                } else {
+                    $fakeRequest = Request::create('/fake', 'POST', $payload);
+                    $this->storeFromRequest($fakeRequest);
+                    $criados++;
+                }
+            } catch (\Throwable $e) {
+                $erros[] = [
+                    'linha' => $row,
+                    'gestor' => $sheet->getCell([1, $row])->getValue(),
+                    'cnpj' => $sheet->getCell([2, $row])->getValue(),
+                    'erro' => $e->getMessage(),
+                ];
             }
-        } catch (\Throwable $e) {
-            $erros[] = [
-                'linha' => $row,
-                'gestor' => $sheet->getCell([1, $row])->getValue(),
-                'cnpj' => $sheet->getCell([2, $row])->getValue(),
-                'erro' => $e->getMessage(),
-            ];
         }
+
+        return [
+            'criados' => $criados,
+            'atualizados' => $atualizados,
+            'pulados' => $pulados,
+            'erros' => $erros,
+        ];
     }
 
-    return [
-        'criados' => $criados,
-        'atualizados' => $atualizados,
-        'pulados' => $pulados,
-        'erros' => $erros,
-    ];
-}
+    /**
+     * Divide listas do Excel: separa por vírgula, ponto-e-vírgula ou quebra de linha.
+     */
+    private function splitLista(?string $raw): array
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') return [];
 
+        $parts = preg_split('/[;,\n\r]+/', $raw) ?: [];
+        $parts = array_values(array_filter(array_map(fn($v) => trim((string)$v), $parts), fn($v) => $v !== ''));
 
-/**
- * Divide listas do Excel: separa por vírgula, ponto-e-vírgula ou quebra de linha.
- */
-private function splitLista(?string $raw): array
-{
-    $raw = trim((string) $raw);
-    if ($raw === '') return [];
-
-    $parts = preg_split('/[;,\\n\\r]+/', $raw) ?: [];
-    $parts = array_values(array_filter(array_map(fn($v) => trim((string)$v), $parts), fn($v) => $v !== ''));
-
-    return $parts;
-}
-
-
+        return $parts;
+    }
 }

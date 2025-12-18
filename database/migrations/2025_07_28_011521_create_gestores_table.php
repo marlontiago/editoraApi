@@ -42,7 +42,12 @@ return new class extends Migration {
             $table->string('cep2', 9)->nullable();
 
             // Contratuais
+            // Base do cadastro (nunca deve ser sobrescrito por contrato)
+            $table->decimal('percentual_vendas_base', 5, 2)->default(0);
+
+            // Percentual vigente (pode ser base ou do contrato ativo)
             $table->decimal('percentual_vendas', 5, 2)->default(0);
+
             $table->date('vencimento_contrato')->nullable();
             $table->boolean('contrato_assinado')->default(false);
 

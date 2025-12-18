@@ -47,6 +47,7 @@ class Distribuidor extends Model
 
         // Comercial / Contrato
         'percentual_vendas',
+        'percentual_vendas_base',
         'vencimento_contrato',
         'contrato_assinado',
     ];

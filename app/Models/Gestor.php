@@ -52,6 +52,7 @@ class Gestor extends Model
 
         // Contratuais
         'percentual_vendas',
+        'percentual_vendas_base',
         'vencimento_contrato',
         'contrato_assinado',
     ];

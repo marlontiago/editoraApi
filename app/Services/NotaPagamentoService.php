@@ -333,16 +333,26 @@ class NotaPagamentoService
             ->orderByDesc('created_at')
             ->get();
 
-        $globalVigentes = $globalAnexos->filter(fn($ax) =>
-            $this->anexoVigente($ax, $refDate) && $ax->percentual_vendas !== null
+        $globalVigentesAtivos = $globalAnexos->filter(fn($ax) =>
+            (bool) $ax->ativo === true
+            && $this->anexoVigente($ax, $refDate)
+            && $ax->percentual_vendas !== null
         );
 
-        $globalActive = $globalVigentes->first(fn($ax) => (bool) $ax->ativo === true);
-        if ($globalActive) return (float) $globalActive->percentual_vendas;
+        if ($globalVigentesAtivos->isNotEmpty()) {
+            return (float) $globalVigentesAtivos->first()->percentual_vendas;
+        }
 
-        if ($globalVigentes->isNotEmpty()) return (float) $globalVigentes->first()->percentual_vendas;
 
-        return (float) ($owner->percentual_vendas ?? 0.0);
+        if (isset($owner->percentual_vendas_base)) {
+            return (float) ($owner->percentual_vendas_base ?? 0.0);
+        }
+
+        return (float) (
+            $owner->percentual_vendas
+            ?? $owner->percentual_vendas_base
+            ?? 0.0
+        );
     }
 
     private function anexoVigente($ax, Carbon $refDate): bool

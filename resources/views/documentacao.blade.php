@@ -563,7 +563,7 @@ Content-Type: application/json
             {{-- ========================= --}}
             {{-- ABAS PLACEHOLDER --}}
             {{-- ========================= --}}
-          <<section x-show="active === 'gestores'" x-cloak>
+          <section x-show="active === 'gestores'" x-cloak>
   <div class="rounded-lg border border-gray-200 bg-white p-6 space-y-8">
 
     {{-- Cabeçalho --}}
@@ -676,6 +676,16 @@ Content-Type: application/json
         <li>O gestor possui UFs vinculadas (ex.: <code>gestor_ufs</code>) via <code>estados_uf</code>.</li>
         <li>Apenas um anexo pode ficar com <code>ativo=true</code>; o ativo aplica automaticamente <code>percentual_vendas</code> e <code>vencimento_contrato</code> no gestor.</li>
         <li>Ao ativar um anexo, os demais anexos ativos do mesmo gestor são desativados.</li>
+
+        {{-- NOVO: contrato por cidade --}}
+        <li>
+          Existe o tipo <code>contrato_cidade</code> em <code>contratos[*].tipo</code>. Nesse caso, é obrigatório enviar
+          <code>contratos[*].cidade_id</code>, e o percentual passa a valer apenas para a cidade escolhida (prioridade nos cálculos).
+          As cidades disponíveis devem pertencer às UFs do gestor.
+        </li>
+        <li>
+          Para <code>contrato_cidade</code>, o campo <code>contratos[*].ativo</code> não é utilizado (o percentual é aplicado automaticamente para a cidade informada).
+        </li>
       </ul>
     </div>
 
@@ -817,7 +827,20 @@ Content-Type: application/json
               <td class="px-4 py-2 font-mono">contratos[*].tipo</td>
               <td class="px-4 py-2">string</td>
               <td class="px-4 py-2">Depende</td>
-              <td class="px-4 py-2">ex: contrato, aditivo</td>
+              <td class="px-4 py-2">
+                valores: <code>contrato</code>, <code>aditivo</code>, <code>outro</code>, <code>contrato_cidade</code>.
+                Se <code>contrato_cidade</code>, exigir <code>contratos[*].cidade_id</code>.
+              </td>
+            </tr>
+
+            {{-- NOVO: cidade_id para contrato por cidade --}}
+            <tr>
+              <td class="px-4 py-2 font-mono">contratos[*].cidade_id</td>
+              <td class="px-4 py-2">int</td>
+              <td class="px-4 py-2">Somente se tipo = <code>contrato_cidade</code></td>
+              <td class="px-4 py-2">
+                ID da cidade para aplicar o percentual. Deve ser uma cidade pertencente às UFs do gestor.
+              </td>
             </tr>
 
             <tr>
@@ -838,14 +861,20 @@ Content-Type: application/json
               <td class="px-4 py-2 font-mono">contratos[*].percentual_vendas</td>
               <td class="px-4 py-2">number</td>
               <td class="px-4 py-2">Não</td>
-              <td class="px-4 py-2">se ativo=true, aplica no gestor automaticamente</td>
+              <td class="px-4 py-2">
+                se <code>ativo=true</code> (para tipos comuns), aplica no gestor automaticamente.
+                Para <code>contrato_cidade</code>, aplica na cidade informada (prioridade nos cálculos).
+              </td>
             </tr>
 
             <tr>
               <td class="px-4 py-2 font-mono">contratos[*].ativo</td>
               <td class="px-4 py-2">boolean</td>
               <td class="px-4 py-2">Não</td>
-              <td class="px-4 py-2">apenas 1 ativo=true por gestor</td>
+              <td class="px-4 py-2">
+                apenas 1 ativo=true por gestor (para tipos comuns).
+                Para <code>contrato_cidade</code>, não usar este campo.
+              </td>
             </tr>
 
             <tr>
@@ -877,7 +906,8 @@ Content-Type: application/json
         <ul class="list-disc pl-6 mt-1 space-y-1">
           <li>Campos em <code>telefones</code> / <code>emails</code>: o service remove itens vazios e salva <code>null</code> se a lista ficar vazia.</li>
           <li><code>uf</code>, <code>uf2</code> e <code>estados_uf[*]</code> são normalizados para maiúsculo.</li>
-          <li>Em <code>contratos</code>: apenas 1 item pode ficar com <code>ativo</code>.</li>
+          <li>Em <code>contratos</code>: apenas 1 item pode ficar com <code>ativo</code> (exceto <code>contrato_cidade</code>).</li>
+          <li>Em <code>contrato_cidade</code>: <code>cidade_id</code> é obrigatório e o percentual tem prioridade para a cidade.</li>
         </ul>
       </div>
     </div>
@@ -930,12 +960,21 @@ Content-Type: application/json
       "ativo": true,
       "data_assinatura": "2024-01-01",
       "validade_meses": 24
+    },
+    {
+      "tipo": "contrato_cidade",
+      "cidade_id": 123,
+      "descricao": "Percentual específico para a cidade",
+      "assinado": true,
+      "percentual_vendas": 9,
+      "data_assinatura": "2025-01-01",
+      "validade_meses": 12
     }
   ]
 }</code></pre>
 
       <p class="text-sm text-gray-600 mt-2">
-        Se enviar <code>contratos[0][arquivo]</code>, troque o request para <code>multipart/form-data</code> e envie o PDF no campo.
+        Se enviar <code>contratos[0][arquivo]</code> (ou qualquer índice), troque o request para <code>multipart/form-data</code> e envie o PDF no campo.
       </p>
     </div>
 
@@ -960,6 +999,15 @@ Content-Type: application/json
       "ativo": false,
       "data_assinatura": "2025-01-01",
       "validade_meses": 12
+    },
+    {
+      "tipo": "contrato_cidade",
+      "cidade_id": 456,
+      "descricao": "Aditivo por cidade (prioridade)",
+      "assinado": true,
+      "percentual_vendas": 10,
+      "data_assinatura": "2025-02-01",
+      "validade_meses": 6
     }
   ]
 }</code></pre>
@@ -985,7 +1033,16 @@ contratos[0][percentual_vendas]: 6
 contratos[0][ativo]: 1
 contratos[0][data_assinatura]: 2024-01-01
 contratos[0][validade_meses]: 24
-contratos[0][arquivo]: (PDF)</code></pre>
+contratos[0][arquivo]: (PDF)
+
+contratos[1][tipo]: contrato_cidade
+contratos[1][cidade_id]: 123
+contratos[1][descricao]: Contrato por cidade
+contratos[1][assinado]: 1
+contratos[1][percentual_vendas]: 9
+contratos[1][data_assinatura]: 2025-01-01
+contratos[1][validade_meses]: 12
+contratos[1][arquivo]: (PDF opcional)</code></pre>
     </div>
 
     {{-- VÍNCULO DISTRIBUIDORES --}}
@@ -1027,7 +1084,6 @@ contratos[0][arquivo]: (PDF)</code></pre>
 
 
 
-
             <section x-show="active === 'distribuidores'" x-cloak>
     <div class="rounded-lg border border-gray-200 bg-white p-6 space-y-8">
 
@@ -1038,7 +1094,7 @@ contratos[0][arquivo]: (PDF)</code></pre>
             </h2>
             <p class="text-sm text-gray-500">
                 CRUD de distribuidores com usuário automático, vínculo obrigatório com gestor, cidades (pivot),
-                contratos/anexos e endpoints auxiliares de filtro.
+                contratos/anexos (inclui contrato por cidade) e endpoints auxiliares de filtro.
             </p>
         </div>
 
@@ -1157,238 +1213,275 @@ contratos[0][arquivo]: (PDF)</code></pre>
         {{-- Atenção multipart --}}
         <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800">
             <strong>Atenção:</strong>
-            Se você enviar <code>contratos[*].arquivo</code> (PDF), o request deve ser
+            Se você enviar <code>contratos[*][arquivo]</code> (PDF), o request deve ser
             <code>multipart/form-data</code>. Sem upload, pode usar <code>application/json</code>.
         </div>
 
         {{-- Regras importantes --}}
-        <div class="space-y-2 text-sm text-gray-700">
-            <h3 class="font-semibold text-gray-900">Regras de negócio</h3>
-            <ul class="list-disc pl-6 space-y-1">
-                <li><code>gestor_id</code> é <strong>obrigatório</strong> no create e no update.</li>
-                <li>Ao criar, se <code>email</code> estiver vazio, o sistema cria um e-mail placeholder automaticamente.</li>
-                <li>Se <code>password</code> estiver vazio, uma senha aleatória é gerada automaticamente.</li>
-                <li>As cidades (<code>cities</code>) devem estar dentro das UFs do gestor (<code>gestor_ufs</code>).</li>
-                <li>Uma cidade não pode estar vinculada a outro distribuidor (validação de “ocupada”).</li>
-                <li>No <strong>update</strong>, <code>percentual_vendas</code> é <strong>required</strong> (regra atual do service).</li>
-                <li>O anexo <code>ativo=true</code> aplica automaticamente <code>percentual_vendas</code> e <code>vencimento_contrato</code> no distribuidor.</li>
-            </ul>
-        </div>
-
-        {{-- Campos --}}
+        {{-- Regras importantes --}}
 <div class="space-y-2 text-sm text-gray-700">
-    <h3 class="font-semibold text-gray-900">Campos do Distribuidor</h3>
+  <h3 class="font-semibold text-gray-900">Regras de negócio</h3>
 
-    <div class="overflow-auto border border-gray-200 rounded-lg">
-        <table class="min-w-full text-sm">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-4 py-2 text-left">Campo</th>
-                    <th class="px-4 py-2 text-left">Tipo</th>
-                    <th class="px-4 py-2 text-left">Obrigatório</th>
-                    <th class="px-4 py-2 text-left">Regras / Observações</th>
-                </tr>
-            </thead>
-
-            <tbody class="divide-y">
-                {{-- VÍNCULO --}}
-                <tr>
-                    <td class="px-4 py-2 font-mono">gestor_id</td>
-                    <td class="px-4 py-2">int</td>
-                    <td class="px-4 py-2">Sim</td>
-                    <td class="px-4 py-2">obrigatório no create e update; deve existir em <code>gestores.id</code></td>
-                </tr>
-
-                {{-- LOGIN / USUÁRIO --}}
-                <tr>
-                    <td class="px-4 py-2 font-mono">email</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">
-                        email válido, max 255, único em <code>users.email</code>;
-                        se vazio, o sistema cria um placeholder automaticamente
-                    </td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">password</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">se vazio, o sistema gera uma senha aleatória automaticamente</td>
-                </tr>
-
-                {{-- DADOS PRINCIPAIS --}}
-                <tr>
-                    <td class="px-4 py-2 font-mono">razao_social</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Sim</td>
-                    <td class="px-4 py-2">max 255</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">cnpj</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Geralmente Sim</td>
-                    <td class="px-4 py-2">max 18; validar formato; pode ser único (se você aplicou unique)</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">representante_legal</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">max 255</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">cpf</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">max 14</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">rg</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">max 30</td>
-                </tr>
-
-                {{-- CONTATOS (LISTAS) --}}
-                <tr>
-                    <td class="px-4 py-2 font-mono">telefones</td>
-                    <td class="px-4 py-2">array</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">lista de strings; itens vazios removidos; salva null se vier vazio</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">emails</td>
-                    <td class="px-4 py-2">array</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">lista de emails válidos; itens vazios removidos; salva null se vier vazio</td>
-                </tr>
-
-                {{-- ENDEREÇO 1 --}}
-                <tr><td class="px-4 py-2 font-mono">endereco</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 255</td></tr>
-                <tr><td class="px-4 py-2 font-mono">numero</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 20</td></tr>
-                <tr><td class="px-4 py-2 font-mono">complemento</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
-                <tr><td class="px-4 py-2 font-mono">bairro</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
-                <tr><td class="px-4 py-2 font-mono">cidade</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
-                <tr><td class="px-4 py-2 font-mono">uf</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">size 2; normalizado para maiúsculo</td></tr>
-                <tr><td class="px-4 py-2 font-mono">cep</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 9</td></tr>
-
-                {{-- ENDEREÇO 2 --}}
-                <tr><td class="px-4 py-2 font-mono">endereco2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 255</td></tr>
-                <tr><td class="px-4 py-2 font-mono">numero2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 20</td></tr>
-                <tr><td class="px-4 py-2 font-mono">complemento2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
-                <tr><td class="px-4 py-2 font-mono">bairro2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
-                <tr><td class="px-4 py-2 font-mono">cidade2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
-                <tr><td class="px-4 py-2 font-mono">uf2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">size 2; normalizado para maiúsculo</td></tr>
-                <tr><td class="px-4 py-2 font-mono">cep2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 9</td></tr>
-
-                {{-- CIDADES / FILTRO --}}
-                <tr>
-                    <td class="px-4 py-2 font-mono">uf_cidades</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">auxiliar para UI/filtro; ex: "SP"</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">cities</td>
-                    <td class="px-4 py-2">array[int]</td>
-                    <td class="px-4 py-2">Não (depende)</td>
-                    <td class="px-4 py-2">
-                        lista de IDs de cidades; devem estar nas UFs do gestor; uma cidade não pode estar ocupada por outro distribuidor
-                    </td>
-                </tr>
-
-                {{-- COMISSÃO / CONTRATO --}}
-                <tr>
-                    <td class="px-4 py-2 font-mono">percentual_vendas</td>
-                    <td class="px-4 py-2">number</td>
-                    <td class="px-4 py-2">Update: Sim</td>
-                    <td class="px-4 py-2">no update é required (regra atual do service); pode ser aplicado via anexo ativo</td>
-                </tr>
-
-                {{-- CONTRATOS/ANEXOS --}}
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos</td>
-                    <td class="px-4 py-2">array</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">lista de objetos; ao ativar um, desativa os demais</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos[*].tipo</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Depende</td>
-                    <td class="px-4 py-2">ex: contrato, aditivo</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos[*].descricao</td>
-                    <td class="px-4 py-2">string</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">texto livre</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos[*].assinado</td>
-                    <td class="px-4 py-2">boolean</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">1/0 no form-data</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos[*].percentual_vendas</td>
-                    <td class="px-4 py-2">number</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">se ativo=true, aplica no distribuidor automaticamente</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos[*].ativo</td>
-                    <td class="px-4 py-2">boolean</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">apenas 1 ativo=true por distribuidor</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos[*].data_assinatura</td>
-                    <td class="px-4 py-2">date (Y-m-d)</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">ex: 2025-01-01</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos[*].validade_meses</td>
-                    <td class="px-4 py-2">int</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">ex: 12, 24</td>
-                </tr>
-
-                <tr>
-                    <td class="px-4 py-2 font-mono">contratos[*].arquivo</td>
-                    <td class="px-4 py-2">file (PDF)</td>
-                    <td class="px-4 py-2">Não</td>
-                    <td class="px-4 py-2">requer multipart/form-data</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="rounded-md bg-gray-50 border border-gray-200 p-3 text-xs text-gray-700">
-        <strong>Observações:</strong>
-        <ul class="list-disc pl-6 mt-1 space-y-1">
-            <li><code>uf</code>, <code>uf2</code> são normalizadas para maiúsculo.</li>
-            <li>Campos em <code>telefones</code> / <code>emails</code>: o service remove itens vazios e salva <code>null</code> se a lista ficar vazia.</li>
-            <li><code>cities</code>: valida “cidade ocupada” e se a cidade pertence às UFs do gestor.</li>
-            <li>Contrato/anexo com <code>ativo=true</code> aplica <code>percentual_vendas</code> e <code>vencimento_contrato</code> automaticamente.</li>
-        </ul>
-    </div>
+  <ul class="list-disc pl-6 space-y-1">
+    <li>
+      Ao criar, se <code>email</code> estiver vazio, o sistema cria um e-mail placeholder automaticamente.
+    </li>
+    <li>
+      Se <code>password</code> estiver vazio, uma senha aleatória é gerada automaticamente.
+    </li>
+    <li>
+      O distribuidor deve estar vinculado a um gestor, e suas cidades de atuação devem pertencer às UFs desse gestor.
+    </li>
+    <li>
+      Uma mesma cidade não pode estar vinculada a mais de um distribuidor.
+    </li>
+    <li>
+      Apenas um anexo pode ficar com <code>ativo=true</code>; o ativo aplica automaticamente
+      <code>percentual_vendas</code> e <code>vencimento_contrato</code> no distribuidor.
+    </li>
+    <li>
+      Ao ativar um anexo, os demais anexos ativos do mesmo distribuidor são desativados.
+    </li>
+    <li>
+      Existe o tipo <code>contrato_cidade</code> em <code>contratos[*].tipo</code>. Nesse caso, é obrigatório enviar
+      <code>contratos[*].cidade_id</code>, e o percentual passa a valer apenas para a cidade escolhida
+      (prioridade nos cálculos). As cidades disponíveis devem pertencer às UFs do gestor.
+    </li>
+  </ul>
 </div>
 
+
+
+        {{-- Campos --}}
+        <div class="space-y-2 text-sm text-gray-700">
+            <h3 class="font-semibold text-gray-900">Campos do Distribuidor</h3>
+
+            <div class="overflow-auto border border-gray-200 rounded-lg">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Campo</th>
+                            <th class="px-4 py-2 text-left">Tipo</th>
+                            <th class="px-4 py-2 text-left">Obrigatório</th>
+                            <th class="px-4 py-2 text-left">Regras / Observações</th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y">
+                        {{-- VÍNCULO --}}
+                        <tr>
+                            <td class="px-4 py-2 font-mono">gestor_id</td>
+                            <td class="px-4 py-2">int</td>
+                            <td class="px-4 py-2">Sim</td>
+                            <td class="px-4 py-2">obrigatório no create e update; deve existir em <code>gestores.id</code></td>
+                        </tr>
+
+                        {{-- LOGIN / USUÁRIO --}}
+                        <tr>
+                            <td class="px-4 py-2 font-mono">email</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">
+                                email válido, max 255, único em <code>users.email</code>;
+                                se vazio, o sistema cria um placeholder automaticamente
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">password</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">se vazio, o sistema gera uma senha aleatória automaticamente</td>
+                        </tr>
+
+                        {{-- DADOS PRINCIPAIS --}}
+                        <tr>
+                            <td class="px-4 py-2 font-mono">razao_social</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Sim</td>
+                            <td class="px-4 py-2">max 255</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">cnpj</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Geralmente Sim</td>
+                            <td class="px-4 py-2">max 18; validar formato; pode ser único (se você aplicou unique)</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">representante_legal</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">max 255</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">cpf</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">max 14</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">rg</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">max 30</td>
+                        </tr>
+
+                        {{-- CONTATOS (LISTAS) --}}
+                        <tr>
+                            <td class="px-4 py-2 font-mono">telefones</td>
+                            <td class="px-4 py-2">array</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">lista de strings; itens vazios removidos; salva null se vier vazio</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">emails</td>
+                            <td class="px-4 py-2">array</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">lista de emails válidos; itens vazios removidos; salva null se vier vazio</td>
+                        </tr>
+
+                        {{-- ENDEREÇO 1 --}}
+                        <tr><td class="px-4 py-2 font-mono">endereco</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 255</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">numero</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 20</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">complemento</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">bairro</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">cidade</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">uf</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">size 2; normalizado para maiúsculo</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">cep</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 9</td></tr>
+
+                        {{-- ENDEREÇO 2 --}}
+                        <tr><td class="px-4 py-2 font-mono">endereco2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 255</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">numero2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 20</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">complemento2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">bairro2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">cidade2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 100</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">uf2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">size 2; normalizado para maiúsculo</td></tr>
+                        <tr><td class="px-4 py-2 font-mono">cep2</td><td class="px-4 py-2">string</td><td class="px-4 py-2">Não</td><td class="px-4 py-2">max 9</td></tr>
+
+                        {{-- CIDADES / FILTRO --}}
+                        <tr>
+                            <td class="px-4 py-2 font-mono">uf_cidades</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">auxiliar para UI/filtro; ex: "SP"</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">cities</td>
+                            <td class="px-4 py-2">array[int]</td>
+                            <td class="px-4 py-2">Não (depende)</td>
+                            <td class="px-4 py-2">
+                                lista de IDs de cidades; devem estar nas UFs do gestor; uma cidade não pode estar ocupada por outro distribuidor
+                            </td>
+                        </tr>
+
+                        {{-- COMISSÃO / CONTRATO --}}
+                        <tr>
+                            <td class="px-4 py-2 font-mono">percentual_vendas</td>
+                            <td class="px-4 py-2">number</td>
+                            <td class="px-4 py-2">Update: Sim</td>
+                            <td class="px-4 py-2">no update é required (regra atual do service); pode ser aplicado via anexo ativo</td>
+                        </tr>
+
+                        {{-- CONTRATOS/ANEXOS --}}
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos</td>
+                            <td class="px-4 py-2">array</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">lista de objetos; ao ativar um, desativa os demais</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].tipo</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Depende</td>
+                            <td class="px-4 py-2">
+                                valores aceitos: <code>contrato</code>, <code>aditivo</code>, <code>outro</code>, <code>contrato_cidade</code><br>
+                                obrigatório quando <code>contratos[*].arquivo</code> é enviado (required_with)
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].cidade_id</td>
+                            <td class="px-4 py-2">int</td>
+                            <td class="px-4 py-2">Somente se tipo=contrato_cidade</td>
+                            <td class="px-4 py-2">
+                                obrigatório quando <code>contratos[*].tipo = contrato_cidade</code>;
+                                deve existir em <code>cities.id</code>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].descricao</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">texto livre</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].assinado</td>
+                            <td class="px-4 py-2">boolean</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">1/0 no form-data</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].percentual_vendas</td>
+                            <td class="px-4 py-2">number</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">se ativo=true, aplica no distribuidor automaticamente</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].ativo</td>
+                            <td class="px-4 py-2">boolean</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">apenas 1 ativo=true por distribuidor</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].data_assinatura</td>
+                            <td class="px-4 py-2">date (Y-m-d)</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">ex: 2025-01-01</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].validade_meses</td>
+                            <td class="px-4 py-2">int</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">ex: 12, 24</td>
+                        </tr>
+
+                        <tr>
+                            <td class="px-4 py-2 font-mono">contratos[*].arquivo</td>
+                            <td class="px-4 py-2">file (PDF)</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">requer multipart/form-data</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="rounded-md bg-gray-50 border border-gray-200 p-3 text-xs text-gray-700">
+                <strong>Observações:</strong>
+                <ul class="list-disc pl-6 mt-1 space-y-1">
+                    <li><code>uf</code>, <code>uf2</code> são normalizadas para maiúsculo.</li>
+                    <li>Campos em <code>telefones</code> / <code>emails</code>: o service remove itens vazios e salva <code>null</code> se a lista ficar vazia.</li>
+                    <li><code>cities</code>: valida “cidade ocupada” e se a cidade pertence às UFs do gestor.</li>
+                    <li>Contrato/anexo com <code>ativo=true</code> aplica <code>percentual_vendas</code> e <code>vencimento_contrato</code> automaticamente.</li>
+                    <li>
+                        Para contrato por cidade: use <code>contratos[*].tipo=contrato_cidade</code> e informe <code>contratos[*].cidade_id</code>.
+                        Recomenda-se manter a mesma cidade também em <code>cities[]</code>.
+                    </li>
+                </ul>
+            </div>
+        </div>
 
         {{-- CREATE (payload completo) --}}
         <div>
@@ -1415,32 +1508,25 @@ contratos[0][arquivo]: (PDF)</code></pre>
   "numero": "100",
   "complemento": "Sala 301",
   "bairro": "Centro",
-  "cidade": "São Paulo",
-  "uf": "SP",
-  "cep": "01000-000",
+  "cidade": "Vitória",
+  "uf": "ES",
+  "cep": "29000-000",
 
-  "endereco2": "Rua Secundária",
-  "numero2": "200",
-  "complemento2": "Galpão",
-  "bairro2": "Industrial",
-  "cidade2": "Campinas",
-  "uf2": "SP",
-  "cep2": "13000-000",
-
-  "uf_cidades": "SP",
-  "cities": [1, 2, 3],
+  "uf_cidades": "ES",
+  "cities": [3427],
 
   "percentual_vendas": 5,
 
   "contratos": [
     {
-      "tipo": "contrato",
-      "descricao": "Contrato principal",
+      "tipo": "contrato_cidade",
+      "cidade_id": 3427,
+      "descricao": "Contrato de atuação — Vitória (ES)",
       "assinado": true,
       "percentual_vendas": 6,
       "ativo": true,
-      "data_assinatura": "2024-01-01",
-      "validade_meses": 24
+      "data_assinatura": "2025-01-01",
+      "validade_meses": 12
     }
   ]
 }</code></pre>
@@ -1464,21 +1550,19 @@ contratos[0][arquivo]: (PDF)</code></pre>
 
   "razao_social": "Distribuidora Beta (Atualizada)",
 
-  "emails": ["novo@beta.com"],
-  "telefones": ["11911112222"],
-
-  "cities": [1, 2],
+  "cities": [3427, 3426],
 
   "percentual_vendas": 7,
 
   "contratos": [
     {
-      "tipo": "aditivo",
-      "descricao": "Aditivo 2025",
+      "tipo": "contrato_cidade",
+      "cidade_id": 3426,
+      "descricao": "Aditivo de atuação — Vila Velha (ES)",
       "assinado": true,
       "percentual_vendas": 8,
       "ativo": false,
-      "data_assinatura": "2025-01-01",
+      "data_assinatura": "2026-01-01",
       "validade_meses": 12
     }
   ]
@@ -1488,29 +1572,34 @@ contratos[0][arquivo]: (PDF)</code></pre>
         {{-- Exemplo multipart/form-data --}}
         <div>
             <h3 class="font-semibold text-gray-900 mb-2">
-                Exemplo — Envio de contrato com arquivo (multipart/form-data)
+                Exemplo — Envio de contrato por cidade com arquivo (multipart/form-data)
             </h3>
 
 <pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>gestor_id: 5
 razao_social: Distribuidora Beta LTDA
 email: distribuidor@empresa.com
 password: 12345678
-percentual_vendas: 5
-cities[0]: 1
-cities[1]: 2
+cities[0]: 3427
 
-contratos[0][tipo]: contrato
-contratos[0][descricao]: Contrato principal
+contratos[0][tipo]: contrato_cidade
+contratos[0][cidade_id]: 3427
+contratos[0][descricao]: Contrato de atuação — Vitória (ES)
 contratos[0][assinado]: 1
 contratos[0][percentual_vendas]: 6
 contratos[0][ativo]: 1
-contratos[0][data_assinatura]: 2024-01-01
-contratos[0][validade_meses]: 24
+contratos[0][data_assinatura]: 2025-01-01
+contratos[0][validade_meses]: 12
 contratos[0][arquivo]: (PDF)</code></pre>
+
+            <div class="rounded-md bg-blue-50 border border-blue-200 p-4 text-sm text-blue-800 mt-3">
+                <strong>Dica:</strong> No Postman, use <em>Body → form-data → Bulk Edit</em> para colar as chaves no formato
+                <code>key:value</code> e depois adicione o PDF em <code>contratos[0][arquivo]</code> com o tipo <code>File</code>.
+            </div>
         </div>
 
     </div>
 </section>
+
 
 
 {{-- ========================= --}}

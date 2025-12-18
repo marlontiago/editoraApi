@@ -338,7 +338,7 @@
 
                             <!-- Select CIDADE (apenas quando contrato_cidade) -->
                             <div x-show="tipo === 'contrato_cidade'" class="mt-2">
-                                <label class="text-xs text-gray-600">Cidade (das UFs do gestor)</label>
+                                <label class="text-xs text-gray-600">Cidade (cidades de atuação)</label>
                                 <select
                                     :name="'contratos['+idx+'][cidade_id]'"
                                     x-model="cidadeId"
@@ -447,8 +447,10 @@
             </div>
         </form>
     </div>
+
     <script>
-    const ROTA_CIDADES_POR_GESTOR = @js(route('admin.distribuidores.cidadesPorGestor'));
+        // Mantive sua constante, mas agora o anexo não depende dela no CREATE.
+        const ROTA_CIDADES_POR_GESTOR = @js(route('admin.distribuidores.cidadesPorGestor'));
     </script>
 
     {{-- JS: Alpine helpers + store compartilhado (gestor → cidades) --}}
@@ -458,21 +460,17 @@
             let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), delay); }
         }
 
-        // Store: cacheia cidades por gestor
+        // Store: agora guarda também as cidades selecionadas (para contrato_cidade)
         document.addEventListener('alpine:init', () => {
             Alpine.store('dist', {
                 gestorId: @json(old('gestor_id', '')),
+                selectedCities: [], // <<< NOVO: cidades selecionadas no picker
                 cidadesCacheByGestor: {},
 
                 async getCidadesOptions() {
                     const gid = String(this.gestorId || '').trim();
                     if (!gid) return [];
                     if (this.cidadesCacheByGestor[gid]) return this.cidadesCacheByGestor[gid];
-
-                    try {
-                        const url = "{{ route('admin.gestores.ufs', ['gestor' => '__ID__']) }}".replace('__ID__', gid); // apenas validação de acesso
-                    } catch(e) {}
-
                     return [];
                 }
             });
@@ -491,14 +489,37 @@
                     this.selected = (selectedInitial || []).map(s => ({id: s.id, name: s.name || '…', uf: s.uf || ''}));
                     this.debouncedFetch = debounce(this.fetchList.bind(this), 350);
                     this.fetchList();
+                    this.syncToStore(); // <<< NOVO
                 },
+
+                // <<< NOVO
+                syncToStore() {
+                    try {
+                        if (window.Alpine) {
+                            Alpine.store('dist').selectedCities = (this.selected || []).map(s => ({
+                                id: s.id,
+                                name: s.name,
+                                uf: s.uf || '',
+                                text: s.name + (s.uf ? ` (${s.uf})` : ''),
+                            }));
+                        }
+                    } catch (e) {}
+                },
+
                 has(id) { return this.selected.some(s => String(s.id) === String(id)); },
+
                 add(item) {
                     if (item.occupied) return;
                     if (this.has(item.id)) return;
                     this.selected.push({id: item.id, name: item.name, uf: item.uf || ''});
+                    this.syncToStore(); // <<< NOVO
                 },
-                remove(id) { this.selected = this.selected.filter(s => String(s.id) !== String(id)); },
+
+                remove(id) {
+                    this.selected = this.selected.filter(s => String(s.id) !== String(id));
+                    this.syncToStore(); // <<< NOVO
+                },
+
                 async fetchList() {
                     const params = new URLSearchParams();
                     if (this.q.trim() !== '') params.set('q', this.q.trim());
@@ -519,12 +540,15 @@
                             distribuidor_id: r.distribuidor_id || null,
                             distribuidor_name: r.distribuidor_name || r.distribuidor_nome || null,
                         }));
-                        // atualiza names das já selecionadas
+
+                        // atualiza names das já selecionadas (e depois publica no store)
                         const mapById = new Map(this.results.map(r => [String(r.id), r]));
                         this.selected = this.selected.map(s => {
                             const hit = mapById.get(String(s.id));
                             return hit ? {id: s.id, name: hit.name, uf: hit.uf || ''} : s;
                         });
+
+                        this.syncToStore(); // <<< NOVO
                     } catch(e) {
                         console.error('[citiesPicker] fetch error:', e);
                     }
@@ -552,6 +576,7 @@
                 onGestorChange: async () => {
                     if (window.Alpine) Alpine.store('dist').gestorId = document.getElementById('gestor_id').value || '';
                     window.dispatchEvent(new CustomEvent('gestor-updated'));
+
                     // também atualiza as UFs permitidas nas selects
                     if (typeof loadUfsForGestor === 'function') {
                         loadUfsForGestor(document.getElementById('gestor_id').value);
@@ -565,6 +590,7 @@
         }
 
         // Componente de cada "card" de anexo com cidade dinâmica
+        // AGORA: lista SOMENTE as cidades de atuação selecionadas (cities[] do picker)
         function anexoCidadeDist() {
             return {
                 tipo: 'contrato',
@@ -573,50 +599,29 @@
                 carregando: false,
 
                 async refreshCidades() {
-                    // só carrega quando o tipo exigir cidade
                     if (this.tipo !== 'contrato_cidade') {
                         this.cidades = [];
                         this.cidadeId = '';
                         return;
                     }
 
-                    // gestor atual vem do Alpine store do form principal
-                    const gid = (window.Alpine?.store('dist')?.gestorId || '').toString().trim();
-                    if (!gid) {
-                        this.cidades = [];
+                    // CREATE: usa as cidades selecionadas no picker
+                    const selected = (window.Alpine?.store('dist')?.selectedCities || []);
+
+                    this.cidades = (selected || []).map(c => ({
+                        id: c.id,
+                        text: c.text || c.name,
+                        uf: c.uf || ''
+                    }));
+
+                    if (this.cidadeId && !this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
                         this.cidadeId = '';
-                        return;
-                    }
-
-                    this.carregando = true;
-                    try {
-                        const url = `${ROTA_CIDADES_POR_GESTOR}?gestor_id=${encodeURIComponent(gid)}`;
-                        const resp = await fetch(url, {
-                            credentials: 'same-origin',
-                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                        });
-                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-
-                        const rows = await resp.json(); // [{id, text, uf}]
-                        this.cidades = rows;
-
-                        // se a cidade selecionada não pertence mais ao novo conjunto, limpa
-                        if (this.cidadeId && !this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
-                            this.cidadeId = '';
-                        }
-                    } catch (e) {
-                        console.error('[anexoCidadeDist] erro ao carregar cidades por gestor:', e);
-                        this.cidades = [];
-                        this.cidadeId = '';
-                    } finally {
-                        this.carregando = false;
                     }
                 },
 
                 onTipoChange() { this.refreshCidades(); },
 
                 init() {
-                    // carga inicial (considera old()) e recarrega ao trocar gestor
                     this.refreshCidades();
                     window.addEventListener('gestor-updated', () => this.refreshCidades());
                 }
@@ -653,36 +658,19 @@
 
             // Picker de Cidades de Atuação: restringir às UFs do gestor
             if (ufCitySel) {
-                // permite vazio + UFs permitidas
                 filterSelectByAllowedUFs(ufCitySel, [''].concat(allowed));
 
-                // Se a UF selecionada no filtro ficou inválida, limpar e forçar nova busca
-                if (ufCitySel.value && !allowed.includes(ufCitySel.value)) {
-                    ufCitySel.value = '';
-                    try {
-                        const root = ufCitySel.closest('[x-data]');
-                        if (root && window.Alpine) {
-                            const comp = Alpine.$data(root);
-                            if (comp && typeof comp.fetchList === 'function') comp.fetchList();
-
-                            // Saneia cidades já selecionadas que estejam fora das UFs permitidas
-                            if (comp && Array.isArray(comp.selected)) {
-                                comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
-                            }
+                try {
+                    const root = ufCitySel.closest('[x-data]');
+                    if (root && window.Alpine) {
+                        const comp = Alpine.$data(root);
+                        if (comp && Array.isArray(comp.selected)) {
+                            comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
+                            if (typeof comp.syncToStore === 'function') comp.syncToStore(); // <<< NOVO: manter store em dia
                         }
-                    } catch(e) {}
-                } else {
-                    // Mesmo caso acima, mas sem trocar o valor do select
-                    try {
-                        const root = ufCitySel.closest('[x-data]');
-                        if (root && window.Alpine) {
-                            const comp = Alpine.$data(root);
-                            if (comp && Array.isArray(comp.selected)) {
-                                comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
-                            }
-                        }
-                    } catch(e) {}
-                }
+                        if (comp && typeof comp.fetchList === 'function') comp.fetchList();
+                    }
+                } catch(e) {}
             }
         }
 

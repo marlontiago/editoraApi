@@ -30,8 +30,8 @@ class DatabaseSeeder extends Seeder
         ColecaoSeeder::class,
         //ProdutoSeeder::class,
         CityVinculosSeeder::class,
-        //GestorSeeder::class,
-        //DistribuidorSeeder::class,
+        GestorSeeder::class,
+        DistribuidorSeeder::class,
         //PedidoSeeder::class,
     ]);
 }

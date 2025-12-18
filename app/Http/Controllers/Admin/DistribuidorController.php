@@ -185,6 +185,20 @@ class DistribuidorController extends Controller
                 $cidades->map(fn($c) => ['id'=>$c->id, 'text'=> "{$c->nome} ({$c->uf})", 'uf'=>$c->uf])
             );
         }
+        public function cidadesPorDistribuidor(Distribuidor $distribuidor)
+        {
+            // se sua coluna for 'name' (como você já usa nos outros métodos)
+            $cidades = $distribuidor->cities()
+                ->orderBy('name')
+                ->get(['cities.id', 'cities.name as nome']);
+
+            return response()->json(
+                $cidades->map(fn($c) => [
+                    'id'   => $c->id,
+                    'text' => $c->nome, // aqui é só o nome (sem UF)
+                ])
+            );
+        }
 
         public function importar(Request $request, \App\Services\DistribuidorService $service)
         {

@@ -195,7 +195,7 @@ class PedidoService
                     ->where('city_id', $request->cidade_id)
                     ->exists();
 
-                if ($ocupada) {
+                if ($ocupada && blank($request->gestor_id)) {
                     $distName = DB::table('city_distribuidor')
                         ->join('distribuidores','distribuidores.id','=','city_distribuidor.distribuidor_id')
                         ->where('city_distribuidor.city_id', $request->cidade_id)
@@ -209,6 +209,7 @@ class PedidoService
                 }
             }
         }
+
 
         return DB::transaction(function () use ($request, $validated) {
 

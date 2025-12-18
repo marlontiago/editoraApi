@@ -346,34 +346,40 @@ class NotaPagamentoService
     }
 
     private function anexoVigente($ax, Carbon $refDate): bool
-    {
-        $inicio = null;
-        if (!empty($ax->data_assinatura)) {
-            try { $inicio = Carbon::parse($ax->data_assinatura)->startOfDay(); } catch (\Throwable $e) {}
-        }
-        if (!$inicio && !empty($ax->created_at)) {
-            try { $inicio = Carbon::parse($ax->created_at)->startOfDay(); } catch (\Throwable $e) {}
-        }
+{
+    $inicio = null;
+    if (!empty($ax->data_assinatura)) {
+        try { $inicio = Carbon::parse($ax->data_assinatura)->startOfDay(); } catch (\Throwable $e) {}
+    }
+    if (!$inicio && !empty($ax->created_at)) {
+        try { $inicio = Carbon::parse($ax->created_at)->startOfDay(); } catch (\Throwable $e) {}
+    }
 
-        $fim = null;
-        if (!empty($ax->data_vencimento)) {
-            try { $fim = Carbon::parse($ax->data_vencimento)->endOfDay(); } catch (\Throwable $e) {}
-        }
+    $fim = null;
+    if (!empty($ax->data_vencimento)) {
+        try { $fim = Carbon::parse($ax->data_vencimento)->endOfDay(); } catch (\Throwable $e) {}
+    }
 
-        if (!$inicio && !$fim) {
-            return (bool) $ax->ativo === true;
-        }
-
-        if (!$fim) {
-            if (!(bool)$ax->ativo) return false;
-            if ($inicio) return $refDate->greaterThanOrEqualTo($inicio);
+    if (!$inicio && !$fim) {
+        if (($ax->tipo ?? null) === 'contrato_cidade') {
             return true;
         }
-
-        if (!$inicio) {
-            return (bool)$ax->ativo === true && $refDate->lessThanOrEqualTo($fim);
+        return (bool) $ax->ativo === true;
+    }
+    if (!$fim) {
+        if (($ax->tipo ?? null) === 'contrato_cidade') {
+            return $inicio ? $refDate->greaterThanOrEqualTo($inicio) : true;
         }
 
-        return $refDate->betweenIncluded($inicio, $fim);
+        if (!(bool) $ax->ativo) return false;
+        return $inicio ? $refDate->greaterThanOrEqualTo($inicio) : true;
     }
+
+    if (!$inicio) {
+        return (bool) $ax->ativo === true && $refDate->lessThanOrEqualTo($fim);
+    }
+
+    return $refDate->betweenIncluded($inicio, $fim);
+}
+
 }

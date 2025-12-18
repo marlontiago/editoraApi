@@ -503,7 +503,13 @@
       cidadeSelect.innerHTML = '';
       cidadeSelect.add(new Option('-- Selecione --', ''));
 
-      cidades.forEach(c => {
+      const sorted = [...(cidades || [])].sort((a, b) => {
+        const la = cidadeLabel(a, ufFallback).toLocaleLowerCase('pt-BR');
+        const lb = cidadeLabel(b, ufFallback).toLocaleLowerCase('pt-BR');
+        return la.localeCompare(lb, 'pt-BR', { sensitivity: 'base' });
+      });
+
+      sorted.forEach(c => {
         const opt = new Option(cidadeLabel(c, ufFallback), c.id);
         const isOccupied = Boolean(c.ocupado);
         const distName   = c.distribuidor_nome || null;
@@ -519,6 +525,7 @@
       cidadeSelect.disabled = false;
       cidadeSelect.classList.remove('bg-gray-50');
     }
+
 
     async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
       resetCidadeSelect('-- Carregando... --');
@@ -540,14 +547,22 @@
         const resp = await fetch(`/admin/cidades/por-uf/${encodeURIComponent(uf)}?with_occupancy=1`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const cidades = await resp.json();
+
         const hasDistribuidor = Boolean(distribuidorSelect.value);
-        rebuildCidadeOptions(cidades, { allowOccupied: hasDistribuidor, ufFallback: uf });
+        const hasGestor       = Boolean(gestorSelect.value);
+
+        // ✅ gestor pode escolher qualquer cidade (mesmo ocupada)
+        const allowOccupied = hasDistribuidor || hasGestor;
+
+        rebuildCidadeOptions(cidades, { allowOccupied, ufFallback: uf });
+
         if (selectedCidadeId) cidadeSelect.value = String(selectedCidadeId);
       } catch (e) {
         console.error(e);
         resetCidadeSelect('Falha ao carregar cidades');
       }
     }
+
 
     distribuidorSelect.addEventListener('change', async function () {
       const distId = this.value || null;
@@ -562,8 +577,18 @@
       }
     });
 
-    gestorSelect.addEventListener('change', function () {});
+gestorSelect.addEventListener('change', async function () {
+  const uf = stateSelect.value || null;
+  const distId = distribuidorSelect.value || null;
 
+  if (distId) {
+    await carregarCidadesPorDistribuidor(distId, null);
+  } else if (uf) {
+    await carregarCidadesPorUF(uf, null);
+  } else {
+    resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+  }
+});
     stateSelect.addEventListener('change', async function () {
       const uf = this.value || null;
       if (!uf) {

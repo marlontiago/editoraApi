@@ -36,6 +36,7 @@ class DistribuidorService
 
     public function createFromRequest(Request $request): Distribuidor
     {
+
         [$emailsReq, $telefonesReq] = $this->normalizeLists($request);
 
         if (!$request->filled('email') && $emailsReq->isNotEmpty()) {

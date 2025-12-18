@@ -59,14 +59,21 @@
                 $preSel = collect(old('cities', $distribuidor->cities->pluck('id')->all()))
                     ->map(fn($id)=>(int)$id)
                     ->values();
-                $selectedFull = $distribuidor->cities->map(fn($c)=>['id'=>$c->id,'name'=>$c->name,'uf'=>$c->state])->values();
+
+                $selectedFull = $distribuidor->cities->map(fn($c)=>[
+                    'id'   => $c->id,
+                    'name' => $c->name,
+                    'uf'   => $c->state,
+                ])->values();
             @endphp
+
             <div class="col-span-12 md:col-span-6"
                  x-data="citiesPicker({
                     searchUrl: @js(route('admin.cidades.search')),
                     selectedInitial: @js(
-                        old('cities') ? $preSel->map(fn($v)=>['id'=>$v,'name'=>'','uf'=>''])->values()
-                                      : $selectedFull
+                        old('cities')
+                            ? $preSel->map(fn($v)=>['id'=>$v,'name'=>'','uf'=>''])->values()
+                            : $selectedFull
                     ),
                     allowOccupiedIfSameOwnerId: @js($distribuidor->id)
                  })"
@@ -79,7 +86,8 @@
                     @php
                         $ufs = ['','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
                     @endphp
-                    <select id="ufFiltroCidades" x-model="uf" @change="fetchList()" class="w-28 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <select id="ufFiltroCidades" x-model="uf" @change="fetchList()"
+                            class="w-28 rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         @foreach($ufs as $uf)
                             <option value="{{ $uf }}">{{ $uf === '' ? 'UF...' : $uf }}</option>
                         @endforeach
@@ -92,14 +100,17 @@
                             <div class="text-sm">
                                 <span x-text="item.name"></span>
                                 <span class="text-gray-500" x-text="'(' + (item.uf || '') + ')'"></span>
+
                                 <template x-if="item.occupied && !(allowOccupiedIfSameOwnerId && String(item.distribuidor_id) === String(allowOccupiedIfSameOwnerId))">
                                     <span class="ml-2 text-xs rounded px-2 py-0.5 bg-red-100 text-red-700"
                                           x-text="'ocupada' + (item.distribuidor_name ? ' por ' + item.distribuidor_name : '')"></span>
                                 </template>
+
                                 <template x-if="item.occupied && allowOccupiedIfSameOwnerId && String(item.distribuidor_id) === String(allowOccupiedIfSameOwnerId)">
                                     <span class="ml-2 text-xs rounded px-2 py-0.5 bg-green-100 text-green-700">sua</span>
                                 </template>
                             </div>
+
                             <button type="button"
                                     class="text-xs px-2 py-1 rounded border hover:bg-gray-50"
                                     :disabled="(item.occupied && !(allowOccupiedIfSameOwnerId && String(item.distribuidor_id) === String(allowOccupiedIfSameOwnerId))) || has(item.id)"
@@ -125,6 +136,7 @@
                         </template>
                     </div>
                 </div>
+
                 @error('cities') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
@@ -135,24 +147,28 @@
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('razao_social') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-6">
                 <label for="representante_legal" class="block text-sm font-medium text-gray-700">Representante Legal </label>
                 <input type="text" id="representante_legal" name="representante_legal" value="{{ old('representante_legal', $distribuidor->representante_legal) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('representante_legal') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-6">
                 <label for="cnpj" class="block text-sm font-medium text-gray-700">CNPJ </label>
                 <input type="text" id="cnpj" name="cnpj" value="{{ old('cnpj', $distribuidor->cnpj) }}" maxlength="18"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cnpj') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-3">
                 <label for="cpf" class="block text-sm font-medium text-gray-700">CPF </label>
                 <input type="text" id="cpf" name="cpf" value="{{ old('cpf', $distribuidor->cpf) }}" maxlength="14"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" >
                 @error('cpf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-3">
                 <label for="rg" class="block text-sm font-medium text-gray-700">RG</label>
                 <input type="text" id="rg" name="rg" value="{{ old('rg', $distribuidor->rg) }}" maxlength="30"
@@ -220,36 +236,42 @@
             <div class="col-span-12">
                 <h3 class="text-sm font-semibold text-gray-800 mb-1">Endereço principal</h3>
             </div>
+
             <div class="col-span-12 md:col-span-6">
                 <label for="endereco" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco" name="endereco" value="{{ old('endereco', $distribuidor->endereco) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('endereco') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-3">
                 <label for="numero" class="block text-sm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero" name="numero" value="{{ old('numero', $distribuidor->numero) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('numero') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-3">
                 <label for="complemento" class="block text-sm font-medium text-gray-700">Complemento</label>
                 <input type="text" id="complemento" name="complemento" value="{{ old('complemento', $distribuidor->complemento) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('complemento') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-4">
                 <label for="bairro" class="block text-sm font-medium text-gray-700">Bairro</label>
                 <input type="text" id="bairro" name="bairro" value="{{ old('bairro', $distribuidor->bairro) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('bairro') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-5">
                 <label for="cidade" class="block text-sm font-medium text-gray-700">Cidade</label>
                 <input type="text" id="cidade" name="cidade" value="{{ old('cidade', $distribuidor->cidade) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cidade') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-1">
                 <label for="uf" class="block text-sm font-medium text-gray-700">UF</label>
                 <select id="uf" name="uf"
@@ -263,6 +285,7 @@
                 </select>
                 @error('uf') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-2">
                 <label for="cep" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep" name="cep" value="{{ old('cep', $distribuidor->cep) }}" maxlength="9"
@@ -274,36 +297,42 @@
             <div class="col-span-12 mt-2">
                 <h3 class="text-sm font-semibold text-gray-800 mb-1">Endereço secundário</h3>
             </div>
+
             <div class="col-span-12 md:col-span-6">
                 <label for="endereco2" class="block text-sm font-medium text-gray-700">Endereço</label>
                 <input type="text" id="endereco2" name="endereco2" value="{{ old('endereco2', $distribuidor->endereco2) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('endereco2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-3">
                 <label for="numero2" class="block textsm font-medium text-gray-700">Número</label>
                 <input type="text" id="numero2" name="numero2" value="{{ old('numero2', $distribuidor->numero2) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('numero2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-3">
                 <label for="complemento2" class="block text-sm font-medium text-gray-700">Complemento</label>
                 <input type="text" id="complemento2" name="complemento2" value="{{ old('complemento2', $distribuidor->complemento2) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('complemento2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-4">
                 <label for="bairro2" class="block text-sm font-medium text-gray-700">Bairro</label>
                 <input type="text" id="bairro2" name="bairro2" value="{{ old('bairro2', $distribuidor->bairro2) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('bairro2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-5">
                 <label for="cidade2" class="block text-sm font-medium text-gray-700">Cidade</label>
                 <input type="text" id="cidade2" name="cidade2" value="{{ old('cidade2', $distribuidor->cidade2) }}"
                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 @error('cidade2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-1">
                 <label for="uf2" class="block text-sm font-medium text-gray-700">UF</label>
                 <select id="uf2" name="uf2"
@@ -317,6 +346,7 @@
                 </select>
                 @error('uf2') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
+
             <div class="col-span-12 md:col-span-2">
                 <label for="cep2" class="block text-sm font-medium text-gray-700">CEP</label>
                 <input type="text" id="cep2" name="cep2" value="{{ old('cep2', $distribuidor->cep2) }}" maxlength="9"
@@ -329,8 +359,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Novos anexos (PDF)</label>
 
                 <template x-for="(item, idx) in itens" :key="item.id">
-                    <!-- 👇 Mover x-data para o CONTAINER do card -->
-                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border" x-data="anexoCidade()">
+                    <div class="grid grid-cols-12 gap-3 mb-4 p-3 rounded border" x-data="anexoCidade()" x-init="init()">
                         <!-- Tipo + Cidade (dinâmico) -->
                         <div class="col-span-12 md:col-span-3">
                             <label class="text-xs text-gray-600">Tipo</label>
@@ -346,9 +375,8 @@
                                 <option value="contrato_cidade">Contrato por cidade</option>
                             </select>
 
-                            <!-- Select de CIDADE (aparece só no tipo contrato_cidade) -->
                             <div x-show="tipo === 'contrato_cidade'" class="mt-2">
-                                <label class="text-xs text-gray-600">Cidade (nas UFs do Gestor)</label>
+                                <label class="text-xs text-gray-600">Cidade (cidades de atuação)</label>
                                 <select
                                     :name="`contratos[${idx}][cidade_id]`"
                                     x-model="cidadeId"
@@ -381,7 +409,7 @@
                                     class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                 <span class="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm">%</span>
                             </div>
-                            <!-- dica muda conforme tipo -->
+
                             <template x-if="tipo !== 'contrato_cidade'">
                                 <p class="mt-1 text-[11px] text-gray-500">Se marcado <b>Ativo</b>, aplicará este percentual.</p>
                             </template>
@@ -390,7 +418,6 @@
                             </template>
                         </div>
 
-                        <!-- "Ativo?" só para tipos diferentes de contrato_cidade -->
                         <template x-if="tipo !== 'contrato_cidade'">
                             <div class="col-span-12 md:col-span-2">
                                 <label class="text-xs text-gray-600">Ativo?</label>
@@ -449,7 +476,6 @@
                 @error('contratos.*.tipo') <p class="mt-2 text-xs text-red-600">{{ $message }}</p> @enderror
             </div>
 
-
             {{-- ===== Ações ===== --}}
             <div class="col-span-12 flex items-center justify-end gap-3 pt-2">
                 <a href="{{ route('admin.distribuidores.index') }}"
@@ -462,11 +488,18 @@
         </form>
     </div>
 
-    {{-- JS: helpers (debounce + citiesPicker - igual ao create) --}}
+    {{-- JS: Store + helpers (debounce + citiesPicker) --}}
     <script>
         function debounce(fn, delay=400) {
             let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), delay); }
         }
+
+        // STORE: publica as cidades selecionadas (para contrato_cidade)
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('dist', {
+                selectedCities: [],
+            });
+        });
 
         function citiesPicker({searchUrl, selectedInitial=[], allowOccupiedIfSameOwnerId=null}) {
             return {
@@ -475,19 +508,43 @@
                 results: [],
                 selected: [],
                 allowOccupiedIfSameOwnerId,
+                debouncedFetch: null,
+
                 init() {
                     this.selected = (selectedInitial || []).map(s => ({id: s.id, name: s.name || '…', uf: s.uf || ''}));
                     this.debouncedFetch = debounce(this.fetchList.bind(this), 350);
                     this.fetchList();
+                    this.syncToStore();
                 },
+
+                syncToStore() {
+                    try {
+                        if (window.Alpine) {
+                            Alpine.store('dist').selectedCities = (this.selected || []).map(s => ({
+                                id: s.id,
+                                name: s.name,
+                                uf: s.uf || '',
+                                text: (s.name || '…') + (s.uf ? ` (${s.uf})` : ''),
+                            }));
+                        }
+                    } catch(e) {}
+                },
+
                 has(id) { return this.selected.some(s => String(s.id) === String(id)); },
+
                 add(item) {
                     const occupiedByOther = item.occupied && !(this.allowOccupiedIfSameOwnerId && String(item.distribuidor_id) === String(this.allowOccupiedIfSameOwnerId));
                     if (occupiedByOther) return;
                     if (this.has(item.id)) return;
                     this.selected.push({id: item.id, name: item.name, uf: item.uf || ''});
+                    this.syncToStore();
                 },
-                remove(id) { this.selected = this.selected.filter(s => String(s.id) !== String(id)); },
+
+                remove(id) {
+                    this.selected = this.selected.filter(s => String(s.id) !== String(id));
+                    this.syncToStore();
+                },
+
                 async fetchList() {
                     const params = new URLSearchParams();
                     if (this.q.trim() !== '') params.set('q', this.q.trim());
@@ -508,11 +565,14 @@
                             distribuidor_id: r.distribuidor_id || null,
                             distribuidor_name: r.distribuidor_name || r.distribuidor_nome || null,
                         }));
+
                         const mapById = new Map(this.results.map(r => [String(r.id), r]));
                         this.selected = this.selected.map(s => {
                             const hit = mapById.get(String(s.id));
                             return hit ? {id: s.id, name: hit.name, uf: hit.uf || ''} : s;
                         });
+
+                        this.syncToStore();
                     } catch(e) {
                         console.error('[citiesPicker] fetch error:', e);
                     }
@@ -525,10 +585,10 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const gestorSel = document.getElementById('gestor_id');
-            const uf1Sel    = document.getElementById('uf');     // UF principal
-            const uf2Sel    = document.getElementById('uf2');    // UF secundária
-            const ufCitySel = document.getElementById('ufFiltroCidades'); // UF do picker de cidades
-            const ufsCache  = new Map(); // gestorId -> ['SP','RJ',...]
+            const uf1Sel    = document.getElementById('uf');
+            const uf2Sel    = document.getElementById('uf2');
+            const ufCitySel = document.getElementById('ufFiltroCidades');
+            const ufsCache  = new Map();
 
             function enableAllOptions(selectEl){
                 if(!selectEl) return;
@@ -546,47 +606,25 @@
             }
 
             function applyAllowed(allowed){
-                // Sempre manter TODOS os estados liberados nos selects de endereço
-                const uf1Sel    = document.getElementById('uf');   // endereço principal
-                const uf2Sel    = document.getElementById('uf2');  // endereço secundário
-                const ufCitySel = document.getElementById('ufFiltroCidades'); // filtro do picker (este sim é restrito)
-
-                // Endereços: liberar tudo (sem filtro por gestor)
+                // Endereços: liberar tudo
                 enableAllOptions(uf1Sel);
                 enableAllOptions(uf2Sel);
 
-                // Picker de Cidades de Atuação: restringir às UFs do gestor
+                // Picker: restringir UFs
                 if (ufCitySel) {
-                    // permite vazio + UFs permitidas
                     filterSelectByAllowedUFs(ufCitySel, [''].concat(allowed));
 
-                    // Se a UF selecionada no filtro ficou inválida, limpar e forçar nova busca
-                    if (ufCitySel.value && !allowed.includes(ufCitySel.value)) {
-                        ufCitySel.value = '';
-                        try {
-                            const root = ufCitySel.closest('[x-data]');
-                            if (root && window.Alpine) {
-                                const comp = Alpine.$data(root);
-                                if (comp && typeof comp.fetchList === 'function') comp.fetchList();
-
-                                // Saneia cidades já selecionadas que estejam fora das UFs permitidas
-                                if (comp && Array.isArray(comp.selected)) {
-                                    comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
-                                }
+                    try {
+                        const root = ufCitySel.closest('[x-data]');
+                        if (root && window.Alpine) {
+                            const comp = Alpine.$data(root);
+                            if (comp && Array.isArray(comp.selected)) {
+                                comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
+                                if (typeof comp.syncToStore === 'function') comp.syncToStore();
                             }
-                        } catch(e) {}
-                    } else {
-                        // Mesmo caso acima, mas sem trocar o valor do select
-                        try {
-                            const root = ufCitySel.closest('[x-data]');
-                            if (root && window.Alpine) {
-                                const comp = Alpine.$data(root);
-                                if (comp && Array.isArray(comp.selected)) {
-                                    comp.selected = comp.selected.filter(s => !s.uf || allowed.includes(String(s.uf).toUpperCase()));
-                                }
-                            }
-                        } catch(e) {}
-                    }
+                            if (comp && typeof comp.fetchList === 'function') comp.fetchList();
+                        }
+                    } catch(e) {}
                 }
             }
 
@@ -612,14 +650,11 @@
                 }
             }
 
-            // Reage à troca do gestor
             gestorSel.addEventListener('change', (e) => loadUfsForGestor(e.target.value));
-
-            // Primeira carga (considera old() ou valor do model)
             if (gestorSel.value) loadUfsForGestor(gestorSel.value);
         });
 
-        // Componente de cada card de anexo para "contrato_cidade"
+        // anexoCidade: agora usa SOMENTE as cidades selecionadas no picker
         document.addEventListener('alpine:init', () => {
             Alpine.data('anexoCidade', () => ({
                 tipo: 'contrato',
@@ -627,25 +662,25 @@
                 cidadeId: null,
                 carregando: false,
 
-                async refreshCidades() {
-                    if (this.tipo !== 'contrato_cidade') return;
-                    const sel = document.getElementById('gestor_id');
-                    const gid = sel ? sel.value : '';
-                    if (!gid) { this.cidades = []; this.cidadeId = null; return; }
+                refreshCidades() {
+                    if (this.tipo !== 'contrato_cidade') {
+                        this.cidades = [];
+                        this.cidadeId = null;
+                        return;
+                    }
 
+                    this.carregando = true;
                     try {
-                        this.carregando = true;
-                        const url = "{{ route('admin.distribuidores.cidadesPorGestor') }}" + "?gestor_id=" + encodeURIComponent(gid);
-                        const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
-                        const data = await res.json();
-                        this.cidades = Array.isArray(data) ? data : [];
-                        // Se cidade atual não existir mais, limpa
-                        if (!this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
+                        const selected = (Alpine.store('dist')?.selectedCities || []);
+                        this.cidades = (selected || []).map(c => ({
+                            id: c.id,
+                            text: c.text || c.name,
+                            uf: c.uf || ''
+                        }));
+
+                        if (this.cidadeId && !this.cidades.some(c => String(c.id) === String(this.cidadeId))) {
                             this.cidadeId = null;
                         }
-                    } catch (e) {
-                        console.error('Erro ao carregar cidades do gestor:', e);
-                        this.cidades = [];
                     } finally {
                         this.carregando = false;
                     }
@@ -654,17 +689,12 @@
                 onTipoChange() { this.refreshCidades(); },
 
                 init() {
-                    // carrega ao iniciar
                     this.refreshCidades();
 
-                    // Reage à troca do gestor (evento disparado acima)
+                    // quando trocar gestor, saneia (porque o filtro de UF pode remover cidades)
                     window.addEventListener('gestor-ufs-updated', () => this.refreshCidades());
-
-                    // Reage à troca real do select de gestor
                     const gestorSel = document.getElementById('gestor_id');
-                    if (gestorSel) {
-                        gestorSel.addEventListener('change', () => this.refreshCidades());
-                    }
+                    if (gestorSel) gestorSel.addEventListener('change', () => this.refreshCidades());
                 }
             }));
         });

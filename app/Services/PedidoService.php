@@ -156,7 +156,7 @@ class PedidoService
         }
 
         $rules = [
-            'data'                   => ['required', 'date', 'after_or_equal:' . Carbon::now('America/Sao_Paulo')->toDateString()],
+            'data'                   => ['required', 'date'],
             'cliente_id'             => ['required', 'exists:clientes,id'],
             'gestor_id'              => ['nullable', 'exists:gestores,id'],
             'distribuidor_id'        => ['nullable', 'exists:distribuidores,id'],
@@ -323,7 +323,7 @@ class PedidoService
     ]);
 
     $rules = [
-        'data'                   => ['required', 'date', 'after_or_equal:' . Carbon::now('America/Sao_Paulo')->toDateString()],
+        'data'                   => ['required', 'date'],
         'cliente_id'             => ['required', 'exists:clientes,id'],
         'gestor_id'              => ['nullable','exists:gestores,id'],
         'distribuidor_id'        => ['nullable','exists:distribuidores,id'],

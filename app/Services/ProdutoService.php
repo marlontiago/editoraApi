@@ -116,7 +116,7 @@ class ProdutoService
 
         $sort = $request->get('sort', 'titulo');
         $dir  = strtolower($request->get('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
-        $allowedSort = ['titulo','preco','quantidade_estoque','ano'];
+        $allowedSort = ['codigo','titulo','preco','quantidade_estoque','ano'];
         if (!in_array($sort, $allowedSort, true)) $sort = 'titulo';
 
         $query->orderBy($sort, $dir);

@@ -298,13 +298,10 @@ Content-Type: application/json
                         <td class="px-4 py-2">Detalhar cliente</td>
                     </tr>
                     <tr>
-                        <td class="px-4 py-2 font-mono">POST</td>
+                        <td class="px-4 py-2 font-mono">PUT</td>
                         <td class="px-4 py-2 font-mono">/api/admin/clientes/{cliente}</td>
                         <td class="px-4 py-2">
                             Atualizar cliente
-                            <span class="block text-xs text-gray-500">
-                                (usar <code>_method=PUT</code>)
-                            </span>
                         </td>
                     </tr>
                     <tr>
@@ -2706,6 +2703,154 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
     </div>
 </section>
 
+{{-- ========================= --}}
+{{-- ABA: COLEÇÕES --}}
+{{-- ========================= --}}
+<section x-show="active === 'colecoes'" x-cloak>
+    <div class="rounded-lg border border-gray-200 bg-white p-6 space-y-8">
+
+        {{-- Cabeçalho --}}
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900">
+                Coleções (Admin)
+            </h2>
+            <p class="text-sm text-gray-500">
+                Endpoints para listar e manter coleções usadas em Produtos e no payload do “Criar Pedido”.
+                Inclui endpoint de criação rápida (quick-create).
+            </p>
+        </div>
+
+        {{-- Base --}}
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+            <span class="text-gray-500">Base:</span>
+            <code class="bg-gray-100 border border-gray-200 rounded px-2 py-1 text-xs">
+                /api/admin/colecoes
+            </code>
+        </div>
+
+        {{-- Endpoints --}}
+        <div class="overflow-auto border border-gray-200 rounded-lg">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-50 text-gray-600">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Método</th>
+                        <th class="px-4 py-2 text-left">Endpoint</th>
+                        <th class="px-4 py-2 text-left">Descrição</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr>
+                        <td class="px-4 py-2 font-mono">GET</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/colecoes</td>
+                        <td class="px-4 py-2">Listar coleções (para selects e filtros)</td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-2 font-mono">POST</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/colecoes/quick-create</td>
+                        <td class="px-4 py-2">Criar coleção rapidamente (retorna a coleção criada)</td>
+                    </tr>
+
+                    <tr>
+                        <td class="px-4 py-2 font-mono">DELETE</td>
+                        <td class="px-4 py-2 font-mono">/api/admin/colecoes/{colecao}</td>
+                        <td class="px-4 py-2">Excluir coleção</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Regras de negócio --}}
+        <div class="space-y-2 text-sm text-gray-700">
+            <h3 class="font-semibold text-gray-900">Regras de negócio</h3>
+            <ul class="list-disc pl-6 space-y-1">
+                <li><strong>nome</strong> é obrigatório na criação rápida.</li>
+                
+                <li>Coleções aparecem em:
+                    <ul class="list-disc pl-6 mt-1 space-y-1">
+                        <li><code>Produtos</code> (campo <code>colecao_id</code>)</li>
+                        <li><code>Pedidos/create</code> (lista <code>colecoes</code> para filtros/seleção)</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        {{-- Campos quick-create --}}
+        <div class="space-y-2 text-sm text-gray-700">
+            <h3 class="font-semibold text-gray-900">Quick-create — Campos</h3>
+
+            <div class="overflow-auto border border-gray-200 rounded-lg">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Campo</th>
+                            <th class="px-4 py-2 text-left">Tipo</th>
+                            <th class="px-4 py-2 text-left">Obrigatório</th>
+                            <th class="px-4 py-2 text-left">Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <tr>
+                            <td class="px-4 py-2 font-mono">nome</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Sim</td>
+                            <td class="px-4 py-2">max 255</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-mono">codigo</td>
+                            <td class="px-4 py-2">string</td>
+                            <td class="px-4 py-2">Não</td>
+                            <td class="px-4 py-2">opcional (se você usa no seu model)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {{-- Exemplo — Listar --}}
+        <div>
+            <h3 class="font-semibold text-gray-900 mb-2">
+                Exemplo — Listar Coleções (GET /api/admin/colecoes)
+            </h3>
+<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>[
+  { "id": 1, "nome": "Coleção Alfa", "codigo": "ALFA" },
+  { "id": 2, "nome": "Coleção Beta", "codigo": "BETA" }
+]</code></pre>
+        </div>
+
+        {{-- Exemplo — Quick create --}}
+        <div>
+            <h3 class="font-semibold text-gray-900 mb-2">
+                Exemplo — Criar Coleção (POST /api/admin/colecoes/quick-create)
+            </h3>
+
+<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
+  "nome": "Coleção 2026",
+  "codigo": "C26"
+}</code></pre>
+
+            <p class="text-sm text-gray-700 mt-2">Resposta esperada (201/200):</p>
+<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
+  "ok": true,
+  "colecao": { "id": 10, "nome": "Coleção 2026", "codigo": "C26" }
+}</code></pre>
+        </div>
+
+        {{-- Exemplo — Delete --}}
+        <div>
+            <h3 class="font-semibold text-gray-900 mb-2">
+                Exemplo — Excluir Coleção (DELETE /api/admin/colecoes/{colecao})
+            </h3>
+<pre class="text-xs bg-gray-900 text-white rounded-lg p-4 overflow-auto"><code>{
+  "ok": true
+}</code></pre>
+
+        </div>
+
+    </div>
+</section>
+
+
 
             <section x-show="active === 'anexos'" x-cloak>
                 <div class="rounded-lg border border-gray-200 bg-white p-6">
@@ -2740,7 +2885,9 @@ imagem: (arquivo .png/.jpg/.webp)</code></pre>
                     { key: 'produtos', label: 'Produtos' },
                     { key: 'pedidos', label: 'Pedidos' }, 
                     { key: 'notas-fiscais', label: 'Notas Fiscais' },    
-                    { key: 'pagamentos-nota', label: 'Pagamentos da Nota' },              
+                    { key: 'pagamentos-nota', label: 'Pagamentos da Nota' },   
+                    { key: 'colecoes', label: 'Coleções' },
+           
                 ],
                 setActive(tab) {
                     this.active = tab;

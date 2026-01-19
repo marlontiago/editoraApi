@@ -88,12 +88,35 @@ switch ($status) {
     $percDescTot = $valorBruto > 0 ? (100 * $totalDesc / $valorBruto) : 0;
 
     function img_src_or_placeholder($pathRelative) {
-        $full = null; $rel = $pathRelative ? ltrim($pathRelative, '/') : '';
-        $cands=[]; if($rel!==''){ $cands[] = storage_path('app/public/'.$rel); $cands[] = public_path($rel); $cands[] = public_path('storage/'.$rel); }
+        $full = null;
+        $rel = $pathRelative ? ltrim((string)$pathRelative, '/') : '';
+
+        $cands = [];
+
+        if ($rel !== '') {
+            $cands[] = storage_path('app/public/' . $rel);
+            $cands[] = public_path($rel);
+            $cands[] = public_path('storage/' . $rel);
+        }
+
         $cands[] = public_path('images/placeholder.png');
-        foreach($cands as $p){ if(file_exists($p)){ $full=$p; break; } }
-        $ext=strtolower(pathinfo($full,PATHINFO_EXTENSION)?:'png'); $mime=$ext==='jpg'?'jpeg':$ext;
-        $data=@file_get_contents($full); return $data?('data:image/'.$mime.';base64,'.base64_encode($data)):'';
+
+        foreach ($cands as $p) {
+            if ($p && file_exists($p)) {
+                $full = $p;
+                break;
+            }
+        }
+
+        if (!$full) {
+            return '';
+        }
+
+        $ext  = strtolower(pathinfo($full, PATHINFO_EXTENSION) ?: 'png');
+        $mime = $ext === 'jpg' ? 'jpeg' : $ext;
+
+        $data = @file_get_contents($full);
+        return $data ? ('data:image/' . $mime . ';base64,' . base64_encode($data)) : '';
     }
 
     

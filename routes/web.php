@@ -23,8 +23,8 @@ use App\Http\Controllers\NotaFiscalPlugBridgeController;
 use App\Http\Controllers\Admin\GestorAnexoController;
 use App\Http\Controllers\Admin\ColecaoController;
 
-Route::pattern('gestor', '[0-9]+');        // {gestor} numérico
-Route::pattern('distribuidor', '[0-9]+');  // {distribuidor} numérico
+Route::pattern('gestor', '[0-9]+');
+Route::pattern('distribuidor', '[0-9]+'); 
 
 Route::get('/documentacao', function () {
     return view('documentacao');

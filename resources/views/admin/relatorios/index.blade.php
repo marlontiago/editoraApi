@@ -245,11 +245,20 @@
 
         {{-- 3) TABELA (sempre lista as notas do recorte) --}}
         <div class="mt-6 px-4">
-            <div class="flex justify-end mb-2">
+            <div class="flex justify-end mb-2 gap-2">
                 @if($notas->count())
                     <a href="{{ route('admin.relatorios.index', array_merge(request()->all(), ['export' => 'pdf'])) }}"
                        class="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800">
                         Exportar PDF
+                    </a>
+                    <a href="{{ route('admin.relatorios.index', array_merge(request()->all(), ['export' => 'xlsx'])) }}"
+                    class="inline-flex items-center gap-2 px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                        Exportar Excel
+                    </a>
+
+                    <a href="{{ route('admin.relatorios.index', array_merge(request()->all(), ['export' => 'csv'])) }}"
+                    class="inline-flex items-center gap-2 px-3 py-2 text-sm bg-sky-600 text-white rounded-lg hover:bg-sky-700">
+                        Exportar CSV
                     </a>
                 @endif
             </div>

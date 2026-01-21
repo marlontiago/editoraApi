@@ -12,6 +12,8 @@ use App\Models\City;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\RelatorioNotasExport;
 
 class RelatoriosController extends Controller
 {
@@ -440,6 +442,140 @@ class RelatoriosController extends Controller
 
         return $pdf->download($filename);
     }
+
+    // ==========================
+    // 7.1) Export CSV
+    // ==========================
+    if ($request->get('export') === 'csv') {
+        if ($notas->isEmpty()) {
+            return back()->with('error', 'Nenhum dado para exportar com os filtros atuais.');
+        }
+
+        $filename = ($tipoRelatorio === 'financeiro' ? 'relatorio_financeiro_' : 'relatorio_geral_')
+            . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+        ];
+
+        $callback = function () use ($notas, $dataInicio, $dataFim) {
+            $out = fopen('php://output', 'w');
+
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fwrite($out, "sep=;\n");
+
+            fputcsv($out, [
+                'Pedido',
+                'Nota',
+                'Cliente',
+                'Gestor',
+                'Distribuidor',
+                'Cidades',
+                'Emitida em',
+                'Faturada em',
+                'Status financeiro',
+                'Valor nota',
+                'Pago (líquido)',
+
+                'IRRF', 'ISS', 'PIS', 'COFINS', 'OUTROS', 'Retenções (total)',
+
+                'Comissão Gestor',
+                'Comissão Distribuidor',
+                'Comissão Advogado',
+                'Comissão Diretor',
+                'Comissões (total)',
+            ], ';');
+
+            foreach ($notas as $n) {
+                $pedido = $n->pedido;
+
+                $pgts = collect($n->pagamentos);
+
+                if (!empty($dataInicio) && !empty($dataFim)) {
+                    $pgts = $pgts->filter(function ($pg) use ($dataInicio, $dataFim) {
+                        if (empty($pg->data_pagamento)) return false;
+                        $d = \Carbon\Carbon::parse($pg->data_pagamento)->toDateString();
+                        return $d >= $dataInicio && $d <= $dataFim;
+                    });
+                }
+
+                $liquido = (float) $pgts->sum('valor_liquido');
+
+                $retIRRF   = (float) $pgts->sum('ret_irrf_valor');
+                $retISS    = (float) $pgts->sum('ret_iss_valor');
+                $retPIS    = (float) $pgts->sum('ret_pis_valor');
+                $retCOFINS = (float) $pgts->sum('ret_cofins_valor');
+                $retOUTROS = (float) $pgts->sum('ret_outros_valor');
+
+                $retTotal = $retIRRF + $retISS + $retPIS + $retCOFINS + $retOUTROS;
+
+                $comG   = (float) $pgts->sum('comissao_gestor');
+                $comD   = (float) $pgts->sum('comissao_distribuidor');
+                $comAdv = (float) $pgts->sum('comissao_advogado');
+                $comDir = (float) $pgts->sum('comissao_diretor');
+                $comTotal = $comG + $comD + $comAdv + $comDir;
+
+                $cidades = ($pedido && $pedido->cidades)
+                    ? $pedido->cidades->pluck('name')->join(', ')
+                    : '—';
+
+                fputcsv($out, [
+                    $pedido->id ?? '',
+                    $n->id,
+                    $pedido->cliente->razao_social ?? '',
+                    $pedido->gestor->razao_social ?? '',
+                    $pedido->distribuidor->razao_social ?? '',
+                    $cidades,
+                    $n->emitida_em ? \Carbon\Carbon::parse($n->emitida_em)->format('d/m/Y') : '',
+                    $n->faturada_em ? \Carbon\Carbon::parse($n->faturada_em)->format('d/m/Y') : '',
+                    (string) ($n->status_financeiro ?? ''),
+                    number_format((float)($n->valor_total ?? 0), 2, ',', '.'),
+                    number_format($liquido, 2, ',', '.'),
+
+                    // Retenções
+                    number_format($retIRRF, 2, ',', '.'),
+                    number_format($retISS, 2, ',', '.'),
+                    number_format($retPIS, 2, ',', '.'),
+                    number_format($retCOFINS, 2, ',', '.'),
+                    number_format($retOUTROS, 2, ',', '.'),
+                    number_format($retTotal, 2, ',', '.'),
+
+                    // Comissões
+                    number_format($comG, 2, ',', '.'),
+                    number_format($comD, 2, ',', '.'),
+                    number_format($comAdv, 2, ',', '.'),
+                    number_format($comDir, 2, ',', '.'),
+                    number_format($comTotal, 2, ',', '.'),
+                ], ';');
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+
+    // ==========================
+    // 7.2) Export Excel (XLSX)
+    // ==========================
+    if ($request->get('export') === 'xlsx') {
+        if ($notas->isEmpty()) {
+            return back()->with('error', 'Nenhum dado para exportar com os filtros atuais.');
+        }
+
+        $filename = ($tipoRelatorio === 'financeiro' ? 'relatorio_financeiro_' : 'relatorio_geral_')
+            . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(
+            new RelatorioNotasExport($notas, $dataInicio, $dataFim),
+            $filename
+        );
+    }
+
 
     // ==========================
     // 8) View

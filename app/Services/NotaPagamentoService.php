@@ -8,6 +8,7 @@ use App\Models\Advogado;
 use App\Models\DiretorComercial;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class NotaPagamentoService
 {
@@ -74,6 +75,15 @@ class NotaPagamentoService
      */
     public function store(NotaFiscal $nota, array $data): NotaPagamento
     {
+        Log::info('RET INPUTS', [
+  'ret_irrf' => $data['ret_irrf'] ?? null,
+  'ret_iss' => $data['ret_iss'] ?? null,
+  'ret_pis' => $data['ret_pis'] ?? null,
+  'ret_cofins' => $data['ret_cofins'] ?? null,
+  'ret_inss' => $data['ret_inss'] ?? null,
+  'ret_csll' => $data['ret_csll'] ?? null,
+  'ret_outros' => $data['ret_outros'] ?? null,
+]);
         if ($nota->status !== 'faturada') {
             throw new \RuntimeException('Apenas notas faturadas podem registrar pagamento.');
         }

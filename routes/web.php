@@ -22,6 +22,7 @@ use App\Http\Controllers\NotaFiscalPlugNotasController;
 use App\Http\Controllers\NotaFiscalPlugBridgeController;
 use App\Http\Controllers\Admin\GestorAnexoController;
 use App\Http\Controllers\Admin\ColecaoController;
+use App\Http\Controllers\Admin\UsuarioPermissaoController;
 
 Route::pattern('gestor', '[0-9]+');
 Route::pattern('distribuidor', '[0-9]+'); 
@@ -44,8 +45,10 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+
+    Route::post('usuarios/{user}/permissoes', [UsuarioPermissaoController::class, 'update'])->name('usuarios.permissoes.update');
     // Dashboard + charts
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('permission:dashboard.acessar');
     Route::get('/dashboard/charts/notas-pagas', [DashboardController::class, 'chartNotasPagas'])->name('dashboard.charts.notas_pagas');
     Route::get('/dashboard/charts/vendas-por-gestor', [DashboardController::class, 'chartVendasPorGestor'])->name('dashboard.charts.vendas_por_gestor');
     Route::get('/dashboard/charts/vendas-por-distribuidor', [DashboardController::class, 'chartVendasPorDistribuidor'])->name('dashboard.charts.vendas_por_distribuidor');
@@ -55,8 +58,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/dashboard/export/excel', [DashboardController::class, 'exportExcel'])->name('dashboard.export.excel');
     Route::get('/dashboard/export/pdf', [DashboardController::class, 'exportPdf'])->name('dashboard.export.pdf');
     // Recursos
-    Route::resource('produtos', ProdutoController::class)->except('show');
-    Route::resource('usuarios', UserController::class);
+    Route::resource('produtos', ProdutoController::class)->middleware('permission:estoque.gerenciar')->except('show');
+    Route::resource('usuarios', UserController::class)->middleware('permission:gerenciar.usuarios');
     Route::resource('clientes', ClienteController::class)->parameters(['clientes' => 'cliente']);
     Route::resource('advogados', AdvogadoController::class);
     Route::resource('diretor-comercials', DiretorComercialController::class)->parameters(['diretor-comercials' => 'diretor_comercial']);
@@ -97,8 +100,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('cidades/por-uf/{uf}', [CidadeController::class, 'porUf']);
     Route::get('cidades/busca', [CidadeController::class, 'search'])->name('cidades.search');
 
-    Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create');
-    Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store');
+    Route::get('/pedidos/create', [PedidoController::class, 'create'])->name('pedidos.create')->middleware('permission:pedido.criar');
+    Route::post('/pedidos', [PedidoController::class, 'store'])->name('pedidos.store')->middleware('permission:pedido.criar');
     Route::get('/pedidos', [PedidoController::class, 'index'])->name('pedidos.index');
     Route::get('/pedidos/{pedido}', [PedidoController::class, 'show'])->name('pedidos.show');
     Route::get('/pedidos/{pedido}/exportar/{tipo}', [PedidoController::class, 'exportar'])->name('pedidos.exportar');
@@ -116,7 +119,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('notas/{nota}/pagamentos/{pagamento}', [NotaPagamentoController::class, 'show'])->name('notas.pagamentos.show');
 
     // Relatórios
-    Route::get('/relatorios', [RelatoriosController::class, 'index'])->name('relatorios.index');
+    Route::get('/relatorios', [RelatoriosController::class, 'index'])->name('relatorios.index')->middleware('permission:relatorios.acessar');
 
     Route::post('notas/{nota}/plugnotas/emitir',    [NotaFiscalPlugBridgeController::class, 'emitir'])->name('notas.plug.emitir');
     Route::get ('notas/{nota}/plugnotas/consultar', [NotaFiscalPlugBridgeController::class, 'consultar'])->name('notas.plug.consultar');

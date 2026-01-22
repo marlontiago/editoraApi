@@ -1,46 +1,55 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Clientes</h2>
-    </x-slot>
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 leading-tight">Clientes</h2>
+                <p class="text-sm text-gray-500 mt-1">Cadastro, dados fiscais e contatos.</p>
+            </div>
 
-    @if ($msg = session('success'))
-        <div class="max-w-7xl mx-auto px-6 pt-4">
-            <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded">
-                {{ $msg }}
+            <div class="flex items-center gap-2">
+                <a href="{{ route('admin.clientes.create') }}"
+                   class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 h-10 text-sm font-semibold text-white hover:bg-gray-800 transition">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Novo cliente
+                </a>
             </div>
         </div>
-    @endif
+    </x-slot>
 
-    <div class="max-w-full mx-auto p-6">
-        <div class="flex items-center justify-between mb-4">
-            <a href="{{ route('admin.clientes.create') }}"
-               class="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700">
-                <span class="text-lg leading-none">＋</span> Novo Cliente
-            </a>
-        </div>
+    <div class="max-w-full mx-auto p-6 space-y-4">
+
+        {{-- Flash --}}
+        @if ($msg = session('success'))
+            <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+                {{ $msg }}
+            </div>
+        @endif
 
         @if($clientes->count() === 0)
-            <div class="bg-white border rounded shadow p-8 text-center text-gray-600">
+            <div class="bg-white rounded-xl shadow-sm ring-1 ring-gray-100 px-5 py-10 text-center text-gray-600">
                 Nenhum cliente cadastrado ainda.
             </div>
         @else
-            <div class="overflow-x-auto bg-white border rounded shadow">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-700 sticky top-0">
-                        <tr class="text-left">
-                            <th class="px-4 py-3">Razão Social</th>
-                            <th class="px-4 py-3">Documento</th>
-                            <th class="px-4 py-3">I.E.</th>
-                            <th class="px-4 py-3">E-mail</th>
-                            <th class="px-4 py-3">Telefone</th>
-                            <th class="px-4 py-3">Cidade / UF</th>
-                            <th class="px-4 py-3">CEP</th>
-                            <th class="px-4 py-3">Endereço</th>
-                            <th class="px-4 py-3 text-right">Ações</th>
+            {{-- Tabela --}}
+            <div class="bg-white rounded-xl shadow-sm ring-1 ring-gray-100 overflow-x-auto">
+                <table class="min-w-[1100px] w-full text-sm">
+                    <thead class="bg-gray-50 text-gray-600 text-xs uppercase tracking-wide">
+                        <tr class="border-b border-gray-100 text-left">
+                            <th class="px-4 py-3 whitespace-nowrap">Razão Social</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Documento</th>
+                            <th class="px-4 py-3 whitespace-nowrap">I.E.</th>
+                            <th class="px-4 py-3 whitespace-nowrap">E-mail</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Telefone</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Cidade / UF</th>
+                            <th class="px-4 py-3 whitespace-nowrap">CEP</th>
+                            <th class="px-4 py-3 whitespace-nowrap">Endereço</th>
+                            <th class="px-4 py-3 whitespace-nowrap text-right">Ações</th>
                         </tr>
                     </thead>
 
-                    <tbody class="divide-y">
+                    <tbody class="divide-y divide-gray-100">
                         @foreach($clientes as $cliente)
                             @php
                                 // Documento (CNPJ preferencial, senão CPF)
@@ -65,7 +74,7 @@
                                 $enderecoCompleto = $linha1 ?: '—';
                             @endphp
 
-                            <tr class="hover:bg-gray-50">
+                            <tr class="hover:bg-gray-50/60">
                                 {{-- Razão Social --}}
                                 <td class="px-4 py-3 font-medium text-gray-900">
                                     <a href="{{ route('admin.clientes.show', $cliente) }}" class="hover:underline">
@@ -76,10 +85,10 @@
                                 {{-- Documento --}}
                                 <td class="px-4 py-3">
                                     @if($docLabel)
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs bg-gray-50 text-gray-700 border-gray-200">
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
                                             {{ $docLabel }}
                                         </span>
-                                        <div class="mt-1 text-gray-900">{{ $docValue }}</div>
+                                        <div class="mt-1 text-gray-900 whitespace-nowrap">{{ $docValue }}</div>
                                     @else
                                         —
                                     @endif
@@ -111,12 +120,12 @@
                                 </td>
 
                                 {{-- Cidade / UF --}}
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 whitespace-nowrap">
                                     {{ $cidade }} / {{ $uf }}
                                 </td>
 
                                 {{-- CEP --}}
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 whitespace-nowrap">
                                     {{ $cliente->cep ?: '—' }}
                                 </td>
 
@@ -133,25 +142,34 @@
                                 </td>
 
                                 {{-- Ações --}}
-                                <td class="px-4 py-3 text-right whitespace-nowrap">
-                                    <a href="{{ route('admin.clientes.show', $cliente) }}"
-                                       class="inline-flex items-center px-3 py-1.5 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 mr-2">
-                                        Ver
-                                    </a>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href="{{ route('admin.clientes.show', $cliente) }}"
+                                           class="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-700 hover:bg-gray-50 transition"
+                                           title="Ver">
+                                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15a3 3 0 100-6 3 3 0 000 6z"/>
+                                            </svg>
+                                        </a>
 
-                                    <a href="{{ route('admin.clientes.edit', $cliente) }}"
-                                       class="inline-flex items-center px-3 py-1.5 rounded border border-blue-600 text-blue-600 hover:bg-blue-50 mr-2">
-                                        Editar
-                                    </a>
+                                        <a href="{{ route('admin.clientes.edit', $cliente) }}"
+                                           class="inline-flex items-center justify-center rounded-md border border-blue-200 p-2 text-blue-700 hover:bg-blue-50 transition"
+                                           title="Editar">
+                                            <x-heroicon-o-pencil-square class="w-5 h-5" />
+                                        </a>
 
-                                    <form action="{{ route('admin.clientes.destroy', $cliente) }}" method="POST" class="inline">
-                                        @csrf @method('DELETE')
-                                        <button type="submit"
-                                                onclick="return confirm('Tem certeza que deseja excluir?')"
-                                                class="inline-flex items-center px-3 py-1.5 rounded border border-red-600 text-red-600 hover:bg-red-50">
-                                            Excluir
-                                        </button>
-                                    </form>
+                                        <form action="{{ route('admin.clientes.destroy', $cliente) }}" method="POST" class="inline"
+                                              onsubmit="return confirm('Tem certeza que deseja excluir?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-flex items-center justify-center rounded-md border border-red-200 p-2 text-red-700 hover:bg-red-50 transition"
+                                                    title="Excluir">
+                                                <x-heroicon-o-trash class="w-5 h-5" />
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -159,7 +177,8 @@
                 </table>
             </div>
 
-            <div class="mt-4">
+            {{-- Paginação --}}
+            <div class="flex justify-end">
                 {{ $clientes->links() }}
             </div>
         @endif

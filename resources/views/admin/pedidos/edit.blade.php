@@ -1,17 +1,37 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Editar Pedido #{{ $pedido->id }}</h2>
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 leading-tight">
+                    Editar Pedido #{{ $pedido->id }}
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">
+                    Ajuste data, status, observações e itens do pedido.
+                </p>
+            </div>
+
+            <a href="{{ route('admin.pedidos.show', $pedido) }}"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 h-10 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Voltar
+            </a>
+        </div>
     </x-slot>
 
-    @if (session('error'))
-        <div class="bg-red-100 text-red-800 p-3 rounded mb-4">
-            {{ session('error') }}
-        </div>
-    @endif
+    <div class="max-w-6xl mx-auto p-6 space-y-6">
 
-    <div class="max-w-6xl mx-auto p-6">
+        {{-- Feedback --}}
+        @if (session('error'))
+            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800 shadow-sm">
+                {{ session('error') }}
+            </div>
+        @endif
+
         @if ($errors->any())
-            <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 shadow-sm">
+                <div class="font-semibold mb-2">Corrija os erros abaixo:</div>
                 <ul class="list-disc pl-5 space-y-1">
                     @foreach ($errors->all() as $e)
                         <li class="text-sm">{{ $e }}</li>
@@ -21,13 +41,14 @@
         @endif
 
         @if (session('success'))
-            <div class="mb-6 rounded-md border border-green-300 bg-green-50 p-4 text-green-800">
+            <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800 shadow-sm">
                 {{ session('success') }}
             </div>
         @endif
 
         <form method="POST" action="{{ route('admin.pedidos.update', $pedido) }}"
-              class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4" id="formPedidoEdit">
+              class="bg-white shadow-sm rounded-xl p-6 grid grid-cols-12 gap-4 ring-1 ring-gray-100"
+              id="formPedidoEdit">
             @csrf
             @method('PUT')
 
@@ -78,7 +99,6 @@
             <div class="col-span-12 md:col-span-6">
                 <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
                 @php
-                    $temDistOuGestor = $pedido->distribuidor_id || $pedido->gestor_id;
                     $cidadeAtualId   = old('cidade_id', $pedido->cidades->pluck('id')->first());
                     $cidadeAtualNome = optional($pedido->cidades->first())->name;
                 @endphp
@@ -103,7 +123,13 @@
             {{-- Status (editável) --}}
             <div class="col-span-12 md:col-span-6">
                 <label class="block text-sm font-medium text-gray-700">Status</label>
-                @php $statuses = ['em_andamento' => 'Em andamento', 'finalizado' => 'Finalizado', 'cancelado' => 'Cancelado']; @endphp
+                @php
+                    $statuses = [
+                        'em_andamento' => 'Em andamento',
+                        'finalizado'   => 'Finalizado',
+                        'cancelado'    => 'Cancelado'
+                    ];
+                @endphp
                 <select name="status"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required>
@@ -121,27 +147,35 @@
                           placeholder="Anotações internas sobre o pedido (opcional)">{{ old('observacoes', $pedido->observacoes) }}</textarea>
             </div>
 
-            {{-- ==================== PRODUTOS (mantida sua lógica atual) ==================== --}}
+            {{-- ==================== PRODUTOS ==================== --}}
             <div class="col-span-12">
-                <div class="bg-white p-4 rounded-lg border">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold">Produtos do Pedido</h3>
+                <div class="rounded-xl border border-gray-200 bg-white">
+                    <div class="p-4 border-b flex items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">Produtos do Pedido</h3>
+                            <p class="text-sm text-gray-500">Adicione/remova itens e ajuste quantidade e desconto por item.</p>
+                        </div>
+
                         <button type="button" id="btnAddRow"
-                                class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition">
-                            + Adicionar produto
+                                class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 h-10 text-sm font-semibold text-white hover:bg-green-700 transition">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Adicionar produto
                         </button>
                     </div>
 
-                    <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <div class="overflow-x-auto">
                         <table class="min-w-full text-left border-collapse">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-3 text-sm font-medium text-gray-600">Produto</th>
-                                    <th class="px-4 py-3 text-sm font-medium text-gray-600" style="width: 140px;">Quantidade</th>
-                                    <th class="px-4 py-3 text-sm font-medium text-gray-600" style="width: 160px;">Desc. item (%)</th>
-                                    <th class="px-4 py-3" style="width: 80px;"></th>
+                                    <th class="px-4 py-3 text-sm font-semibold text-gray-700">Produto</th>
+                                    <th class="px-4 py-3 text-sm font-semibold text-gray-700" style="width: 140px;">Quantidade</th>
+                                    <th class="px-4 py-3 text-sm font-semibold text-gray-700" style="width: 170px;">Desc. item (%)</th>
+                                    <th class="px-4 py-3" style="width: 90px;"></th>
                                 </tr>
                             </thead>
+
                             <tbody id="tabelaProdutos">
                                 @foreach ($pedido->produtos as $p)
                                     @php
@@ -151,35 +185,47 @@
                                         $precoDesc = $precoTab * (1 - ($descPerc / 100));
                                         $titulo    = $p->titulo ?: $p->nome;
                                     @endphp
+
                                     <tr class="border-t" data-index="{{ $loop->index }}">
-                                        <td class="px-4 py-2 align-top">
+                                        <td class="px-4 py-3 align-top">
                                             <input type="hidden" name="produtos[{{ $loop->index }}][id]" value="{{ $p->id }}" class="inputId">
-                                            <div class="font-medium">{{ $titulo }}</div>
-                                            <div class="text-xs text-gray-500">
-                                                Tabela: R$ {{ number_format($precoTab, 2, ',', '.') }} •
-                                                c/ desc ({{ number_format($descPerc,2,',','.') }}%): R$
-                                                {{ number_format($precoDesc, 2, ',', '.') }}
+                                            <div class="font-semibold text-gray-800">{{ $titulo }}</div>
+
+                                            <div class="mt-1 text-xs text-gray-500">
+                                                Tabela: <span class="font-medium">R$ {{ number_format($precoTab, 2, ',', '.') }}</span>
+                                                • c/ desc ({{ number_format($descPerc,2,',','.') }}%):
+                                                <span class="font-medium">R$ {{ number_format($precoDesc, 2, ',', '.') }}</span>
                                             </div>
                                         </td>
-                                        <td class="px-4 py-2 text-center align-top">
+
+                                        <td class="px-4 py-3 text-center align-top">
                                             <input type="number" min="1"
                                                    class="w-28 border rounded-lg px-2 py-1 inputQtd focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                    name="produtos[{{ $loop->index }}][quantidade]"
                                                    value="{{ old('produtos.'.$loop->index.'.quantidade', $qtd) }}" required>
                                         </td>
-                                        <td class="px-4 py-2 align-top">
+
+                                        <td class="px-4 py-3 align-top">
                                             <input type="number" min="0" max="100" step="0.01"
                                                    class="w-36 border rounded-lg px-2 py-1 inputDesc focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                    name="produtos[{{ $loop->index }}][desconto]"
                                                    value="{{ old('produtos.'.$loop->index.'.desconto', $descPerc) }}">
                                         </td>
-                                        <td class="px-4 py-2 text-right align-top">
-                                            <button type="button" class="text-red-600 hover:underline btnRemoveRow">Remover</button>
+
+                                        <td class="px-4 py-3 text-right align-top">
+                                            <button type="button"
+                                                    class="inline-flex items-center gap-1 text-red-700 hover:text-red-800 hover:underline btnRemoveRow">
+                                                Remover
+                                            </button>
                                         </td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
+
+                        <div class="p-4 border-t text-xs text-gray-500">
+                            Dica: “Adicionar produto” evita duplicar itens já existentes na lista.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -187,11 +233,12 @@
             {{-- Botões --}}
             <div class="col-span-12 flex items-center justify-end gap-3 pt-2">
                 <a href="{{ route('admin.pedidos.show', $pedido) }}"
-                   class="px-4 py-2 rounded-lg border hover:bg-gray-50">
+                   class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 h-10 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
                     Cancelar
                 </a>
+
                 <button type="submit"
-                        class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition">
+                        class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 h-10 text-sm font-semibold text-white hover:bg-blue-700 transition">
                     Salvar alterações
                 </button>
             </div>
@@ -212,6 +259,7 @@
                         </option>
                     @endforeach
                 </select>
+
                 <input type="hidden" data-name="produtos[__INDEX__][id]" class="inputId">
 
                 <div class="mt-2 rounded-md bg-white border p-2 text-xs text-gray-700 space-x-2 infoPreco hidden">
@@ -220,18 +268,21 @@
                     <span class="unitDesc">c/ desc: R$ 0,00</span>
                 </div>
             </td>
+
             <td class="px-4 py-3 align-top">
                 <input type="number" min="1"
                     class="w-28 border rounded-lg px-2 py-1 inputQtd focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     data-name="produtos[__INDEX__][quantidade]" value="1" required>
             </td>
+
             <td class="px-4 py-3 align-top">
                 <input type="number" min="0" max="100" step="0.01"
                     class="w-36 border rounded-lg px-2 py-1 inputDesc focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     data-name="produtos[__INDEX__][desconto]" value="0">
             </td>
+
             <td class="px-4 py-3 text-right align-top">
-                <button type="button" class="text-red-600 hover:underline btnRemoveRow">Remover</button>
+                <button type="button" class="text-red-700 hover:text-red-800 hover:underline btnRemoveRow">Remover</button>
             </td>
         </tr>
     </template>
@@ -258,8 +309,8 @@
         };
 
         /* ======= CIDADE: carregar por distribuidor/gestor (mantido) ======= */
-        const cidadeSelect = document.getElementById('cidade_id');       // <select> DESABILITADO (somente exibição)
-        const cidadeHidden = document.getElementById('cidade_id_hidden'); // hidden que será enviado
+        const cidadeSelect = document.getElementById('cidade_id');         // <select> DESABILITADO (somente exibição)
+        const cidadeHidden = document.getElementById('cidade_id_hidden');  // hidden que será enviado
         const ufDisplay    = document.getElementById('ufDisplay');
         const ufHidden     = document.getElementById('ufHidden');
 
@@ -267,7 +318,7 @@
             if (!cidadeSelect) return;
             cidadeSelect.innerHTML = '';
             cidadeSelect.add(new Option(placeholder, ''));
-            cidadeSelect.disabled = true; // permanece desabilitado no edit
+            cidadeSelect.disabled = true;
             cidadeSelect.classList.add('bg-gray-50');
         }
 
@@ -277,17 +328,21 @@
                 const resp = await fetch(`/admin/cidades/por-distribuidor/${distribuidorId}`);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const cidades = await resp.json();
+
                 cidadeSelect.innerHTML = '';
                 cidadeSelect.add(new Option('-- Selecione --', ''));
+
                 cidades.forEach(c => {
                     const opt = new Option(c.name, c.id);
                     if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
                     cidadeSelect.add(opt);
                 });
-                cidadeSelect.disabled = true;                 // mantém travado
-                cidadeSelect.classList.add('bg-gray-100');    // visual de bloqueado
-                // sincroniza hidden
+
+                cidadeSelect.disabled = true;
+                cidadeSelect.classList.add('bg-gray-100');
+
                 if (cidadeHidden) cidadeHidden.value = String(selectedCidadeId || cidadeSelect.value || '');
+
                 if (!cidades.length) resetCidadeSelect('Distribuidor sem cidades vinculadas');
             } catch (e) {
                 console.error(e);
@@ -301,17 +356,21 @@
                 const resp = await fetch(`/admin/cidades/por-gestor/${gestorId}`);
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const cidades = await resp.json();
+
                 cidadeSelect.innerHTML = '';
                 cidadeSelect.add(new Option('-- Selecione --', ''));
+
                 cidades.forEach(c => {
                     const opt = new Option(c.name, c.id);
                     if (selectedCidadeId && String(selectedCidadeId) === String(c.id)) opt.selected = true;
                     cidadeSelect.add(opt);
                 });
+
                 cidadeSelect.disabled = true;
                 cidadeSelect.classList.add('bg-gray-100');
-                // sincroniza hidden
+
                 if (cidadeHidden) cidadeHidden.value = String(selectedCidadeId || cidadeSelect.value || '');
+
                 if (!cidades.length) resetCidadeSelect('Nenhuma cidade para a UF do gestor');
             } catch (e) {
                 console.error(e);
@@ -319,7 +378,7 @@
             }
         }
 
-        /* ======= PRODUTOS (mantida sua lógica) ======= */
+        /* ======= PRODUTOS ======= */
         const tabelaProdutosBody = document.getElementById('tabelaProdutos');
         const btnAddRow          = document.getElementById('btnAddRow');
         const rowTemplate        = document.getElementById('rowTemplate');
@@ -328,41 +387,57 @@
         function getSelectedProductIds() {
             if (!tabelaProdutosBody) return [];
             const ids = [];
-            tabelaProdutosBody.querySelectorAll('input.inputId[name^="produtos["][name$="[id]"]').forEach(h => {
-                const v = String(h.value || '').trim();
-                if (v) ids.push(v);
-            });
-            tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
-                const v = String(sel.value || '').trim();
-                if (v) ids.push(v);
-            });
+
+            tabelaProdutosBody
+                .querySelectorAll('input.inputId[name^="produtos["][name$="[id]"]')
+                .forEach(h => {
+                    const v = String(h.value || '').trim();
+                    if (v) ids.push(v);
+                });
+
+            tabelaProdutosBody
+                .querySelectorAll('tr[data-index] select.produtoSelect')
+                .forEach(sel => {
+                    const v = String(sel.value || '').trim();
+                    if (v) ids.push(v);
+                });
+
             return Array.from(new Set(ids));
         }
 
         function refreshAllProductSelectOptions() {
             if (!tabelaProdutosBody) return;
+
             const chosen = getSelectedProductIds();
+
             tabelaProdutosBody.querySelectorAll('tr[data-index] select.produtoSelect').forEach(sel => {
                 const current = String(sel.value || '');
+
+                // Captura opções atuais (para reconstruir sem duplicados)
                 const allOpts = Array.from(sel.querySelectorAll('option')).map(o => ({
                     value: o.value,
                     text:  o.textContent,
                     dataset: { titulo: o.dataset.titulo, preco: o.dataset.preco }
                 }));
+
                 sel.innerHTML = '';
+
                 const placeholder = document.createElement('option');
                 placeholder.value = '';
                 placeholder.textContent = '— Selecionar produto —';
                 sel.appendChild(placeholder);
+
                 allOpts.forEach(({value, text, dataset}) => {
                     if (value === '') return;
+
                     const isExcluded = chosen.includes(value) && value !== current;
                     if (isExcluded) return;
+
                     const opt = document.createElement('option');
                     opt.value = value;
                     opt.textContent = text;
-                    if (dataset && dataset.titulo) opt.dataset.titulo = dataset.titulo;
-                    if (dataset && dataset.preco)  opt.dataset.preco  = dataset.preco;
+                    if (dataset?.titulo) opt.dataset.titulo = dataset.titulo;
+                    if (dataset?.preco)  opt.dataset.preco  = dataset.preco;
                     if (value === current) opt.selected = true;
                     sel.appendChild(opt);
                 });
@@ -407,40 +482,44 @@
                 descI.addEventListener('input',  () => updateRowInfo(tr));
                 descI.addEventListener('change', () => updateRowInfo(tr));
             }
+
             updateRowInfo(tr);
         }
 
         function addProductRow() {
             if (!rowTemplate || !tabelaProdutosBody) return;
+
             const clone = rowTemplate.content.cloneNode(true);
             const html  = clone.firstElementChild.outerHTML.replaceAll('__INDEX__', String(nextIndex));
-            const container = document.createElement('tbody');
-            container.innerHTML = html;
-            const tr = container.firstElementChild;
+
+            const temp = document.createElement('tbody');
+            temp.innerHTML = html;
+            const tr = temp.firstElementChild;
 
             tr.querySelectorAll('[data-name]').forEach(el => {
                 el.setAttribute('name', el.getAttribute('data-name'));
                 el.removeAttribute('data-name');
             });
 
-            const select = tr.querySelector('select.produtoSelect');
-            const hidden = tr.querySelector('input.inputId');
-
             tr.querySelector('.btnRemoveRow')?.addEventListener('click', () => {
                 tr.remove();
                 refreshAllProductSelectOptions();
             });
 
+            const select = tr.querySelector('select.produtoSelect');
+            const hidden = tr.querySelector('input.inputId');
             if (select) {
                 select.addEventListener('change', () => {
-                    hidden.value = select.value || '';
+                    if (hidden) hidden.value = select.value || '';
                     refreshAllProductSelectOptions();
                 });
             }
 
             tabelaProdutosBody.appendChild(tr);
+
             refreshAllProductSelectOptions();
             wireRowEvents(tr);
+
             nextIndex++;
         }
 
@@ -465,7 +544,7 @@
                 if (cidadeHidden) cidadeHidden.value = '';
             }
 
-            // Produtos existentes + futuros
+            // Produtos
             refreshAllProductSelectOptions();
             btnAddRow?.addEventListener('click', addProductRow);
 
@@ -482,11 +561,14 @@
             const form = document.getElementById('formPedidoEdit');
             form?.addEventListener('submit', () => {
                 if (!tabelaProdutosBody) return;
+
                 tabelaProdutosBody.querySelectorAll('tr[data-index]').forEach(tr => {
                     const hidden = tr.querySelector('input.inputId');
                     const qtd    = tr.querySelector('input.inputQtd');
+
                     const idVal  = parseInt(hidden?.value || '0', 10);
                     const qVal   = parseInt(qtd?.value || '0', 10);
+
                     if (!(idVal > 0 && qVal > 0)) tr.remove();
                 });
             });

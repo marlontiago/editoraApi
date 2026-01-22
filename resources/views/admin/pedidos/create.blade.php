@@ -1,17 +1,33 @@
 <x-app-layout>
   <x-slot name="header">
-    <h2 class="text-xl font-semibold text-gray-800">Criar Novo Pedido</h2>
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-semibold text-gray-800 leading-tight">Criar Novo Pedido</h2>
+        <p class="text-sm text-gray-500 mt-1">Selecione cliente, (opcional) gestor/distribuidor, cidade e adicione itens.</p>
+      </div>
+
+      <a
+        href="{{ route('admin.pedidos.index') }}"
+        class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 h-10 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Voltar
+      </a>
+    </div>
   </x-slot>
 
-  <div class="max-w-6xl mx-auto p-6">
+  <div class="max-w-6xl mx-auto p-6 space-y-4">
     @if(session('success'))
-      <div class="mb-6 rounded-md border border-green-300 bg-green-50 p-4 text-green-800">
+      <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
         {{ session('success') }}
       </div>
     @endif
 
     @if($errors->any())
-      <div class="mb-6 rounded-md border border-red-300 bg-red-50 p-4 text-red-800">
+      <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+        <div class="font-semibold text-sm mb-2">Corrija os itens abaixo:</div>
         <ul class="list-disc pl-5 space-y-1">
           @foreach($errors->all() as $error)
             <li class="text-sm">{{ $error }}</li>
@@ -21,14 +37,14 @@
     @endif
 
     <form action="{{ route('admin.pedidos.store') }}" method="POST"
-          class="bg-white shadow rounded-lg p-6 grid grid-cols-12 gap-4">
+          class="bg-white rounded-xl shadow-sm ring-1 ring-gray-100 p-6 grid grid-cols-12 gap-4">
       @csrf
 
       {{-- Cliente (obrigatório) --}}
       <div class="col-span-12 md:col-span-6">
         <label for="cliente_id" class="block text-sm font-medium text-gray-700">Cliente</label>
         <select name="cliente_id" id="cliente_id" required
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900">
           <option value="">-- Selecione --</option>
           @foreach($clientes as $cliente)
             <option value="{{ $cliente->id }}" @selected(old('cliente_id') == $cliente->id)>{{ $cliente->razao_social ?? $cliente->nome }}</option>
@@ -40,7 +56,7 @@
       <div class="col-span-12 md:col-span-6">
         <label for="gestor_id" class="block text-sm font-medium text-gray-700">Gestor (opcional)</label>
         <select name="gestor_id" id="gestor_id"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900">
           <option value="">-- Sem gestor --</option>
           @foreach($gestores as $gestor)
             <option value="{{ $gestor->id }}" data-uf="{{ $gestor->estado_uf }}" @selected(old('gestor_id') == $gestor->id)>{{ $gestor->razao_social }}</option>
@@ -52,7 +68,7 @@
       <div class="col-span-12 md:col-span-6">
         <label for="distribuidor_id" class="block text-sm font-medium text-gray-700">Distribuidor (opcional)</label>
         <select name="distribuidor_id" id="distribuidor_id"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900">
           <option value="">-- Sem distribuidor --</option>
           @foreach($distribuidores as $d)
             <option value="{{ $d->id }}"
@@ -68,7 +84,7 @@
       <div class="col-span-12 md:col-span-6">
         <label for="state" class="block text-sm font-medium text-gray-800">UF</label>
         <select name="state" id="state"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900">
           <option value="">-- Selecione --</option>
           @foreach($cidadesUF as $uf)
             <option value="{{ $uf }}" @selected(old('state') == $uf)>{{ $uf }}</option>
@@ -81,7 +97,7 @@
         <label for="cidade_id" class="block text-sm font-medium text-gray-700">Cidade da Venda</label>
         @php $temDistOuGestor = old('distribuidor_id') || old('gestor_id') || old('state'); @endphp
         <select name="cidade_id" id="cidade_id" {{ $temDistOuGestor ? '' : 'disabled' }}
-                class="mt-1 block w-full rounded-md border-gray-300 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                class="mt-1 block w-full rounded-lg border-gray-200 {{ $temDistOuGestor ? '' : 'bg-gray-50' }} shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900">
           <option value="">{{ $temDistOuGestor ? '-- Selecione --' : '-- Selecione o gestor, distribuidor ou UF --' }}</option>
         </select>
       </div>
@@ -90,30 +106,37 @@
       <div class="col-span-12 md:col-span-6">
         <label for="data" class="block text-sm font-medium text-gray-700">Data</label>
         <input type="date" name="data" id="data" value="{{ old('data') }}"
-               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+               class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900" required>
       </div>
 
       {{-- Produtos --}}
       <div class="col-span-12">
-        <label class="block text-sm font-medium text-gray-700">Produtos</label>
+        <div class="flex items-center justify-between gap-3">
+          <label class="block text-sm font-medium text-gray-700">Produtos</label>
 
-        <div class="flex items-center gap-2 mt-2">
-          <button type="button" onclick="adicionarProduto()"
-                  class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            + Adicionar Produto
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="adicionarProduto()"
+                    class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-3 h-9 text-sm font-semibold text-white hover:bg-gray-800 transition">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/>
+              </svg>
+              Adicionar produto
+            </button>
 
-          {{-- NOVO: botão Adicionar Coleção --}}
-          <button type="button" id="btn-add-colecao"
-                  class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
-            + Adicionar Coleção
-          </button>
+            <button type="button" id="btn-add-colecao"
+                    class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 h-9 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h10M4 17h16"/>
+              </svg>
+              Adicionar coleção
+            </button>
+          </div>
         </div>
 
-        <div id="produtos-container" class="space-y-4 mt-4"></div>
-        {{-- Aviso quando não houver itens --}}
+        <div id="produtos-container" class="space-y-3 mt-4"></div>
+
         <div id="produtos-empty" class="mt-2 text-sm text-gray-500">
-          Nenhum produto adicionado. Use “Adicionar Produto” ou “Adicionar Coleção”.
+          Nenhum produto adicionado. Use “Adicionar produto” ou “Adicionar coleção”.
         </div>
       </div>
 
@@ -121,19 +144,19 @@
       <div class="col-span-12">
         <label class="block text-sm font-medium text-gray-700">Observações</label>
         <textarea name="observacoes" rows="3"
-                  class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="mt-1 w-full rounded-lg border-gray-200 px-3 py-2 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900"
                   placeholder="Anotações internas sobre o pedido (opcional)">{{ old('observacoes') }}</textarea>
       </div>
 
       {{-- Botões --}}
-      <div class="col-span-12 flex justify-end gap-3 pt-4">
+      <div class="col-span-12 flex justify-end gap-3 pt-2">
         <a href="{{ route('admin.pedidos.index') }}"
-           class="inline-flex h-10 items-center rounded-md border px-4 text-sm hover:bg-gray-50">
+           class="inline-flex h-10 items-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
           Cancelar
         </a>
         <button type="submit"
-                class="inline-flex h-10 items-center rounded-md bg-green-600 px-5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
-          Salvar Pedido
+                class="inline-flex h-10 items-center rounded-lg bg-gray-900 px-5 text-sm font-semibold text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900/20 transition">
+          Salvar pedido
         </button>
       </div>
     </form>
@@ -144,14 +167,16 @@
     <div class="absolute inset-0 bg-black/40" data-close></div>
     <div class="absolute inset-0 flex items-start justify-center p-4 pt-16 sm:pt-24 overflow-y-auto">
       <div class="w-full max-w-lg rounded-xl bg-white shadow-xl border max-h-[90vh] overflow-y-auto">
-        <div class="border-b px-5 py-3">
+        <div class="border-b px-5 py-3 flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-800">Adicionar Coleção</h3>
+          <button type="button" class="text-gray-500 hover:text-gray-700" data-close>✕</button>
         </div>
+
         <div class="px-5 py-4 space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700" for="colecao_select">Selecione a coleção</label>
             <select id="colecao_select"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
               <option value="">-- Selecione --</option>
               @foreach(($colecoes ?? []) as $c)
                 <option value="{{ $c->id }}">{{ $c->nome ?? $c->codigo ?? ('Coleção #'.$c->id) }}</option>
@@ -163,12 +188,12 @@
             <div class="col-span-12 md:col-span-6">
               <label for="colecao_qtd" class="block text-sm font-medium text-gray-700">Quantidade por item</label>
               <input type="number" id="colecao_qtd" min="1" value="1"
-                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                     class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
             </div>
             <div class="col-span-12 md:col-span-6">
               <label for="colecao_desc" class="block text-sm font-medium text-gray-700">Desconto (%)</label>
               <input type="number" id="colecao_desc" min="0" max="100" step="0.01" value="0"
-                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                     class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
             </div>
           </div>
 
@@ -176,12 +201,18 @@
             Ao confirmar, todos os produtos dessa coleção serão adicionados abaixo usando a quantidade e o desconto informados.
             Produtos já selecionados não serão duplicados.
           </p>
+
           <div id="colecao-feedback" class="hidden text-sm"></div>
         </div>
+
         <div class="flex items-center justify-end gap-2 px-5 py-3 border-t">
-          <button type="button" class="rounded-md border px-4 py-2 text-sm hover:bg-gray-50" data-close>Cancelar</button>
+          <button type="button"
+                  class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                  data-close>
+            Cancelar
+          </button>
           <button type="button" id="confirm-add-colecao"
-                  class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                  class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition">
             Adicionar
           </button>
         </div>
@@ -214,7 +245,6 @@
   </script>
 
   {{-- ===== PRODUTOS ===== --}}
-    
   <script>
     let produtoIndex = 0;
     const container = document.getElementById('produtos-container');
@@ -246,68 +276,95 @@
     }
 
     function refreshAllProductSelects() {
-      const chosen = getSelectedProductIds();
-      const selects = container.querySelectorAll('select[name^="produtos["][name$="[id]"]');
-      selects.forEach(sel => {
-        const current = sel.value || null;
-        sel.innerHTML = '';
-        const exclude = chosen.filter(id => id !== current);
-        sel.append(buildOptions(exclude, current));
-      });
-      const maxReached = chosen.length >= ALL_PRODUCTS.length;
-      addBtn.disabled = maxReached;
-      addBtn.classList.toggle('opacity-50', maxReached);
-      addBtn.title = maxReached ? 'Todos os produtos já foram adicionados' : '';
-    }
+  const selects = Array.from(
+    container.querySelectorAll('select[name^="produtos["][name$="[id]"]')
+  );
+
+  // ids escolhidos
+  const chosen = new Set(
+    selects.map(s => String(s.value || '')).filter(v => v)
+  );
+
+  // em vez de refazer options, só desabilita/oculta
+  selects.forEach(sel => {
+    const current = String(sel.value || '');
+
+    Array.from(sel.options).forEach(opt => {
+      if (!opt.value) return;
+
+      const v = String(opt.value);
+      const taken = chosen.has(v) && v !== current;
+
+      opt.disabled = taken;
+      opt.hidden = taken; // opcional: some da lista
+    });
+  });
+
+  const maxReached = chosen.size >= ALL_PRODUCTS.length;
+  addBtn.disabled = maxReached;
+  addBtn.classList.toggle('opacity-50', maxReached);
+  addBtn.title = maxReached ? 'Todos os produtos já foram adicionados' : '';
+}
+
 
     function makeProdutoRow(preset = {}) {
       const idx = produtoIndex++;
       const row = document.createElement('div');
-      row.className = 'produto border p-4 rounded-md bg-gray-50 grid grid-cols-12 gap-4 items-start';
+      row.className = 'produto rounded-xl border border-gray-200 bg-white p-4 shadow-sm';
       row.innerHTML = `
-        <div class="col-span-12 md:col-span-6 flex items-start gap-3">
-          <div class="w-20 h-20 flex-shrink-0">
-            <img src="" alt="Imagem do produto" class="product-thumb w-20 h-20 object-cover rounded-md shadow-sm" />
+        <div class="grid grid-cols-12 gap-4 items-start">
+          <div class="col-span-12 lg:col-span-6 flex items-start gap-3">
+            <div class="w-20 h-20 flex-shrink-0">
+              <img src="" alt="Imagem do produto" class="product-thumb w-20 h-20 object-cover rounded-lg ring-1 ring-gray-200 bg-gray-50" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <label class="block text-sm font-medium text-gray-700">Produto</label>
+              <select name="produtos[${idx}][id]"
+                      class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900"></select>
+            </div>
           </div>
-          <div class="flex-1">
-            <label class="block text-sm font-medium text-gray-700">Produto</label>
-            <select name="produtos[${idx}][id]"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></select>
+
+          <div class="col-span-12 sm:col-span-6 lg:col-span-2">
+            <label class="block text-sm font-medium text-gray-700">Quantidade</label>
+            <input type="number" min="1" value="${preset.quantidade ?? 1}" name="produtos[${idx}][quantidade]"
+                   class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900" required>
           </div>
-        </div>
 
-        <div class="col-span-12 md:col-span-3">
-          <label class="block text-sm font-medium text-gray-700">Quantidade</label>
-          <input type="number" min="1" value="${preset.quantidade ?? 1}" name="produtos[${idx}][quantidade]"
-                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
+          <div class="col-span-12 sm:col-span-6 lg:col-span-2">
+            <label class="block text-sm font-medium text-gray-700">Desc. item (%)</label>
+            <input type="number" min="0" max="100" step="0.01" value="${preset.desconto ?? 0}" name="produtos[${idx}][desconto]"
+                   class="mt-1 block w-full rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900">
+          </div>
 
-        <div class="col-span-12 md:col-span-2">
-          <label class="block text-sm font-medium text-gray-700">Desc. item (%)</label>
-          <input type="number" min="0" max="100" step="0.01" value="${preset.desconto ?? 0}" name="produtos[${idx}][desconto]"
-                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-        </div>
+          <div class="col-span-12 lg:col-span-2 flex items-end justify-end">
+            <button type="button"
+                    class="remove-row inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 h-10 text-sm font-semibold text-red-700 hover:bg-red-100 transition"
+                    title="Remover item">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7h12M9 7V5h6v2m-7 3v9m4-9v9m4-9v9M7 7l1 14h8l1-14"/>
+              </svg>
+              Remover
+            </button>
+          </div>
 
-        <div class="col-span-12 md:col-span-1 flex items-end">
-          <button type="button" class="remove-row inline-flex items-center rounded-md border px-3 py-2 text-sm bg-red-600 text-white hover:bg-red-700">
-            Remover
-          </button>
-        </div>
-
-        <div class="col-span-12">
-          <div class="mt-2 rounded-md bg-white border p-3 text-sm text-gray-700 space-x-3 calc-area">
-            <span><span class="font-medium">Preço de tabela:</span> <span class="unit-price">R$ 0,00</span></span>
-            <span>•</span>
-            <span><span class="font-medium">Preço com desconto:</span> <span class="unit-disc">R$ 0,00</span></span>
-            <span>•</span>
-            <span><span class="font-medium">Total:</span> <span class="total-tabela">R$ 0,00</span></span>
-            <span>•</span>
-            <span><span class="font-medium">Total com desconto:</span> <span class="total-desc">R$ 0,00</span></span>
+          <div class="col-span-12">
+            <div class="mt-2 rounded-lg bg-gray-50 border border-gray-200 p-3 text-sm text-gray-700 calc-area">
+              <div class="flex flex-wrap gap-x-4 gap-y-1">
+                <span><span class="font-medium">Preço de tabela:</span> <span class="unit-price">R$ 0,00</span></span>
+                <span class="text-gray-300">•</span>
+                <span><span class="font-medium">Preço com desconto:</span> <span class="unit-disc">R$ 0,00</span></span>
+                <span class="text-gray-300">•</span>
+                <span><span class="font-medium">Total:</span> <span class="total-tabela">R$ 0,00</span></span>
+                <span class="text-gray-300">•</span>
+                <span><span class="font-medium">Total com desconto:</span> <span class="total-desc">R$ 0,00</span></span>
+              </div>
+            </div>
           </div>
         </div>
       `;
       const sel = row.querySelector('select');
-      sel.append(buildOptions(getSelectedProductIds(), preset.id ?? null));
+      sel.append(buildOptions([], preset.id ?? null)); // não exclui nada
+
       return row;
     }
 
@@ -417,9 +474,12 @@
 
     container.addEventListener('click', (e) => {
       if (e.target.closest('.remove-row')) {
-        e.target.closest('.produto').remove();
+        const row = e.target.closest('.produto');
+        if (!row) return;
+
+        row.remove();
         refreshAllProductSelects();
-        calcAll();
+
         if (container.querySelectorAll('.produto').length === 0) {
           const empty = document.getElementById('produtos-empty');
           if (empty) empty.classList.remove('hidden');
@@ -437,7 +497,6 @@
       }
     });
   </script>
-
 
   {{-- ===== GESTOR / DISTRIBUIDOR / CIDADES ===== --}}
   <script>
@@ -526,7 +585,6 @@
       cidadeSelect.classList.remove('bg-gray-50');
     }
 
-
     async function carregarCidadesPorDistribuidor(distribuidorId, selectedCidadeId = null) {
       resetCidadeSelect('-- Carregando... --');
       try {
@@ -563,7 +621,6 @@
       }
     }
 
-
     distribuidorSelect.addEventListener('change', async function () {
       const distId = this.value || null;
       const uf = stateSelect.value || null;
@@ -577,18 +634,19 @@
       }
     });
 
-gestorSelect.addEventListener('change', async function () {
-  const uf = stateSelect.value || null;
-  const distId = distribuidorSelect.value || null;
+    gestorSelect.addEventListener('change', async function () {
+      const uf = stateSelect.value || null;
+      const distId = distribuidorSelect.value || null;
 
-  if (distId) {
-    await carregarCidadesPorDistribuidor(distId, null);
-  } else if (uf) {
-    await carregarCidadesPorUF(uf, null);
-  } else {
-    resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
-  }
-});
+      if (distId) {
+        await carregarCidadesPorDistribuidor(distId, null);
+      } else if (uf) {
+        await carregarCidadesPorUF(uf, null);
+      } else {
+        resetCidadeSelect('-- Selecione gestor, distribuidor ou UF --');
+      }
+    });
+
     stateSelect.addEventListener('change', async function () {
       const uf = this.value || null;
       if (!uf) {
@@ -617,7 +675,7 @@ gestorSelect.addEventListener('change', async function () {
     });
   </script>
 
-    {{-- ===== LÓGICA: ADICIONAR COLEÇÃO (usa adicionarProdutoBase sem recalcular a cada item) ===== --}}
+  {{-- ===== LÓGICA: ADICIONAR COLEÇÃO (mantida) ===== --}}
   <script>
     const modalColecao      = document.getElementById('colecao-modal');
     const btnAbrirColecao   = document.getElementById('btn-add-colecao');
@@ -714,7 +772,7 @@ gestorSelect.addEventListener('change', async function () {
           });
 
           refreshAllProductSelects();
-          calcAll();
+container.querySelectorAll('.produto').forEach(row => calcRow(row));
         } catch (e) {
           console.error('Erro ao adicionar coleção:', e);
           alert('Ocorreu um erro ao adicionar a coleção. Veja o console do navegador para mais detalhes.');
@@ -733,6 +791,4 @@ gestorSelect.addEventListener('change', async function () {
       }, 30);
     });
   </script>
-
-
 </x-app-layout>

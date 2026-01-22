@@ -71,7 +71,8 @@
                         <x-dropdown-link href="{{ route('admin.usuarios.index') }}"
                             class="{{ request()->routeIs('admin.usuarios.*') ? 'bg-gray-100' : '' }}">
                             {{ __('Usuários') }}
-                        </x-dropdown-link>
+                        </x-dropdown-link>                    
+                        
                     </x-slot>
                 </x-dropdown>
             @endrole

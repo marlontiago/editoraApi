@@ -38,27 +38,6 @@ class DiretorSeeder extends Seeder
             'percentual_vendas' => 10.00,
         ]);
 
-        $user2 = User::firstOrCreate([
-            'name' => 'Diretora Comercial Maria',
-            'email' => 'dirmaria@example.com',
-            'password' => Hash::make('senha123'),
-        ]);
-        $user2->assignRole('diretor_comercial');
-
-        DiretorComercial::firstOrCreate([
-            'user_id' => $user2->id,
-        ], [
-            'nome' => 'Diretora Comercial Maria',
-            'email' => 'dirmaria@example.com',
-            'telefone' => '41955554444',
-            'logradouro' => 'Rua das Empresas',
-            'numero' => '500',
-            'complemento' => 'Apto 505',
-            'bairro' => 'Bairro Comercial',
-            'cidade' => 'São Paulo',
-            'cep' => '01000-000',
-            'estado' => 'SP',
-            'percentual_vendas' => 12.50,
-        ]);
+        
     }
 }

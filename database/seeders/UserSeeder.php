@@ -19,22 +19,12 @@ class UserSeeder extends Seeder
             $admin->assignRole('admin');
         }
 
-        // Gestor
-        $gestorUser = User::firstOrCreate(
-            ['email' => 'gestor@example.com'],
-            ['name' => 'Gestor Exemplo', 'password' => Hash::make('gestor123')]
-        );
-        if (method_exists($gestorUser, 'assignRole')) {
-            $gestorUser->assignRole('gestor');
-        }
+        $admin->givePermissionTo([
+            'pedido.criar',
+            'relatorios.acessar',
+            'gerenciar.usuarios',
+            'estoque.gerenciar',
+        ]);
 
-        // Distribuidor
-        $distUser = User::firstOrCreate(
-            ['email' => 'distribuidor@example.com'],
-            ['name' => 'Distribuidor Exemplo', 'password' => Hash::make('distribuidor123')]
-        );
-        if (method_exists($distUser, 'assignRole')) {
-            $distUser->assignRole('distribuidor');
-        }
     }
 }

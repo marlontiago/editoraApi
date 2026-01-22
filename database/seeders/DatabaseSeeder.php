@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
     Role::firstOrCreate(['name' => 'cliente']);
 
     $this->call([
+        PermissionSeeder::class,
         UserSeeder::class,
         ClienteSeeder::class,
         AdvogadoSeeder::class,
@@ -34,5 +35,6 @@ class DatabaseSeeder extends Seeder
         DistribuidorSeeder::class,
         //PedidoSeeder::class,
     ]);
+    
 }
 }

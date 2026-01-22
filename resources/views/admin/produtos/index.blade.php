@@ -1,90 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold text-gray-800">Lista de Produtos</h2>
-    </x-slot>
-
-    @php
-        $sort = request('sort', 'titulo');
-        $dir  = request('dir', 'asc');
-    @endphp
-
-    <div class="max-w-full mx-auto p-6 space-y-6">
-
-        {{-- Flash --}}
-        @if (session('success'))
-            <div class="rounded-md border border-green-300 bg-green-50 p-4 text-green-800">
-                {{ session('success') }}
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 leading-tight">Lista de Produtos</h2>
+                <p class="text-sm text-gray-500 mt-1">Catálogo, estoque, importação e coleções.</p>
             </div>
-        @endif
-
-        {{-- Produtos com estoque baixo --}}
-        @if($produtosComEstoqueBaixo->isNotEmpty())
-            <div x-data="{ open: false }" class="bg-red-100 p-3 rounded shadow mb-4">
-                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
-                    ⚠️ Produtos com estoque baixo
-                    <span class="ml-auto text-sm text-red-600">({{ $produtosComEstoqueBaixo->count() }} itens)</span>
-                </button>
-                <ul x-show="open" x-transition
-                    class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
-                    @foreach($produtosComEstoqueBaixo as $produto)
-                        <li>
-                            {{ $produto->titulo }}
-                            <span class="text-red-600 font-semibold">
-                                : {{ $produto->quantidade_estoque ?? 'vazio'}} em estoque
-                            </span>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        {{-- Estoque em pedidos em potencial --}}
-        @if($estoqueParaPedidosEmPotencial->isNotEmpty())
-            <div x-data="{ open: false }" class="bg-yellow-100 p-3 rounded shadow">
-                <button @click="open = !open" class="font-semibold flex items-center gap-2 w-full text-left">
-                    ⚠️ Estoque em risco para pedidos futuros
-                    <span class="ml-auto text-sm text-yellow-700">({{ $estoqueParaPedidosEmPotencial->count() }} itens)</span>
-                </button>
-                <ul x-show="open" x-transition
-                    class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-2">
-                    @foreach($estoqueParaPedidosEmPotencial as $produto)
-                        <li>
-                            Produto: <strong>{{ $produto->titulo }}</strong> <br>
-                            Em pedidos: <span class="font-medium text-green-700">{{ $produto->qtd_em_pedidos }}</span> <br>
-                            Disponível: <span class="font-medium text-red-600">{{ $produto->quantidade_estoque }}</span>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        {{-- Toolbar: busca + novo + coleções --}}
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <form method="GET" action="{{ route('admin.produtos.index') }}" class="flex items-center gap-2">
-                <input
-                    type="text"
-                    name="q"
-                    value="{{ request('q') }}"
-                    placeholder="Buscar por nome, título, autores, coleção..."
-                    class="h-10 w-72 max-w-full rounded-md border-gray-300 px-3 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                >
-                <button type="submit"
-                        class="h-10 rounded-md border px-3 text-sm hover:bg-gray-50">
-                    Buscar
-                </button>
-
-                {{-- preserva sort/dir ao buscar --}}
-                @if(request('sort'))
-                    <input type="hidden" name="sort" value="{{ request('sort') }}">
-                @endif
-                @if(request('dir'))
-                    <input type="hidden" name="dir" value="{{ request('dir') }}">
-                @endif
-
-                @if(request('q'))
-                    <a href="{{ route('admin.produtos.index') }}" class="text-sm text-gray-600 hover:underline">Limpar</a>
-                @endif
-            </form>
 
             <div class="flex items-center gap-2" x-data="{ openColecao:false }">
 
@@ -94,8 +14,11 @@
                       class="flex items-center gap-2">
                     @csrf
 
-                    <label class="inline-flex items-center justify-center rounded-md border text-white border-gray-300 bg-green-600 px-3 h-10 text-sm hover:bg-green-700 cursor-pointer">
-                        Importar produtos
+                    <label class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 h-10 text-sm font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer transition">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l4-4m-4 4l-4-4M5 21h14"/>
+                        </svg>
+                        <span class="ml-2">Importar</span>
                         <input type="file"
                                name="arquivo"
                                accept=".xlsx,.xls,.csv"
@@ -105,17 +28,23 @@
                 </form>
 
                 <a href="{{ route('admin.produtos.create') }}"
-                   class="inline-flex h-10 items-center justify-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
-                    Novo Produto
+                   class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 h-10 text-sm font-semibold text-white hover:bg-gray-800 transition">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Novo produto
                 </a>
 
                 <button type="button"
                         @click="openColecao = true"
-                        class="inline-flex h-10 items-center justify-center rounded-md bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-700">
-                    Gerenciar Coleções
+                        class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 h-10 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h10M4 17h16"/>
+                    </svg>
+                    Coleções
                 </button>
 
-                {{-- Modal Coleções (corrigido para não bloquear cliques quando fechado) --}}
+                {{-- Modal Coleções (mantido) --}}
                 <div
                     x-show="openColecao"
                     x-transition
@@ -276,14 +205,114 @@
 
             </div>
         </div>
+    </x-slot>
+
+    @php
+        $sort = request('sort', 'titulo');
+        $dir  = request('dir', 'asc');
+    @endphp
+
+    <div class="max-w-full mx-auto p-6 space-y-4">
+
+        {{-- Flash --}}
+        @if (session('success'))
+            <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        {{-- Produtos com estoque baixo --}}
+        @if($produtosComEstoqueBaixo->isNotEmpty())
+            <div x-data="{ open: false }" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                <button @click="open = !open" class="w-full text-left flex items-center gap-2">
+                    <span class="text-sm font-semibold text-red-800">⚠️ Produtos com estoque baixo</span>
+                    <span class="ml-auto text-xs font-medium text-red-700 rounded-full bg-red-100 px-2 py-0.5">
+                        {{ $produtosComEstoqueBaixo->count() }} itens
+                    </span>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                    @foreach($produtosComEstoqueBaixo as $produto)
+                        <li>
+                            {{ $produto->titulo }}
+                            <span class="text-red-700 font-semibold">
+                                : {{ $produto->quantidade_estoque ?? 'vazio'}} em estoque
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Estoque em pedidos em potencial --}}
+        @if($estoqueParaPedidosEmPotencial->isNotEmpty())
+            <div x-data="{ open: false }" class="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3">
+                <button @click="open = !open" class="w-full text-left flex items-center gap-2">
+                    <span class="text-sm font-semibold text-yellow-900">⚠️ Estoque em risco para pedidos futuros</span>
+                    <span class="ml-auto text-xs font-medium text-yellow-800 rounded-full bg-yellow-100 px-2 py-0.5">
+                        {{ $estoqueParaPedidosEmPotencial->count() }} itens
+                    </span>
+                </button>
+                <ul x-show="open" x-transition class="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-2">
+                    @foreach($estoqueParaPedidosEmPotencial as $produto)
+                        <li>
+                            Produto: <strong>{{ $produto->titulo }}</strong> <br>
+                            Em pedidos: <span class="font-medium text-green-700">{{ $produto->qtd_em_pedidos }}</span> <br>
+                            Disponível: <span class="font-medium text-red-600">{{ $produto->quantidade_estoque }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Busca (layout clean) --}}
+        <div class="bg-white rounded-xl shadow-sm ring-1 ring-gray-100 px-5 py-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <form method="GET" action="{{ route('admin.produtos.index') }}" class="flex items-center gap-2 w-full sm:w-auto">
+                    <div class="relative w-full sm:w-[420px] max-w-full">
+                        <input
+                            type="text"
+                            name="q"
+                            value="{{ request('q') }}"
+                            placeholder="Buscar por nome, título, autores, coleção..."
+                            class="h-10 w-full rounded-lg border-gray-200 px-3 pr-10 text-sm shadow-sm focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+                        >
+                        <svg class="h-4 w-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z"/>
+                        </svg>
+                    </div>
+
+                    <button type="submit"
+                            class="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition">
+                        Buscar
+                    </button>
+
+                    {{-- preserva sort/dir ao buscar --}}
+                    @if(request('sort'))
+                        <input type="hidden" name="sort" value="{{ request('sort') }}">
+                    @endif
+                    @if(request('dir'))
+                        <input type="hidden" name="dir" value="{{ request('dir') }}">
+                    @endif
+
+                    @if(request('q'))
+                        <a href="{{ route('admin.produtos.index') }}" class="text-sm text-gray-500 hover:underline">Limpar</a>
+                    @endif
+                </form>
+
+                <div class="text-xs text-gray-500">
+                    Ordenação: <span class="font-medium text-gray-700">{{ $sort }}</span> •
+                    <span class="font-medium text-gray-700">{{ $dir }}</span>
+                </div>
+            </div>
+        </div>
 
         {{-- Tabela --}}
-        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
+        <div class="bg-white rounded-xl shadow-sm ring-1 ring-gray-100 overflow-x-auto">
             <table class="min-w-[1000px] w-full text-sm">
-                <thead class="bg-gray-50 text-gray-700">
-                    <tr class="text-left text-xs font-semibold uppercase tracking-wide">
+                <thead class="bg-gray-50 text-gray-600 text-xs uppercase tracking-wide">
+                    <tr class="border-b border-gray-100">
                         {{-- Cód. (clicável) --}}
-                        <th class="px-3 py-2 hidden md:table-cell">
+                        <th class="px-4 py-3 hidden md:table-cell whitespace-nowrap">
                             <a
                                 href="{{ route('admin.produtos.index', array_merge(request()->only(['q','per_page']), [
                                     'sort' => 'codigo',
@@ -293,15 +322,15 @@
                             >
                                 Cód.
                                 @if($sort === 'codigo')
-                                    <span class="text-[10px] text-gray-500">{{ $dir === 'asc' ? '▲' : '▼' }}</span>
+                                    <span class="text-[10px] text-gray-400">{{ $dir === 'asc' ? '▲' : '▼' }}</span>
                                 @endif
                             </a>
                         </th>
 
-                        <th class="px-3 py-2">Imagem</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Imagem</th>
 
                         {{-- Título (clicável) --}}
-                        <th class="px-3 py-2 hidden md:table-cell">
+                        <th class="px-4 py-3 hidden md:table-cell whitespace-nowrap">
                             <a
                                 href="{{ route('admin.produtos.index', array_merge(request()->only(['q','per_page']), [
                                     'sort' => 'titulo',
@@ -311,55 +340,58 @@
                             >
                                 Título
                                 @if($sort === 'titulo')
-                                    <span class="text-[10px] text-gray-500">{{ $dir === 'asc' ? '▲' : '▼' }}</span>
+                                    <span class="text-[10px] text-gray-400">{{ $dir === 'asc' ? '▲' : '▼' }}</span>
                                 @endif
                             </a>
                         </th>
 
-                        <th class="px-3 py-2 hidden lg:table-cell">Coleção</th>
-                        <th class="px-3 py-2 hidden lg:table-cell">ISBN</th>
-                        <th class="px-3 py-2 hidden xl:table-cell">Autores</th>
-                        <th class="px-3 py-2 hidden xl:table-cell">Edição</th>
-                        <th class="px-3 py-2 hidden lg:table-cell">Ano</th>
-                        <th class="px-3 py-2 hidden xl:table-cell">Páginas</th>
-                        <th class="px-3 py-2 hidden lg:table-cell">Ano Escolar</th>
-                        <th class="px-3 py-2 whitespace-nowrap">Preço</th>
-                        <th class="px-3 py-2">Estoque</th>
-                        <th class="px-3 py-2 text-center">Ações</th>
+                        <th class="px-4 py-3 hidden lg:table-cell whitespace-nowrap">Coleção</th>
+                        <th class="px-4 py-3 hidden lg:table-cell whitespace-nowrap">ISBN</th>
+                        <th class="px-4 py-3 hidden xl:table-cell whitespace-nowrap">Autores</th>
+                        <th class="px-4 py-3 hidden xl:table-cell whitespace-nowrap">Edição</th>
+                        <th class="px-4 py-3 hidden lg:table-cell whitespace-nowrap">Ano</th>
+                        <th class="px-4 py-3 hidden xl:table-cell whitespace-nowrap">Páginas</th>
+                        <th class="px-4 py-3 hidden lg:table-cell whitespace-nowrap">Ano Escolar</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Preço</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Estoque</th>
+                        <th class="px-4 py-3 whitespace-nowrap text-right">Ações</th>
                     </tr>
                 </thead>
 
                 <tbody class="divide-y divide-gray-100">
                     @forelse ($produtos as $produto)
-                        <tr class="odd:bg-white even:bg-gray-50 hover:bg-gray-100/70">
+                        <tr class="hover:bg-gray-50/60">
                             {{-- Código --}}
-                            <td class="px-3 py-2 hidden md:table-cell">{{ $produto->codigo }}</td>
+                            <td class="px-4 py-3 hidden md:table-cell">{{ $produto->codigo }}</td>
 
                             {{-- Imagem --}}
-                            <td class="px-3 py-2">
+                            <td class="px-4 py-3">
                                 @if ($produto->imagem_url)
                                     <img src="{{ $produto->imagem_url }}" alt="{{ $produto->nome }}"
-                                        class="h-12 w-12 rounded object-cover ring-1 ring-gray-200">
+                                        class="h-12 w-12 rounded-lg object-cover ring-1 ring-gray-200">
                                 @else
-                                    <div class="h-12 w-12 rounded bg-gray-100 grid place-items-center text-[10px] text-gray-500 ring-1 ring-gray-200">
+                                    <div class="h-12 w-12 rounded-lg bg-gray-100 grid place-items-center text-[10px] text-gray-500 ring-1 ring-gray-200">
                                         sem<br>imagem
                                     </div>
                                 @endif
                             </td>
 
-                            <td class="px-3 py-2 hidden md:table-cell">{{ $produto->titulo ?? '—' }}</td>
-                            <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->colecao?->nome ?? '—' }}</td>
-                            <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->isbn }}</td>
-
-                            <td class="px-3 py-2 hidden xl:table-cell">
-                                <span class="line-clamp-2">{{ $produto->autores ?? '—' }}</span>
+                            <td class="px-4 py-3 hidden md:table-cell">
+                                <div class="font-medium text-gray-900">{{ $produto->titulo ?? '—' }}</div>
                             </td>
 
-                            <td class="px-3 py-2 hidden xl:table-cell">{{ $produto->edicao ?? '—' }}</td>
-                            <td class="px-3 py-2 hidden lg:table-cell">{{ $produto->ano ?? '—' }}</td>
-                            <td class="px-3 py-2 hidden xl:table-cell">{{ $produto->numero_paginas ?? '—' }}</td>
+                            <td class="px-4 py-3 hidden lg:table-cell">{{ $produto->colecao?->nome ?? '—' }}</td>
+                            <td class="px-4 py-3 hidden lg:table-cell">{{ $produto->isbn }}</td>
 
-                            <td class="px-3 py-2 hidden lg:table-cell">
+                            <td class="px-4 py-3 hidden xl:table-cell">
+                                <span class="line-clamp-2 text-gray-700">{{ $produto->autores ?? '—' }}</span>
+                            </td>
+
+                            <td class="px-4 py-3 hidden xl:table-cell">{{ $produto->edicao ?? '—' }}</td>
+                            <td class="px-4 py-3 hidden lg:table-cell">{{ $produto->ano ?? '—' }}</td>
+                            <td class="px-4 py-3 hidden xl:table-cell">{{ $produto->numero_paginas ?? '—' }}</td>
+
+                            <td class="px-4 py-3 hidden lg:table-cell">
                                 @if($produto->ano_escolar)
                                     <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
                                         {{ $produto->ano_escolar }}
@@ -370,17 +402,19 @@
                             </td>
 
                             {{-- Preço / Estoque (sempre visíveis) --}}
-                            <td class="px-3 py-2 font-semibold whitespace-nowrap">
+                            <td class="px-4 py-3 font-semibold whitespace-nowrap text-gray-900">
                                 R$ {{ number_format((float)($produto->preco ?? 0), 2, ',', '.') }}
                             </td>
-                            <td class="px-3 py-2">{{ $produto->quantidade_estoque }}</td>
+                            <td class="px-4 py-3">
+                                <span class="font-medium text-gray-900">{{ $produto->quantidade_estoque }}</span>
+                            </td>
 
                             {{-- Ações --}}
-                            <td class="px-3 py-2">
-                                <div class="flex items-center justify-center gap-2">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center justify-end gap-2">
                                     {{-- Editar --}}
                                     <a href="{{ route('admin.produtos.edit', $produto) }}"
-                                       class="inline-flex items-center justify-center rounded-md border border-blue-200 p-2 text-blue-700 hover:bg-blue-50"
+                                       class="inline-flex items-center justify-center rounded-md border border-blue-200 p-2 text-blue-700 hover:bg-blue-50 transition"
                                        title="Editar">
                                         <x-heroicon-o-pencil-square class="w-5 h-5" />
                                     </a>
@@ -391,7 +425,7 @@
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit"
-                                                class="inline-flex items-center justify-center rounded-md border border-red-200 p-2 text-red-700 hover:bg-red-50"
+                                                class="inline-flex items-center justify-center rounded-md border border-red-200 p-2 text-red-700 hover:bg-red-50 transition"
                                                 title="Excluir">
                                             <x-heroicon-o-trash class="w-5 h-5" />
                                         </button>
@@ -401,7 +435,9 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="13" class="px-3 py-6 text-center text-gray-500">Nenhum produto encontrado.</td>
+                            <td colspan="13" class="px-4 py-10 text-center text-sm text-gray-500">
+                                Nenhum produto encontrado.
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
